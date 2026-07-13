@@ -3,7 +3,7 @@ from pathlib import Path
 
 from PIL import Image
 
-from scripts.prepare_up_count import prepare_up_count
+from droneai.up_count import prepare_up_count
 
 
 def test_prepare_up_count_builds_normalized_inventory(tmp_path: Path) -> None:
