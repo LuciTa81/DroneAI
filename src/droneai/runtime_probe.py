@@ -22,14 +22,30 @@ def _run(command: list[str]) -> str | None:
         return None
 
 
-def collect_environment() -> dict[str, Any]:
+def collect_environment(cwd: str | Path | None = None) -> dict[str, Any]:
+    cwd = Path(cwd) if cwd is not None else None
+
+    def run_here(command: list[str]) -> str | None:
+        try:
+            return subprocess.run(
+                command,
+                cwd=cwd,
+                check=True,
+                capture_output=True,
+                text=True,
+            ).stdout.strip()
+        except (FileNotFoundError, subprocess.CalledProcessError):
+            return None
+
+    git_status = run_here(["git", "status", "--porcelain"])
     report: dict[str, Any] = {
         "captured_at": datetime.now(timezone.utc).isoformat(),
         "python": sys.version,
         "platform": platform.platform(),
         "executable": sys.executable,
         "colab_release_tag": os.environ.get("COLAB_RELEASE_TAG"),
-        "git_commit": _run(["git", "rev-parse", "HEAD"]),
+        "git_commit": run_here(["git", "rev-parse", "HEAD"]),
+        "git_dirty": None if git_status is None else bool(git_status),
         "nvidia_smi": _run(
             [
                 "nvidia-smi",
