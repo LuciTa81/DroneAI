@@ -1,0 +1,24 @@
+{
+  "stage_id": "stage-1",
+  "name": "Dataset readiness and split integrity",
+  "threshold": 85,
+  "decision_rule": "Score must reach 85 and every rights, integrity and leakage blocker must pass.",
+  "score_groups": {
+    "license_access": 20,
+    "annotation_integrity": 25,
+    "split_integrity": 25,
+    "condition_coverage": 20,
+    "manifest": 10
+  },
+  "blockers": [
+    "access.rights",
+    "access.intended_use",
+    "annotation.pairs",
+    "annotation.points",
+    "split.unit",
+    "split.groups",
+    "split.duplicates",
+    "coverage.splits",
+    "manifest.checksums"
+  ]
+}

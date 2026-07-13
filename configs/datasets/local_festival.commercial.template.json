@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "dataset_id": "REPLACE_WITH_VERSIONED_LOCAL_DATASET_ID",
+  "display_name": "Owned festival CCTV and drone data",
+  "role": "production_training_and_sealed_evaluation",
+  "intended_use": "commercial_product_rnd",
+  "inventory_path": "inventory.jsonl",
+  "source": {
+    "official_url": "REPLACE_WITH_INTERNAL_DATA_RIGHTS_RECORD",
+    "download_url": "google-drive://MyDrive/DroneAI/datasets/local-festival",
+    "citation": "Internal collection record"
+  },
+  "rights": {
+    "status": "pending",
+    "license_id": "OWNED-DATA-PENDING-APPROVAL",
+    "evidence_url": "REPLACE_WITH_APPROVAL_RECORD",
+    "allowed_uses": [],
+    "commercial_use": false,
+    "notes": "Complete collection authority, privacy basis, retention, access, de-identification and model-training permission before changing status to verified."
+  },
+  "annotation": {
+    "format": "normalized-point-json-v1",
+    "point_semantics": "visible_person_head",
+    "coordinate_system": "zero_based_xy"
+  },
+  "split": {
+    "unit": "event_session",
+    "group_key": "event_session_id",
+    "required_splits": ["train", "val", "test"]
+  },
+  "coverage": {
+    "required_condition_tags": ["camera_type", "time_of_day", "weather", "altitude_band", "density_band"]
+  }
+}

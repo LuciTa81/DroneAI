@@ -26,10 +26,15 @@ set is opened.
 ## Model and data order
 
 1. Stage 0 uses no training dataset. It only verifies the experiment foundation.
-2. Stage 1 starts with a small public-data manifest and license review.
+2. Stage 1 uses UP-COUNT as the first non-commercial UAV research benchmark.
+   DroneCrowd remains blocked until explicit dataset terms are obtained. Public
+   datasets never become production-training assets merely because they can be downloaded.
 3. Stage 2 uses CSRNet only as a pipeline smoke baseline.
 4. Stage 3 reproduces DM-Count first, then P2PNet. MPCount is evaluated after the basic reproductions are stable.
-5. Stage 4 uses DroneCrowd as the primary true-drone benchmark. UP-COUNT and DLR-ACD remain candidates pending access and license verification. MovingDroneCrowd is reserved for the later moving-drone individual-counting track.
+5. Stage 4 starts with UP-COUNT for true-UAV generalization. DroneCrowd can be
+   added after rights verification, DLR-ACD is an optional non-commercial
+   extreme-density stress set, and MovingDroneCrowd is reserved for the later
+   moving-drone individual-counting track.
 6. Local festival data is used for fine-tuning and a sealed gold test, split by camera, date, zone or flight session rather than adjacent frame.
 
 CSRNet is therefore not the proposed production winner. It is the cheapest way

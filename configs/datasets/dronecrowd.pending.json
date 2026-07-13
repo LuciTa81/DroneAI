@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "dataset_id": "dronecrowd-full",
+  "display_name": "DroneCrowd (full version)",
+  "role": "blocked_pending_rights_review",
+  "intended_use": "noncommercial_research",
+  "inventory_path": "inventory.jsonl",
+  "source": {
+    "official_url": "https://github.com/VisDrone/DroneCrowd",
+    "download_url": "https://drive.google.com/drive/folders/1EUKLJ1WmrhWTNGt4wFLyHRfspJAt56WN",
+    "citation": "Wen et al., Detection, Tracking, and Counting Meets Drones in Crowds: A Benchmark, CVPR 2021"
+  },
+  "rights": {
+    "status": "unverified",
+    "license_id": "NO-LICENSE-FILE-FOUND",
+    "evidence_url": "https://github.com/VisDrone/DroneCrowd",
+    "allowed_uses": [],
+    "commercial_use": false,
+    "notes": "The official repository README asks for citation but does not state a dataset license, and LICENSE returns 404. Obtain written terms before use."
+  },
+  "annotation": {
+    "format": "adapter-required",
+    "point_semantics": "person_head",
+    "coordinate_system": "dataset-specific-unverified"
+  },
+  "split": {
+    "unit": "sequence",
+    "group_key": "video_sequence_id",
+    "required_splits": ["train", "val", "test"]
+  },
+  "coverage": {
+    "required_condition_tags": ["altitude_band", "density_band"]
+  }
+}
