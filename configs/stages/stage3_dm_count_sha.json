@@ -6,7 +6,7 @@
   "dataset": {
     "id": "shanghaitech-part-a",
     "source": "https://www.kaggle.com/datasets/tthien/shanghaitech",
-    "archive_bytes": 174176615,
+    "archive_bytes": 348994252,
     "license_status": "unknown",
     "allowed_scope": "private research reproduction only",
     "commercial_use": false,
@@ -25,6 +25,13 @@
     "weight_decay": 0.0001,
     "max_epoch": 1000,
     "validation_note": "Upstream uses test_data for checkpoint selection; reproduce only in the faithful lane and label it as test-selected."
+  },
+  "evaluation_protocol": {
+    "crop_size": 512,
+    "downsample_ratio": 8,
+    "batch_size": 1,
+    "method": "val",
+    "prediction": "sum of the predicted density map"
   },
   "clean_protocol": {
     "train_validation_split": "deterministic hash split frozen before test evaluation",

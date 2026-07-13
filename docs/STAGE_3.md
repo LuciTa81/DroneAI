@@ -8,9 +8,35 @@ Part A. The paper reports MAE **59.7** and RMSE **95.7** on its 182-image test
 set. Passing requires the three-seed median of both metrics to be within 5%.
 
 ShanghaiTech Part A is used here only for private research reproduction. The
-Kaggle copy linked by the official DM-Count repository is public and about
-174 MB, but its license field is `Unknown`. This stage must not imply permission
-for commercial training or deployment.
+Kaggle copy linked by the official DM-Count repository is public. The archive
+downloaded on 2026-07-13 was 348,994,252 bytes, but its license field is
+`Unknown`. This stage must not imply permission for commercial training or
+deployment.
+
+## Official-checkpoint preflight (2026-07-13)
+
+The upstream ShanghaiTech Part A checkpoint was evaluated on all 182 test
+images in a Colab T4 runtime using the unmodified upstream evaluation contract:
+`Crowd_sh(test_data, 512, 8, method="val")`, batch size 1, and the sum of the
+predicted density map.
+
+| Metric | Observed | Paper | Relative gap | 5% check |
+|---|---:|---:|---:|---|
+| MAE | 60.0325 | 59.7 | +0.5569% | PASS |
+| RMSE | 95.9966 | 95.7 | +0.3100% | PASS |
+
+The 182-image pass took 15.53 seconds on a Tesla T4 with PyTorch 2.11.0+cu128.
+This proves that the pinned code, dataset and official weights reproduce the
+paper result within tolerance. It does **not** complete Stage 3: the three-seed
+faithful training lane and the test-isolated clean lane remain required.
+
+Traceability:
+
+- checkpoint SHA-256: `810ea89b2e3de766a2611230d272fc9c1ca1dc17f636ee2ca2aee51ba0f30f9f`
+- Part A content-manifest SHA-256 (964 image/MAT files): `9f638d75f2e04a1bec007512e694c7abc0840fdcce5de55687a718a0a6b0d52b`
+- archive SHA-256: `af5dc0978d676abc9f559540c24a903d18ab449206b970f0cc90f90e733146e3`
+- recorded result: `results/stage3/official_checkpoint_preflight.json`
+- reproducible Colab notebook: `notebooks/04_stage3_dm_count_official_checkpoint.ipynb`
 
 ## Two lanes
 

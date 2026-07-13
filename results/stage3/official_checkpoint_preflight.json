@@ -1,0 +1,52 @@
+{
+  "stage": 3,
+  "status": "PREFLIGHT_PASS_STAGE_IN_PROGRESS",
+  "kind": "official_checkpoint_preflight",
+  "run_date": "2026-07-13",
+  "dataset": "ShanghaiTech Part A",
+  "test_samples": 182,
+  "upstream_commit": "cc5f2132e0d1328909f31b6d665b8e0b15c30467",
+  "checkpoint": "model_sh_A.pth",
+  "evaluation_protocol": {
+    "crop_size": 512,
+    "downsample_ratio": 8,
+    "batch_size": 1,
+    "method": "val",
+    "prediction": "sum of the predicted density map"
+  },
+  "environment": {
+    "torch": "2.11.0+cu128",
+    "cuda": true,
+    "gpu": "Tesla T4"
+  },
+  "metrics": {
+    "mae": 60.03246322044959,
+    "rmse": 95.99663812755958
+  },
+  "paper_targets": {
+    "mae": 59.7,
+    "rmse": 95.7
+  },
+  "relative_gap_pct": {
+    "mae": 0.5568898164984848,
+    "rmse": 0.30996669546454747
+  },
+  "within_5pct": {
+    "mae": true,
+    "rmse": true
+  },
+  "elapsed_seconds": 15.52674150466919,
+  "traceability": {
+    "archive_sha256": "af5dc0978d676abc9f559540c24a903d18ab449206b970f0cc90f90e733146e3",
+    "checkpoint_sha256": "810ea89b2e3de766a2611230d272fc9c1ca1dc17f636ee2ca2aee51ba0f30f9f",
+    "part_a_manifest_sha256": "9f638d75f2e04a1bec007512e694c7abc0840fdcce5de55687a718a0a6b0d52b",
+    "part_a_manifest_files": 964,
+    "archive_bytes": 348994252,
+    "checkpoint_bytes": 86005202
+  },
+  "remaining_stage3_blockers": [
+    "faithful training for seeds 2026, 2027 and 2028",
+    "clean training-only validation split",
+    "one final clean test evaluation per seed"
+  ]
+}

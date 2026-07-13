@@ -47,6 +47,10 @@ DM-Count implementation on ShanghaiTech Part A in two lanes: a faithful
 paper-number check and a test-isolated clean protocol. See `docs/STAGE_3.md`
 for the scored contract.
 
+The Stage 3 official-checkpoint preflight passed on 2026-07-13 with MAE 60.03
+and RMSE 96.00 on all 182 Part A test images. Stage 3 itself remains in progress
+until the three-seed training and clean-lane gates are complete.
+
 The first model sequence is:
 
 1. CSRNet pipeline smoke test
