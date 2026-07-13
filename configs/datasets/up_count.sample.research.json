@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "dataset_id": "up-count-sequence-samples-v1",
+  "display_name": "UP-COUNT official examples of each sequence",
+  "role": "stage1_integrity_pilot_only",
+  "intended_use": "noncommercial_research",
+  "inventory_path": "inventory.jsonl",
+  "source": {
+    "official_url": "https://up-count.github.io/",
+    "download_url": "https://drive.google.com/file/d/1mvNxzHJzmHJsk9eYA6EwjpyY--XVas9U/view",
+    "citation": "Ptak and Kraft, Enhancing people localisation in drone imagery for better crowd management by utilising every pixel in high-resolution images, 2025"
+  },
+  "rights": {
+    "status": "verified",
+    "license_id": "CC-BY-NC-4.0",
+    "evidence_url": "https://up-count.github.io/#download",
+    "allowed_uses": ["noncommercial_research"],
+    "commercial_use": false,
+    "notes": "606 MB official sequence-sample pack. Integrity pilot only; not a full training benchmark and never a production-training asset."
+  },
+  "annotation": {
+    "format": "normalized-point-json-v1",
+    "point_semantics": "person_location",
+    "coordinate_system": "zero_based_xy"
+  },
+  "split": {
+    "unit": "sequence",
+    "group_key": "sequence_id",
+    "required_splits": ["train", "val", "test"]
+  },
+  "coverage": {
+    "required_condition_tags": ["altitude_band", "density_band"]
+  }
+}

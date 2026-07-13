@@ -40,12 +40,11 @@ hide a failed integrity or safety blocker.
 
 See `docs/ROADMAP.md` for the complete review sequence.
 
-## First experiment
+## Current experiment
 
-Open `notebooks/01_stage0_gate.ipynb` in Google Colab. It mounts Drive, checks
-out the private repository without putting a token in the clone URL, installs
-the project, runs the tests and writes the first scored report under
-`MyDrive/DroneAI/runs/stage-0/`.
+Stage 0 passed on Colab with a Tesla T4. Stage 1 now gates dataset rights,
+checksums, point annotations and split leakage before any model is trained.
+See `docs/STAGE_1.md` for the dataset decision and normalized inventory contract.
 
 The first model sequence is:
 
@@ -55,3 +54,8 @@ The first model sequence is:
 4. Drone-view fine-tuning and field evaluation
 
 TensorFlow/Keras ports are kept separate until the official PyTorch baselines are reproduced.
+
+Public datasets are research benchmarks, not automatic production-training
+assets. UP-COUNT is non-commercial, DroneCrowd currently lacks explicit license
+terms in its official repository, and production fine-tuning requires data with
+project-owned or separately granted rights.

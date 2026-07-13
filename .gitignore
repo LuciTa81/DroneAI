@@ -10,11 +10,12 @@ venv/
 .ipynb_checkpoints/
 
 # Local and Colab artifacts
-data/
-datasets/
-checkpoints/
-runs/
-artifacts/
+/data/
+/datasets/
+/checkpoints/
+/runs/
+/artifacts/
+work/
 *.pth
 *.pt
 *.ckpt
