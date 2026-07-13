@@ -1,0 +1,6 @@
+{
+  "drive_root": "/content/drive/MyDrive/DroneAI",
+  "datasets_dir": "/content/drive/MyDrive/DroneAI/datasets",
+  "checkpoints_dir": "/content/drive/MyDrive/DroneAI/checkpoints",
+  "runs_dir": "/content/drive/MyDrive/DroneAI/runs"
+}
