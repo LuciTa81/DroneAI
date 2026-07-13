@@ -65,7 +65,12 @@ Normalized annotations are deliberately simple:
 
 The original files remain untouched. A dataset-specific adapter creates the
 normalized annotations and inventory next to them so later model code does not
-silently reinterpret coordinates or counts.
+silently reinterpret coordinates or counts. UP-COUNT's official loader casts
+coordinates to integers and clips negative or edge-overflow values to the image
+bounds. The adapter reproduces that pinned behavior and records the number of
+corrected points in every annotation and inventory row; it never edits the raw
+label. The reference implementation is pinned to commit `a6d3664` in
+`src/datamodule/dataset/upcount_dataset.py`.
 
 ## Run command
 

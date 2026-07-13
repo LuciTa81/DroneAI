@@ -54,12 +54,13 @@ def _check_asset(
     return True, str(relative), observed_hash
 
 
-def _annotation_points(path: Path) -> list[list[float]]:
+def _annotation_points(path: Path) -> tuple[list[list[float]], int]:
     payload = _read_json(path)
     points = payload.get("points")
     if not isinstance(points, list):
         raise ValueError("annotation must contain a points list")
-    return points
+    normalization = payload.get("normalization") or {}
+    return points, int(normalization.get("corrected_count") or 0)
 
 
 def build_stage1_checks(
@@ -79,6 +80,7 @@ def build_stage1_checks(
     asset_failures: list[str] = []
     checksum_failures: list[str] = []
     point_failures: list[str] = []
+    normalization_corrections = 0
     image_hash_splits: dict[str, set[str]] = defaultdict(set)
     group_splits: dict[str, set[str]] = defaultdict(set)
     split_counts: dict[str, int] = defaultdict(int)
@@ -110,7 +112,10 @@ def build_stage1_checks(
             try:
                 width = int(row["width"])
                 height = int(row["height"])
-                points = _annotation_points(dataset_root / str(row["annotation_path"]))
+                points, corrected_count = _annotation_points(
+                    dataset_root / str(row["annotation_path"])
+                )
+                normalization_corrections += corrected_count
                 declared_count = int(row["point_count"])
                 if declared_count != len(points):
                     point_failures.append(f"{row.get('sample_id')}: count {declared_count}!={len(points)}")
@@ -171,7 +176,11 @@ def build_stage1_checks(
         CheckResult(
             "annotation.points", "annotation integrity", "Point counts match and coordinates stay in bounds", 10,
             points_ok, True, expected="count matches; 0 <= x < width; 0 <= y < height",
-            observed="all points valid" if points_ok else "; ".join(point_failures[:5]) or "files unavailable",
+            observed=(
+                f"all points valid; official-loader corrections={normalization_corrections}"
+                if points_ok
+                else "; ".join(point_failures[:5]) or "files unavailable"
+            ),
         ),
         CheckResult(
             "split.unit", "split integrity", "Split unit prevents adjacent-frame leakage", 5,

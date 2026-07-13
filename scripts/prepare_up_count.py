@@ -11,6 +11,7 @@ from PIL import Image
 from droneai.stage1 import sha256_file
 
 IMAGE_SUFFIXES = {".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff"}
+NORMALIZATION_POLICY = "up-count-official-loader-a6d3664"
 
 
 def _read_split_ids(split_dir: Path) -> dict[str, str]:
@@ -60,6 +61,22 @@ def _density_band(count: int) -> str:
     return "high"
 
 
+def _normalize_like_official_loader(
+    points: list[list[float]], width: int, height: int
+) -> tuple[list[list[int]], int]:
+    """Match the official loader: integer cast, then clip to image bounds."""
+
+    normalized: list[list[int]] = []
+    corrected = 0
+    for x, y in points:
+        nx = min(max(int(x), 0), width - 1)
+        ny = min(max(int(y), 0), height - 1)
+        normalized.append([nx, ny])
+        if nx != x or ny != y:
+            corrected += 1
+    return normalized, corrected
+
+
 def prepare_up_count(
     *,
     dataset_root: Path,
@@ -91,15 +108,29 @@ def prepare_up_count(
             raise FileNotFoundError(f"image missing for {label_path.stem}")
         matched_image_stems.add(label_path.stem)
 
-        points = _parse_points(label_path)
+        source_points = _parse_points(label_path)
         altitude = _altitude_from_stem(label_path.stem)
         with Image.open(image_path) as image:
             width, height = image.size
+        points, corrected_count = _normalize_like_official_loader(
+            source_points, width, height
+        )
 
         normalized_path = normalized_root / sequence_id / f"{label_path.stem}.json"
         normalized_path.parent.mkdir(parents=True, exist_ok=True)
         normalized_path.write_text(
-            json.dumps({"points": points}, ensure_ascii=False, separators=(",", ":")),
+            json.dumps(
+                {
+                    "points": points,
+                    "normalization": {
+                        "policy": NORMALIZATION_POLICY,
+                        "corrected_count": corrected_count,
+                        "source_label": label_path.as_posix(),
+                    },
+                },
+                ensure_ascii=False,
+                separators=(",", ":"),
+            ),
             encoding="utf-8",
         )
         rows.append(
@@ -114,6 +145,7 @@ def prepare_up_count(
                 "width": width,
                 "height": height,
                 "point_count": len(points),
+                "normalization_corrections": corrected_count,
                 "condition_tags": {
                     "altitude_band": _altitude_band(altitude),
                     "density_band": _density_band(len(points)),

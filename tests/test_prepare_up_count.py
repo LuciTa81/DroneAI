@@ -16,7 +16,9 @@ def test_prepare_up_count_builds_normalized_inventory(tmp_path: Path) -> None:
         split_dir.mkdir(parents=True, exist_ok=True)
         stem = f"{sequence}__0000__60.0"
         Image.new("RGB", (12, 10)).save(image_root / sequence / f"{stem}.jpg")
-        (label_root / sequence / f"{stem}.txt").write_text("1 2\n3.5 4.5\n", encoding="utf-8")
+        (label_root / sequence / f"{stem}.txt").write_text(
+            "1 2\n3.5 4.5\n12 10\n3 -4\n", encoding="utf-8"
+        )
         (split_dir / f"{split}.txt").write_text(f"{sequence}\n", encoding="utf-8")
 
     count = prepare_up_count(
@@ -28,7 +30,10 @@ def test_prepare_up_count_builds_normalized_inventory(tmp_path: Path) -> None:
     rows = [json.loads(line) for line in (tmp_path / "inventory.jsonl").read_text().splitlines()]
     assert count == 3
     assert {row["split"] for row in rows} == {"train", "val", "test"}
-    assert rows[0]["point_count"] == 2
+    assert rows[0]["point_count"] == 4
+    assert rows[0]["normalization_corrections"] == 3
+    normalized = json.loads((tmp_path / rows[0]["annotation_path"]).read_text())
+    assert normalized["points"] == [[1, 2], [3, 4], [11, 9], [3, 0]]
     assert rows[0]["condition_tags"] == {"altitude_band": "mid", "density_band": "low"}
 
 

@@ -21,7 +21,7 @@
   "annotation": {
     "format": "normalized-point-json-v1",
     "point_semantics": "person_location",
-    "coordinate_system": "zero_based_xy"
+    "coordinate_system": "official-loader-integer-clipped-zero-based-xy"
   },
   "split": {
     "unit": "sequence",
