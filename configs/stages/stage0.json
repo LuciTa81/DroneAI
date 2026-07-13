@@ -1,0 +1,15 @@
+{
+  "stage_id": "stage-0",
+  "name": "Experiment foundation readiness",
+  "threshold": 85,
+  "decision_rule": "Score must reach 85 and every blocker must pass.",
+  "seeds": [17, 42, 2026],
+  "blockers": [
+    "runtime.cuda",
+    "runtime.cuda_smoke",
+    "storage.writable",
+    "storage.environment_report",
+    "repro.git_commit",
+    "automation.tests"
+  ]
+}

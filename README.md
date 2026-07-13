@@ -23,9 +23,29 @@ MyDrive/DroneAI/
 └── runs/
 ```
 
+## Stage gates
+
+Every stage produces both `score.json` and `score.md`. A high average cannot
+hide a failed integrity or safety blocker.
+
+| Stage | Question | Gate |
+|---|---|---:|
+| 0 | Can Colab, Git and Drive produce a reproducible run? | 85 |
+| 1 | Is the selected dataset legal, intact and leakage-free? | 85 |
+| 2 | Does the CSRNet smoke pipeline preserve counts and learn a tiny subset? | 80 |
+| 3 | Does each official model reproduce its published result? | 85 |
+| 4 | Does the model generalize to drone and held-out camera conditions? | 80 |
+| 5 | Does it pass a controlled field trial? | 85 |
+| 6 | Does it help operators in shadow mode? | 85 |
+
+See `docs/ROADMAP.md` for the complete review sequence.
+
 ## First experiment
 
-Open `notebooks/00_runtime_probe.ipynb` in Google Colab. It mounts Drive, creates the storage folders, records the runtime environment, and writes a JSON report under `MyDrive/DroneAI/runs/runtime-probe/`.
+Open `notebooks/01_stage0_gate.ipynb` in Google Colab. It mounts Drive, checks
+out the private repository without putting a token in the clone URL, installs
+the project, runs the tests and writes the first scored report under
+`MyDrive/DroneAI/runs/stage-0/`.
 
 The first model sequence is:
 
@@ -35,4 +55,3 @@ The first model sequence is:
 4. Drone-view fine-tuning and field evaluation
 
 TensorFlow/Keras ports are kept separate until the official PyTorch baselines are reproduced.
-
