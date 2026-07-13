@@ -42,9 +42,10 @@ See `docs/ROADMAP.md` for the complete review sequence.
 
 ## Current experiment
 
-Stages 0 and 1 passed on Colab. Stage 2 now validates CSRNet pipeline
-correctness, count-preserving density maps and tiny-set learning before any
-paper benchmark is attempted. See `docs/STAGE_2.md` for the scored contract.
+Stages 0, 1 and 2 passed on Colab. Stage 3 now reproduces the official
+DM-Count implementation on ShanghaiTech Part A in two lanes: a faithful
+paper-number check and a test-isolated clean protocol. See `docs/STAGE_3.md`
+for the scored contract.
 
 The first model sequence is:
 

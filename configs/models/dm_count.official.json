@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "model_id": "dm-count-official",
+  "paper": {
+    "title": "Distribution Matching for Crowd Counting",
+    "venue": "NeurIPS 2020",
+    "url": "https://proceedings.neurips.cc/paper/2020/file/118bd558033a1016fcc82560c65cca5f-Paper.pdf"
+  },
+  "repository": {
+    "url": "https://github.com/cvlab-stonybrook/DM-Count",
+    "commit": "cc5f2132e0d1328909f31b6d665b8e0b15c30467",
+    "license": "MIT"
+  },
+  "implementation": {
+    "framework": "PyTorch",
+    "reported_requirement": "torch>=1.2",
+    "backbone": "VGG-19",
+    "loss_terms": ["counting", "optimal_transport", "total_variation"]
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "stage_id": "stage-3",
+  "threshold": 85,
+  "model_id": "dm-count-official",
+  "dataset": {
+    "id": "shanghaitech-part-a",
+    "source": "https://www.kaggle.com/datasets/tthien/shanghaitech",
+    "archive_bytes": 174176615,
+    "license_status": "unknown",
+    "allowed_scope": "private research reproduction only",
+    "commercial_use": false,
+    "expected_train_images": 300,
+    "expected_test_images": 182
+  },
+  "paper_target": {
+    "mae": 59.7,
+    "rmse": 95.7,
+    "maximum_relative_gap": 0.05
+  },
+  "official_protocol": {
+    "crop_size": 256,
+    "batch_size": 10,
+    "learning_rate": 0.00001,
+    "weight_decay": 0.0001,
+    "max_epoch": 1000,
+    "validation_note": "Upstream uses test_data for checkpoint selection; reproduce only in the faithful lane and label it as test-selected."
+  },
+  "clean_protocol": {
+    "train_validation_split": "deterministic hash split frozen before test evaluation",
+    "test_policy": "one final evaluation per seed",
+    "seeds": [2026, 2027, 2028]
+  }
+}
