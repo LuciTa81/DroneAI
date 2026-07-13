@@ -1,0 +1,27 @@
+{
+  "stage_id": "stage-2",
+  "name": "CSRNet pipeline smoke",
+  "threshold": 80,
+  "seed": 2026,
+  "steps": 200,
+  "learning_rate": 0.0001,
+  "input_shape": [4, 3, 64, 64],
+  "expected_output_shape": [4, 1, 8, 8],
+  "score_groups": {
+    "pipeline_correctness": 30,
+    "count_preservation": 25,
+    "tiny_set_overfit": 20,
+    "determinism": 10,
+    "artifacts": 15
+  },
+  "blockers": [
+    "pipeline.architecture",
+    "pipeline.shape",
+    "pipeline.finite",
+    "count.point_density",
+    "count.downsample",
+    "determinism.initialization",
+    "artifacts.config",
+    "artifacts.metrics"
+  ]
+}

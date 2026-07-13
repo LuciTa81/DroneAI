@@ -42,9 +42,9 @@ See `docs/ROADMAP.md` for the complete review sequence.
 
 ## Current experiment
 
-Stage 0 passed on Colab with a Tesla T4. Stage 1 now gates dataset rights,
-checksums, point annotations and split leakage before any model is trained.
-See `docs/STAGE_1.md` for the dataset decision and normalized inventory contract.
+Stages 0 and 1 passed on Colab. Stage 2 now validates CSRNet pipeline
+correctness, count-preserving density maps and tiny-set learning before any
+paper benchmark is attempted. See `docs/STAGE_2.md` for the scored contract.
 
 The first model sequence is:
 

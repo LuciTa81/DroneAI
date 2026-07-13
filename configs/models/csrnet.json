@@ -1,0 +1,15 @@
+{
+  "model_id": "csrnet-paper-compatible-v1",
+  "paper": "CSRNet: Dilated Convolutional Neural Networks for Understanding the Highly Congested Scenes",
+  "paper_url": "https://openaccess.thecvf.com/content_cvpr_2018/papers/Li_CSRNet_Dilated_Convolutional_CVPR_2018_paper.pdf",
+  "reference_repository": "https://github.com/leeyeehoo/CSRNet-pytorch",
+  "reference_model_sha": "9fafc5624fc323aa3a081659ac8517af6b83c48f",
+  "reference_license_status": "no_explicit_license_file_found",
+  "implementation_policy": "independent implementation from the published architecture; no reference weights or source files vendored",
+  "framework": "pytorch",
+  "frontend": "VGG-16 convolutional layers through conv4_3 with three max-pools",
+  "backend_channels": [512, 512, 512, 256, 128, 64],
+  "backend_dilation": 2,
+  "output_channels": 1,
+  "output_stride": 8
+}
