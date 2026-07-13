@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Local and Colab artifacts
+data/
+datasets/
+checkpoints/
+runs/
+artifacts/
+*.pth
+*.pt
+*.ckpt
+*.onnx
+*.engine
+
+# Secrets and environment
+.env
+.env.*
+!.env.example
+*token*
+credentials*.json
+
+# IDE and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
