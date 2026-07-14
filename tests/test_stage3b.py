@@ -1,9 +1,15 @@
+import hashlib
 from pathlib import Path
 
 import pytest
 
 from droneai.scoring import score_stage
-from droneai.stage3b import build_clean_split, build_stage3b_checks, write_split_manifest
+from droneai.stage3b import (
+    build_clean_split,
+    build_stage3b_checks,
+    run_stage3b_gate,
+    write_split_manifest,
+)
 from scripts.run_stage3b_clean_smoke import build_parser
 
 
@@ -59,12 +65,18 @@ def _passing_evidence() -> dict:
         "traceability": {
             "upstream_commit": "cc5f2132e0d1328909f31b6d665b8e0b15c30467",
             "gpu": "Tesla T4",
+            "checkpoint": "checkpoint/model.tar",
             "checkpoint_sha256": "b" * 64,
+            "best_model": "best/model.pth",
+            "best_model_sha256": "c" * 64,
             "config_snapshot": "clean_config.json",
+            "config_snapshot_sha256": "d" * 64,
         },
         "artifacts": {
             "manifest_csv": "split_manifest.csv",
+            "manifest_sha256": "e" * 64,
             "split_json": "split_manifest.json",
+            "split_sha256": "f" * 64,
             "evidence_json": "evidence.snapshot.json",
             "score_json": "score.json",
             "score_md": "score.md",
@@ -132,3 +144,61 @@ def test_stage3b_gate_blocks_split_overlap() -> None:
     )
     assert report.status == "BLOCKED"
     assert "split.counts" in report.to_dict()["failed_blockers"]
+
+
+def test_stage3b_blocks_non_hex_hashes() -> None:
+    evidence = _passing_evidence()
+    evidence["split"]["split_hash"] = "z" * 64
+    evidence["split"]["repeat_hash"] = "z" * 64
+    evidence["traceability"]["checkpoint_sha256"] = "y" * 64
+    report = score_stage(
+        stage_id="stage-3b",
+        stage_name="clean smoke",
+        threshold=90,
+        checks=build_stage3b_checks(evidence),
+    )
+    assert report.status == "BLOCKED"
+    assert {"split.reproducibility", "traceability.bundle"}.issubset(
+        report.to_dict()["failed_blockers"]
+    )
+
+
+def test_stage3b_missing_traceability_or_review_bundle_is_a_blocker() -> None:
+    for missing_key in ("traceability", "artifacts"):
+        evidence = _passing_evidence()
+        evidence[missing_key] = {}
+        report = score_stage(
+            stage_id="stage-3b",
+            stage_name="clean smoke",
+            threshold=90,
+            checks=build_stage3b_checks(evidence),
+        )
+        assert report.status == "BLOCKED"
+
+
+def _materialize_stage3b_artifacts(evidence: dict, root: Path) -> None:
+    pairs = (
+        ("traceability", "checkpoint", "checkpoint_sha256"),
+        ("traceability", "best_model", "best_model_sha256"),
+        ("traceability", "config_snapshot", "config_snapshot_sha256"),
+        ("artifacts", "manifest_csv", "manifest_sha256"),
+        ("artifacts", "split_json", "split_sha256"),
+    )
+    for section, path_key, hash_key in pairs:
+        path = root / evidence[section][path_key]
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(f"{section}:{path_key}", encoding="utf-8")
+        evidence[section][hash_key] = hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def test_stage3b_runner_recalculates_hashes_and_is_research_only(tmp_path: Path) -> None:
+    evidence = _passing_evidence()
+    output_dir = tmp_path / "run"
+    _materialize_stage3b_artifacts(evidence, output_dir)
+    report = run_stage3b_gate(evidence=evidence, output_dir=output_dir)
+    assert report.status == "PASS_RESEARCH_ONLY"
+
+    evidence["traceability"]["checkpoint_sha256"] = "0" * 64
+    blocked = run_stage3b_gate(evidence=evidence, output_dir=output_dir)
+    assert blocked.status == "BLOCKED"
+    assert "traceability.bundle" in blocked.to_dict()["failed_blockers"]

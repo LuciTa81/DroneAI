@@ -17,7 +17,7 @@ def main() -> None:
         output_dir=args.output_dir,
     )
     print(report.to_markdown())
-    if report.status != "PASS":
+    if not report.is_success:
         raise SystemExit(2)
 
 

@@ -1,5 +1,9 @@
+import hashlib
+import json
+from pathlib import Path
+
 from droneai.scoring import score_stage
-from droneai.stage3 import build_stage3_checks
+from droneai.stage3 import build_stage3_checks, run_stage3_gate
 
 
 def _passing_evidence() -> dict:
@@ -25,10 +29,10 @@ def _passing_evidence() -> dict:
             "split_frozen_before_test": True,
         },
         "artifacts": {
-            "config_snapshot": "config.json",
-            "predictions": "predictions.jsonl",
-            "checkpoint_hashes": "checkpoints.json",
-            "environment": "environment.json",
+            "config_snapshot": {"path": "config.json", "sha256": "c" * 64},
+            "predictions": {"path": "predictions.jsonl", "sha256": "c" * 64},
+            "checkpoint_hashes": {"path": "checkpoints.json", "sha256": "c" * 64},
+            "environment": {"path": "environment.json", "sha256": "c" * 64},
         },
         "runtime": {"gpu": "Tesla T4", "median_seconds_per_image": 0.12},
     }
@@ -68,3 +72,44 @@ def test_stage3_blocks_paper_gap() -> None:
     )
     assert report.status == "BLOCKED"
     assert "reproduction.paper_gap" in report.to_dict()["failed_blockers"]
+
+
+def test_stage3_blocks_short_or_non_hex_split_hash() -> None:
+    for invalid_hash in ("x", "z" * 64):
+        evidence = _passing_evidence()
+        evidence["dataset"]["split_hash"] = invalid_hash
+        report = score_stage(
+            stage_id="stage-3",
+            stage_name="DM-Count official reproduction",
+            threshold=85,
+            checks=build_stage3_checks(evidence),
+        )
+        assert report.status == "BLOCKED"
+        assert "dataset.contract" in report.to_dict()["failed_blockers"]
+
+
+def test_stage3_run_recalculates_artifact_hashes_and_is_research_only(tmp_path: Path) -> None:
+    evidence = _passing_evidence()
+    for key, filename in {
+        "config_snapshot": "config.json",
+        "predictions": "predictions.jsonl",
+        "checkpoint_hashes": "checkpoints.json",
+        "environment": "environment.json",
+    }.items():
+        path = tmp_path / filename
+        path.write_text(key, encoding="utf-8")
+        evidence["artifacts"][key] = {
+            "path": filename,
+            "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+        }
+    evidence_path = tmp_path / "evidence.json"
+    evidence_path.write_text(json.dumps(evidence), encoding="utf-8")
+
+    report = run_stage3_gate(evidence_path=evidence_path, output_dir=tmp_path / "run")
+    assert report.status == "PASS_RESEARCH_ONLY"
+
+    evidence["artifacts"]["environment"]["sha256"] = "0" * 64
+    evidence_path.write_text(json.dumps(evidence), encoding="utf-8")
+    blocked = run_stage3_gate(evidence_path=evidence_path, output_dir=tmp_path / "bad-run")
+    assert blocked.status == "BLOCKED"
+    assert "artifacts.bundle" in blocked.to_dict()["failed_blockers"]

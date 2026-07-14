@@ -15,7 +15,9 @@
     "license_id": "OWNED-DATA-PENDING-APPROVAL",
     "evidence_url": "REPLACE_WITH_APPROVAL_RECORD",
     "allowed_uses": [],
-    "commercial_use": false,
+    "commercial_use": null,
+    "research_use": null,
+    "restriction_basis": "pending_review",
     "notes": "Complete collection authority, privacy basis, retention, access, de-identification and model-training permission before changing status to verified."
   },
   "annotation": {

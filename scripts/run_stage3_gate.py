@@ -15,7 +15,7 @@ def main() -> None:
     args = parser.parse_args()
     report = run_stage3_gate(evidence_path=args.evidence, output_dir=args.output_dir)
     print(report.to_markdown())
-    raise SystemExit(0 if report.status == "PASS" else 1)
+    raise SystemExit(0 if report.is_success else 1)
 
 
 if __name__ == "__main__":

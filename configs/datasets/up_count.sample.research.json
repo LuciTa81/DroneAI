@@ -16,6 +16,8 @@
     "evidence_url": "https://up-count.github.io/#download",
     "allowed_uses": ["noncommercial_research"],
     "commercial_use": false,
+    "research_use": true,
+    "restriction_basis": "explicit_terms",
     "notes": "606 MB official sequence-sample pack. Integrity pilot only; not a full training benchmark and never a production-training asset."
   },
   "annotation": {

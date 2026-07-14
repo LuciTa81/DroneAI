@@ -13,7 +13,7 @@ rights.
 |---|---|---|---|
 | UP-COUNT samples | Stage 1 integrity pilot across the official sequences | CC BY-NC 4.0; commercial use is not allowed without separate permission | Import 606 MB pack to Drive and run gate |
 | UP-COUNT full | Primary modern UAV research benchmark | Same non-commercial restriction; image ZIP is 28.4 GB | Defer until capacity review |
-| DroneCrowd | Desirable true-drone video benchmark | Official repository has no `LICENSE`; README only states citation | Block download/use until written terms are confirmed |
+| DroneCrowd | Desirable true-drone video benchmark | Official repository has no `LICENSE`; README only states citation | Keep as a due-diligence candidate; block download/use until terms are confirmed |
 | DLR-ACD | Optional extreme-density stress evaluation | CC BY-NC-ND 3.0; non-commercial and no-derivatives restrictions | Keep out of production training |
 | Owned festival data | Production fine-tuning and sealed field evaluation | Must be documented by the project | Required before production claim |
 
@@ -77,9 +77,12 @@ label. The reference implementation is pinned to commit `a6d3664` in
 ```bash
 python scripts/run_stage1.py \
   --manifest configs/datasets/up_count.sample.research.json \
-  --dataset-root /content/drive/MyDrive/DroneAI/datasets/up-count-sequence-samples-v1 \
-  --output-dir /content/drive/MyDrive/DroneAI/runs/stage-1
+  --dataset-root /workspace/data/datasets/up-count-sequence-samples-v1 \
+  --output-dir /workspace/data/results/stage-1
 ```
+
+The historical Colab lane may use its recorded `/content/drive/MyDrive/DroneAI`
+paths; new runs default to the home5090 profile above.
 
 Until the dataset is downloaded and the adapter writes a non-empty inventory,
 the command is expected to return exit code 2 and `BLOCKED`. That is intentional:

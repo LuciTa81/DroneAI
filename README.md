@@ -48,6 +48,7 @@ hide a failed integrity or safety blocker.
 | 1 | Is the selected dataset legal, intact and leakage-free? | 85 |
 | 2 | Does the CSRNet smoke pipeline preserve counts and learn a tiny subset? | 80 |
 | 3 | Does each official model reproduce its published result? | 85 |
+| 3C | Are code, dataset, pretrained weight, derived weight and deployment rights safe for the requested scope? | 80 |
 | 4 | Does the model generalize to drone and held-out camera conditions? | 80 |
 | 5 | Does it pass a controlled field trial? | 85 |
 | 6 | Does it help operators in shadow mode? | 85 |
@@ -85,6 +86,18 @@ assets. A home5090 foundation smoke is always `research_only` and never grants
 commercial or production approval.
 
 Public datasets are research benchmarks, not automatic production-training
-assets. UP-COUNT is non-commercial, DroneCrowd currently lacks explicit license
-terms in its official repository, and production fine-tuning requires data with
-project-owned or separately granted rights.
+assets. Rights-sensitive gates never emit an unscoped `PASS`:
+
+- `PASS_RESEARCH_ONLY`: the declared research lane is permitted, not commercial use;
+- `PASS_COMMERCIAL_CANDIDATE`: no explicit prohibition is recorded but required permission is absent or unverified;
+- `PRODUCTION_APPROVED`: every required code/data/weight/deployment component has verified commercial evidence;
+- `BLOCKED`: an explicit prohibition, contradiction, missing identity, or integrity blocker exists.
+
+Candidate status permits cataloging and rights due diligence. A synthetic-only
+compatibility smoke is added only when the code component itself is already
+verified for that action; it never opens ambiguous data or weights. Candidate
+status does not permit ambiguous asset download, training,
+weight reuse, or deployment. UP-COUNT is non-commercial; DroneCrowd currently
+lacks explicit license terms in its official repository and remains candidate
+inventory only. Production fine-tuning requires project-owned or separately
+granted rights. This harness is an engineering control, not legal advice.

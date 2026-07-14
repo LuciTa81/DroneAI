@@ -9,6 +9,7 @@ import math
 from pathlib import Path
 from typing import Any
 
+from droneai.integrity import is_sha256, verify_artifact_reference
 from droneai.scoring import CheckResult, StageReport, score_stage
 
 PINNED_COMMIT = "cc5f2132e0d1328909f31b6d665b8e0b15c30467"
@@ -106,7 +107,9 @@ def _finite(value: Any) -> bool:
         return False
 
 
-def build_stage3b_checks(evidence: dict[str, Any]) -> list[CheckResult]:
+def build_stage3b_checks(
+    evidence: dict[str, Any], *, artifact_root: str | Path | None = None
+) -> list[CheckResult]:
     split = evidence.get("split") or {}
     isolation = evidence.get("test_isolation") or {}
     smoke = evidence.get("smoke") or {}
@@ -121,8 +124,7 @@ def build_stage3b_checks(evidence: dict[str, Any]) -> list[CheckResult]:
     } and int(split.get("overlap", -1)) == 0
     reproducible_ok = (
         split.get("seed") == SPLIT_SEED
-        and isinstance(split.get("split_hash"), str)
-        and len(split["split_hash"]) == 64
+        and is_sha256(split.get("split_hash"))
         and split.get("repeat_hash") == split.get("split_hash")
     )
     isolation_ok = (
@@ -139,25 +141,58 @@ def build_stage3b_checks(evidence: dict[str, Any]) -> list[CheckResult]:
         and _finite(smoke.get("validation_mae"))
         and _finite(smoke.get("validation_rmse"))
     )
-    traceability_ok = (
+    traceability_schema_ok = (
         traceability.get("upstream_commit") == PINNED_COMMIT
         and bool(traceability.get("gpu"))
-        and isinstance(traceability.get("checkpoint_sha256"), str)
-        and len(traceability["checkpoint_sha256"]) == 64
+        and is_sha256(traceability.get("checkpoint_sha256"))
+        and is_sha256(traceability.get("best_model_sha256"))
+        and is_sha256(traceability.get("config_snapshot_sha256"))
+        and bool(traceability.get("checkpoint"))
+        and bool(traceability.get("best_model"))
         and bool(traceability.get("config_snapshot"))
     )
-    artifacts_ok = all(
-        artifacts.get(key)
-        for key in ("manifest_csv", "split_json", "evidence_json", "score_json", "score_md")
+    traceability_results = {
+        name: verify_artifact_reference(
+            {"path": traceability.get(path_key), "sha256": traceability.get(hash_key)},
+            base_dir=artifact_root,
+        )
+        for name, path_key, hash_key in (
+            ("checkpoint", "checkpoint", "checkpoint_sha256"),
+            ("best_model", "best_model", "best_model_sha256"),
+            ("config_snapshot", "config_snapshot", "config_snapshot_sha256"),
+        )
+    }
+    traceability_ok = traceability_schema_ok and all(
+        result[0] for result in traceability_results.values()
     )
+    review_results = {
+        name: verify_artifact_reference(
+            {"path": artifacts.get(path_key), "sha256": artifacts.get(hash_key)},
+            base_dir=artifact_root,
+        )
+        for name, path_key, hash_key in (
+            ("manifest_csv", "manifest_csv", "manifest_sha256"),
+            ("split_json", "split_json", "split_sha256"),
+        )
+    }
+    output_references_ok = all(
+        artifacts.get(key) for key in ("evidence_json", "score_json", "score_md")
+    )
+    artifacts_ok = output_references_ok and all(result[0] for result in review_results.values())
+    traceability_observed = "; ".join(
+        f"{key}={result[1]}" for key, result in traceability_results.items()
+    )
+    review_observed = "; ".join(
+        f"{key}={result[1]}" for key, result in review_results.items()
+    ) + f"; output_references={output_references_ok}"
 
     return [
         CheckResult("split.counts", "split integrity", "Frozen split contains 240 train and 60 validation images without overlap", 25, count_ok, True, expected="240/60 from 300; overlap=0", observed=str({**counts, "overlap": split.get("overlap")})),
         CheckResult("split.reproducibility", "reproducibility", "The split is deterministic for seed 2026", 20, reproducible_ok, True, expected="matching 64-character split hashes", observed=f"seed={split.get('seed')}; hash={split.get('split_hash')}; repeat={split.get('repeat_hash')}"),
         CheckResult("evaluation.test_isolation", "test isolation", "Validation uses only the training partition and never evaluates test_data", 20, isolation_ok, True, expected="training_partition_only; zero test paths/evaluations", observed=str(isolation)),
         CheckResult("smoke.training", "training smoke", "At least one clean epoch, validation pass, checkpoint and best model complete", 15, smoke_ok, True, expected="epoch>=1; validation=60; finite metrics and artifacts", observed=str(smoke)),
-        CheckResult("traceability.bundle", "traceability", "Pinned code, GPU, config and checkpoint hash are recorded", 10, traceability_ok, expected=PINNED_COMMIT, observed=str(traceability)),
-        CheckResult("review.bundle", "review", "Manifest, split, evidence and score references are persisted", 10, artifacts_ok, expected="five review artifact references", observed=str(artifacts)),
+        CheckResult("traceability.bundle", "traceability", "Pinned code, GPU, config and model hashes are recalculated", 10, traceability_ok, True, expected=PINNED_COMMIT, observed=traceability_observed),
+        CheckResult("review.bundle", "review", "Split artifacts are hash-verified and output references are persisted", 10, artifacts_ok, True, expected="verified manifest/split plus three output references", observed=review_observed),
     ]
 
 
@@ -168,7 +203,8 @@ def run_stage3b_gate(*, evidence: dict[str, Any], output_dir: str | Path) -> Sta
         stage_id="stage-3b",
         stage_name="DM-Count clean-protocol smoke",
         threshold=90,
-        checks=build_stage3b_checks(evidence),
+        checks=build_stage3b_checks(evidence, artifact_root=output_dir),
+        success_status="PASS_RESEARCH_ONLY",
     )
     (output_dir / "evidence.snapshot.json").write_text(
         json.dumps(evidence, indent=2, ensure_ascii=False), encoding="utf-8"

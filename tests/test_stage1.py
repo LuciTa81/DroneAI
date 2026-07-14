@@ -42,6 +42,8 @@ def _fixture(tmp_path: Path) -> tuple[dict, list[dict]]:
             "status": "verified",
             "evidence_url": "https://example.test/license",
             "allowed_uses": ["noncommercial_research"],
+            "commercial_use": False,
+            "restriction_basis": "explicit_terms",
         },
         "annotation": {
             "format": "normalized-point-json-v1",
@@ -109,7 +111,49 @@ def test_run_stage1_persists_review_artifacts(tmp_path: Path) -> None:
     report = run_stage1(
         manifest_path=manifest_path, dataset_root=tmp_path, output_dir=output_dir
     )
-    assert report.status == "PASS"
+    assert report.status == "PASS_RESEARCH_ONLY"
     assert (output_dir / "score.json").is_file()
     assert (output_dir / "score.md").is_file()
     assert (output_dir / "manifest.snapshot.json").is_file()
+
+
+def test_stage1_blocks_commercial_claim_when_commercial_use_is_false(tmp_path: Path) -> None:
+    manifest, rows = _fixture(tmp_path)
+    manifest["intended_use"] = "commercial_product_rnd"
+    manifest["rights"]["allowed_uses"] = ["commercial_product_rnd"]
+    checks = build_stage1_checks(manifest=manifest, inventory=rows, dataset_root=tmp_path)
+    report = score_stage(
+        stage_id="stage-1",
+        stage_name="Dataset readiness and split integrity",
+        threshold=85,
+        checks=checks,
+    )
+    assert report.status == "BLOCKED"
+    assert "access.intended_use" in report.to_dict()["failed_blockers"]
+
+
+def test_stage1_commercial_claim_requires_explicit_verified_terms(tmp_path: Path) -> None:
+    manifest, rows = _fixture(tmp_path)
+    manifest["intended_use"] = "commercial_product_rnd"
+    manifest["rights"].update(
+        {
+            "allowed_uses": ["commercial_product_rnd"],
+            "commercial_use": True,
+            "restriction_basis": "not_stated",
+        }
+    )
+    report = score_stage(
+        stage_id="stage-1",
+        stage_name="Dataset readiness and split integrity",
+        threshold=85,
+        checks=build_stage1_checks(manifest=manifest, inventory=rows, dataset_root=tmp_path),
+    )
+    assert report.status == "BLOCKED"
+
+    manifest["rights"].update(
+        {"license_id": "COMMERCIAL-TERMS", "restriction_basis": "explicit_terms"}
+    )
+    approved_checks = build_stage1_checks(
+        manifest=manifest, inventory=rows, dataset_root=tmp_path
+    )
+    assert next(c for c in approved_checks if c.check_id == "access.intended_use").passed

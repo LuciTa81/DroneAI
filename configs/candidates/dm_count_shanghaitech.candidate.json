@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "candidate_id": "dm-count-shanghaitech-part-a-current-evidence",
+  "intended_use": "commercial_product_rnd",
+  "components": [
+    {
+      "component_type": "code",
+      "component_id": "dm-count-official-cc5f2132",
+      "source_url": "https://github.com/cvlab-stonybrook/DM-Count/tree/cc5f2132e0d1328909f31b6d665b8e0b15c30467",
+      "rights": {
+        "status": "verified",
+        "license_id": "MIT",
+        "evidence_url": "https://github.com/cvlab-stonybrook/DM-Count/blob/cc5f2132e0d1328909f31b6d665b8e0b15c30467/LICENSE",
+        "commercial_use": true,
+        "research_use": true,
+        "basis": "explicit_terms"
+      }
+    },
+    {
+      "component_type": "dataset",
+      "component_id": "shanghaitech-part-a-current-copy",
+      "source_url": "https://www.kaggle.com/datasets/tthien/shanghaitech",
+      "rights": {
+        "status": "unverified",
+        "license_id": null,
+        "evidence_url": null,
+        "commercial_use": null,
+        "research_use": null,
+        "basis": "not_stated",
+        "notes": "No commercial or research grant is established by the current evidence. Historical reproduction provenance is retained; this record authorizes no new asset use."
+      }
+    },
+    {
+      "component_type": "pretrained_weights",
+      "component_id": "dm-count-upstream-shanghaitech-checkpoint",
+      "source_url": "https://github.com/cvlab-stonybrook/DM-Count",
+      "rights": {
+        "status": "unverified",
+        "license_id": null,
+        "evidence_url": null,
+        "commercial_use": null,
+        "research_use": null,
+        "basis": "not_stated",
+        "notes": "The code license is not assumed to grant separate checkpoint or training-data rights."
+      }
+    },
+    {
+      "component_type": "derived_weights",
+      "component_id": "droneai-derived-weights-policy-pending",
+      "source_url": "project://DroneAI/derived-weights-policy",
+      "rights": {
+        "status": "pending",
+        "license_id": null,
+        "evidence_url": null,
+        "commercial_use": null,
+        "research_use": null,
+        "basis": "pending_review",
+        "notes": "Approval depends on the complete code, dataset, and pretrained-weight rights chain."
+      }
+    },
+    {
+      "component_type": "deployment",
+      "component_id": "droneai-festival-deployment-approval-pending",
+      "source_url": "project://DroneAI/deployment-approval",
+      "rights": {
+        "status": "pending",
+        "license_id": null,
+        "evidence_url": null,
+        "commercial_use": null,
+        "research_use": null,
+        "basis": "pending_review",
+        "notes": "Product approval also requires project collection, privacy, retention, and deployment records."
+      }
+    }
+  ]
+}

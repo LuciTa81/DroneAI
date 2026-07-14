@@ -16,6 +16,8 @@
     "evidence_url": "https://up-count.github.io/#download",
     "allowed_uses": ["noncommercial_research"],
     "commercial_use": false,
+    "research_use": true,
+    "restriction_basis": "explicit_terms",
     "notes": "Commercial use requires separate permission from the authors. Do not train production weights under this manifest."
   },
   "annotation": {

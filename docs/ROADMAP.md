@@ -19,6 +19,7 @@ set is opened.
 | 1. Data | License/access 20, annotation integrity 25, split integrity 25, condition coverage 20, manifest 10 | 85 | Usage rights, corrupt files, train/test leakage |
 | 2. CSRNet smoke | Pipeline correctness 30, count preservation 25, tiny-set overfit 20, determinism 10, artifacts 15 | 80 | Density sum preservation, valid evaluation |
 | 3. Official reproduction | Paper gap 35, seed stability 15, evaluation integrity 20, traceability 15, runtime 15 | 85 | Test leakage, wrong split/metric; median paper gap must be within 5% |
+| 3C. Rights scope | Identity 10, component completeness 15, metadata 20, provenance 15, scope coherence 20, commercial evidence 20 | 80 | Explicit prohibition, contradiction, missing component/provenance |
 | 4. Drone generalization | Count error 25, high-density undercount 25, domain drop 20, condition robustness 20, latency 10 | 80 | High-density undercount target, sealed test integrity |
 | 5. Controlled field | Count 20, area calibration 20, alert recall 25, latency 15, failure signaling 10, operator review 10 | 85 | Missed critical event, failure reported as zero people |
 | 6. Shadow mode | Event recall 25, false alarms 15, lead time 20, uptime/recovery 15, operator acceptance 15, audit completeness 10 | 85 | Critical-event recall and audit log completeness |
@@ -27,10 +28,14 @@ set is opened.
 
 1. Stage 0 uses no training dataset. It only verifies the experiment foundation.
 2. Stage 1 uses UP-COUNT as the first non-commercial UAV research benchmark.
-   DroneCrowd remains blocked until explicit dataset terms are obtained. Public
-   datasets never become production-training assets merely because they can be downloaded.
+   DroneCrowd remains a commercial candidate for due diligence because the
+   current evidence does not state terms; this is not permission to download or
+   use it. Public datasets never become production-training assets merely because
+   they can be downloaded.
 3. Stage 2 uses CSRNet only as a pipeline smoke baseline.
 4. Stage 3 reproduces DM-Count first, then P2PNet. MPCount is evaluated after the basic reproductions are stable.
+   Stage 3C separately evaluates code, dataset, pretrained weights, derived
+   weights and deployment rights before any product-lane action.
 5. Stage 4 starts with UP-COUNT for true-UAV generalization. DroneCrowd can be
    added after rights verification, DLR-ACD is an optional non-commercial
    extreme-density stress set, and MovingDroneCrowd is reserved for the later

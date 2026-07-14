@@ -8,6 +8,7 @@ import statistics
 from pathlib import Path
 from typing import Any
 
+from droneai.integrity import is_sha256, verify_artifact_reference
 from droneai.scoring import CheckResult, StageReport, score_stage
 
 PINNED_COMMIT = "cc5f2132e0d1328909f31b6d665b8e0b15c30467"
@@ -29,7 +30,9 @@ def _relative_gap(observed: float, target: float) -> float:
     return abs(observed - target) / target
 
 
-def build_stage3_checks(evidence: dict[str, Any]) -> list[CheckResult]:
+def build_stage3_checks(
+    evidence: dict[str, Any], *, artifact_root: str | Path | None = None
+) -> list[CheckResult]:
     """Build the fixed 100-point gate from persisted Stage 3 evidence."""
 
     upstream = evidence.get("upstream") or {}
@@ -64,7 +67,7 @@ def build_stage3_checks(evidence: dict[str, Any]) -> list[CheckResult]:
         dataset.get("id") == "shanghaitech-part-a"
         and int(dataset.get("train_images", -1)) == EXPECTED_TRAIN
         and int(dataset.get("test_images", -1)) == EXPECTED_TEST
-        and bool(dataset.get("split_hash"))
+        and is_sha256(dataset.get("split_hash"))
     )
     rights_ok = (
         dataset.get("license_status") == "verified"
@@ -78,9 +81,13 @@ def build_stage3_checks(evidence: dict[str, Any]) -> list[CheckResult]:
         and set(clean.get("seeds") or []) == EXPECTED_SEEDS
         and bool(clean.get("split_frozen_before_test"))
     )
-    artifacts_ok = all(
-        artifacts.get(key)
+    artifact_results = {
+        key: verify_artifact_reference(artifacts.get(key), base_dir=artifact_root)
         for key in ("config_snapshot", "predictions", "checkpoint_hashes", "environment")
+    }
+    artifacts_ok = all(result[0] for result in artifact_results.values())
+    artifact_observed = "; ".join(
+        f"{key}={result[1]}" for key, result in artifact_results.items()
     )
     runtime_ok = (
         bool(runtime.get("gpu"))
@@ -98,7 +105,7 @@ def build_stage3_checks(evidence: dict[str, Any]) -> list[CheckResult]:
         CheckResult("reproduction.seeds", "seed stability", "All three frozen seeds completed", 10, seeds_ok, True, expected=str(sorted(EXPECTED_SEEDS)), observed=str(sorted(faithful_seeds))),
         CheckResult("reproduction.stability", "seed stability", "MAE coefficient of variation is at most 10%", 10, stability <= 0.10, expected="<=10%", observed=f"{stability:.3%}"),
         CheckResult("evaluation.test_isolation", "evaluation integrity", "Clean lane selects checkpoints without the test set", 10, clean_ok, True, expected="train-only validation; one final test per seed", observed=str(clean)),
-        CheckResult("artifacts.bundle", "traceability", "Config, predictions, checkpoint hashes and environment are persisted", 5, artifacts_ok, True, expected="four artifact references", observed=str(artifacts_ok)),
+        CheckResult("artifacts.bundle", "traceability", "Config, predictions, checkpoint hashes and environment are hash-verified", 5, artifacts_ok, True, expected="four path/SHA-256 records matching persisted files", observed=artifact_observed),
         CheckResult("runtime.measurement", "runtime", "GPU inference time is finite and recorded", 5, runtime_ok, expected="GPU and positive median seconds/image", observed=str(runtime)),
     ]
 
@@ -112,7 +119,8 @@ def run_stage3_gate(*, evidence_path: str | Path, output_dir: str | Path) -> Sta
         stage_id="stage-3",
         stage_name="DM-Count official reproduction",
         threshold=85,
-        checks=build_stage3_checks(evidence),
+        checks=build_stage3_checks(evidence, artifact_root=evidence_path.parent),
+        success_status="PASS_RESEARCH_ONLY",
     )
     (output_dir / "evidence.snapshot.json").write_text(
         json.dumps(evidence, indent=2, ensure_ascii=False), encoding="utf-8"

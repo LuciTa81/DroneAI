@@ -163,3 +163,25 @@ scp -r home5090-pop:/mnt/crowd-data/CrowdCounting/results/stage-0 ./home5090-sta
 
 For model runs, pull only score, manifest, metrics, and logs. Keep datasets and
 weights on the SSD, and commit only reviewed small summaries to GitHub.
+
+## Reboot verification
+
+After both the laptop and Pop!_OS server have been shut down and started again,
+run this from laptop PowerShell. It is read-only and confirms the network,
+services, Docker restart policy, container, repository, and CUDA visibility:
+
+```powershell
+ssh home5090-pop "hostname; systemctl is-active tailscaled ssh docker; docker inspect -f '{{.State.Status}} {{.HostConfig.RestartPolicy.Name}}' crowd-jupyter; docker exec crowd-jupyter python -c 'import torch; print(torch.cuda.is_available(), torch.cuda.get_device_name(0))'; cd /home/lucita/crowd-counting-lab; git status --short --branch; git rev-parse HEAD"
+```
+
+The expected service lines are `active`, the container line is
+`running unless-stopped`, CUDA prints `True` with the RTX 5090 name, and the Git
+worktree is clean on the reviewed commit. If that passes, rerun the persisted
+foundation evidence without downloading data or starting a model:
+
+```powershell
+ssh home5090-pop "docker exec crowd-jupyter bash -lc 'cd /workspace && . .venvs/harness/bin/activate && pytest -q && python scripts/run_stage0.py --profile configs/runtime/home5090_docker.json'"
+```
+
+The second command must end with Stage 0 `PASS`, a 100/100 score, and fresh
+hash-verified artifacts under `/workspace/data/results/stage-0/`.

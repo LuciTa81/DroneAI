@@ -76,6 +76,17 @@ def build_stage1_checks(
     intended_use = str(manifest.get("intended_use") or "")
     allowed_uses = set(rights.get("allowed_uses") or [])
     rights_verified = rights.get("status") == "verified" and bool(rights.get("evidence_url"))
+    commercial_requested = intended_use.startswith("commercial_")
+    explicit_bases = {"explicit_terms", "internal_approval"}
+    commercial_consistent = not commercial_requested or (
+        rights.get("commercial_use") is True
+        and bool(rights.get("license_id"))
+        and rights.get("restriction_basis") in explicit_bases
+    )
+    rights_basis_consistent = (
+        rights.get("commercial_use") is None
+        or rights.get("restriction_basis") in explicit_bases
+    )
 
     asset_failures: list[str] = []
     checksum_failures: list[str] = []
@@ -160,9 +171,21 @@ def build_stage1_checks(
             evidence=str(rights.get("evidence_url") or ""),
         ),
         CheckResult(
-            "access.intended_use", "license/access", "Declared use is allowed by the dataset rights", 10,
-            bool(intended_use and intended_use in allowed_uses), True,
-            expected=f"{intended_use} in allowed_uses", observed=", ".join(sorted(allowed_uses)) or "none",
+            "access.intended_use", "license/access", "Declared use and commercial flag agree with the dataset rights", 10,
+            bool(
+                intended_use
+                and intended_use in allowed_uses
+                and commercial_consistent
+                and rights_basis_consistent
+            ), True,
+            expected=(
+                f"{intended_use} in allowed_uses; commercial requests require commercial_use=true; "
+                "true/false use claims require a license_id and explicit terms or internal approval"
+            ),
+            observed=(
+                f"allowed={sorted(allowed_uses)}; commercial_use={rights.get('commercial_use')}; "
+                f"basis={rights.get('restriction_basis') or 'missing'}"
+            ),
         ),
         CheckResult(
             "annotation.schema", "annotation integrity", "Point annotation semantics are explicit", 5, schema_ok,
@@ -229,7 +252,15 @@ def run_stage1(
     inventory = _read_jsonl(inventory_path) if inventory_path.is_file() else []
     checks = build_stage1_checks(manifest=manifest, inventory=inventory, dataset_root=dataset_root)
     report = score_stage(
-        stage_id="stage-1", stage_name="Dataset readiness and split integrity", threshold=85, checks=checks
+        stage_id="stage-1",
+        stage_name="Dataset readiness and split integrity",
+        threshold=85,
+        checks=checks,
+        success_status=(
+            "PASS_COMMERCIAL_CANDIDATE"
+            if str(manifest.get("intended_use") or "").startswith("commercial_")
+            else "PASS_RESEARCH_ONLY"
+        ),
     )
     output_dir.mkdir(parents=True, exist_ok=True)
     (output_dir / "manifest.snapshot.json").write_text(

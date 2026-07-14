@@ -7,6 +7,14 @@ from datetime import datetime, timezone
 from typing import Any, Iterable
 
 
+SUCCESS_SCOPES = {
+    "PASS": "technical",
+    "PASS_RESEARCH_ONLY": "research_only",
+    "PASS_COMMERCIAL_CANDIDATE": "commercial_candidate",
+    "PRODUCTION_APPROVED": "production",
+}
+
+
 @dataclass(frozen=True)
 class CheckResult:
     """One independently reviewable item in a stage gate."""
@@ -40,6 +48,7 @@ class StageReport:
     threshold: float
     score: float
     status: str
+    decision_scope: str
     checks: tuple[CheckResult, ...]
     generated_at: str
 
@@ -47,14 +56,19 @@ class StageReport:
     def failed_blockers(self) -> tuple[CheckResult, ...]:
         return tuple(check for check in self.checks if check.blocker and not check.passed)
 
+    @property
+    def is_success(self) -> bool:
+        return self.status in SUCCESS_SCOPES
+
     def to_dict(self) -> dict[str, Any]:
         return {
-            "schema_version": 1,
+            "schema_version": 2,
             "stage_id": self.stage_id,
             "stage_name": self.stage_name,
             "threshold": self.threshold,
             "score": self.score,
             "status": self.status,
+            "decision_scope": self.decision_scope,
             "generated_at": self.generated_at,
             "failed_blockers": [check.check_id for check in self.failed_blockers],
             "checks": [check.to_dict() for check in self.checks],
@@ -65,6 +79,7 @@ class StageReport:
             f"# {self.stage_id}: {self.stage_name}",
             "",
             f"- Status: **{self.status}**",
+            f"- Decision scope: **{self.decision_scope}**",
             f"- Score: **{self.score:.1f}/100**",
             f"- Pass threshold: **{self.threshold:.1f}**",
             f"- Generated at: `{self.generated_at}`",
@@ -106,6 +121,7 @@ def score_stage(
     stage_name: str,
     threshold: float,
     checks: Iterable[CheckResult],
+    success_status: str = "PASS",
 ) -> StageReport:
     """Calculate a 100-point gate without allowing blockers to be averaged away."""
 
@@ -122,13 +138,17 @@ def score_stage(
         raise ValueError(f"check weights must total 100, got {total_weight}")
     if not 0 <= threshold <= 100:
         raise ValueError("threshold must be between 0 and 100")
+    if success_status not in SUCCESS_SCOPES:
+        raise ValueError(
+            "success_status must be one of " + ", ".join(sorted(SUCCESS_SCOPES))
+        )
 
     score = round(sum(check.earned for check in normalized), 2)
     blocker_failed = any(check.blocker and not check.passed for check in normalized)
     if blocker_failed:
         status = "BLOCKED"
     elif score >= threshold:
-        status = "PASS"
+        status = success_status
     else:
         status = "REVIEW"
 
@@ -138,6 +158,7 @@ def score_stage(
         threshold=threshold,
         score=score,
         status=status,
+        decision_scope=SUCCESS_SCOPES[success_status],
         checks=normalized,
         generated_at=datetime.now(timezone.utc).isoformat(),
     )

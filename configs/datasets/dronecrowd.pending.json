@@ -2,8 +2,8 @@
   "schema_version": 1,
   "dataset_id": "dronecrowd-full",
   "display_name": "DroneCrowd (full version)",
-  "role": "blocked_pending_rights_review",
-  "intended_use": "noncommercial_research",
+  "role": "commercial_candidate_pending_rights_review",
+  "intended_use": "commercial_product_rnd",
   "inventory_path": "inventory.jsonl",
   "source": {
     "official_url": "https://github.com/VisDrone/DroneCrowd",
@@ -15,8 +15,10 @@
     "license_id": "NO-LICENSE-FILE-FOUND",
     "evidence_url": "https://github.com/VisDrone/DroneCrowd",
     "allowed_uses": [],
-    "commercial_use": false,
-    "notes": "The official repository README asks for citation but does not state a dataset license, and LICENSE returns 404. Obtain written terms before use."
+    "commercial_use": null,
+    "research_use": null,
+    "restriction_basis": "not_stated",
+    "notes": "The official repository README asks for citation but does not state a dataset license, and LICENSE returns 404. Candidate inventory only: do not download, train, reuse weights, or deploy until written terms are verified."
   },
   "annotation": {
     "format": "adapter-required",

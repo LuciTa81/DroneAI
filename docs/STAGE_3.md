@@ -13,6 +13,11 @@ downloaded on 2026-07-13 was 348,994,252 bytes, but its license field is
 `Unknown`. This stage must not imply permission for commercial training or
 deployment.
 
+Successful Stage 3 and Stage 3B reports therefore emit
+`PASS_RESEARCH_ONLY`, not a generic `PASS`. This labels the technical lane and
+does not cure missing dataset or checkpoint permission. Stage 3C makes the
+separate commercial-candidate/production decision.
+
 ## Official-checkpoint preflight (2026-07-13)
 
 The upstream ShanghaiTech Part A checkpoint was evaluated on all 182 test
@@ -126,3 +131,9 @@ Stage 3 writes the following under `MyDrive/DroneAI/runs/stage-3/`:
 3. per-seed prediction files;
 4. environment and runtime snapshots;
 5. checkpoint SHA-256 records.
+
+New Stage 3 evidence records every review artifact as a `{path, sha256}` pair;
+the gate reopens the actual file and recalculates SHA-256. Stage 3B likewise
+recalculates its split manifest, split JSON, config, checkpoint and best-model
+hashes. Missing traceability or review bundles are blockers rather than ten
+optional points.

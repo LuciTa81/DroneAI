@@ -239,10 +239,13 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             "best_model": str(best_model),
             "best_model_sha256": sha256_file(best_model),
             "config_snapshot": str(config_snapshot),
+            "config_snapshot_sha256": sha256_file(config_snapshot),
         },
         "artifacts": {
             "manifest_csv": str(manifest_path),
+            "manifest_sha256": sha256_file(manifest_path),
             "split_json": str(split_path),
+            "split_sha256": sha256_file(split_path),
             "evidence_json": str(args.run_dir / "evidence.snapshot.json"),
             "score_json": str(args.run_dir / "score.json"),
             "score_md": str(args.run_dir / "score.md"),
@@ -258,7 +261,12 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
 
 def main() -> None:
     result = run(build_parser().parse_args())
-    raise SystemExit(0 if result["score"]["status"] == "PASS" else 1)
+    raise SystemExit(
+        0
+        if result["score"]["status"]
+        in {"PASS", "PASS_RESEARCH_ONLY", "PASS_COMMERCIAL_CANDIDATE", "PRODUCTION_APPROVED"}
+        else 1
+    )
 
 
 if __name__ == "__main__":

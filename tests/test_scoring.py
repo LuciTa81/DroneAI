@@ -1,3 +1,5 @@
+import pytest
+
 from droneai.scoring import CheckResult, score_stage
 
 
@@ -41,3 +43,27 @@ def test_weights_must_total_one_hundred() -> None:
         assert "total 100" in str(exc)
     else:
         raise AssertionError("invalid weights were accepted")
+
+
+def test_scoped_success_status_is_preserved_and_machine_readable() -> None:
+    report = score_stage(
+        stage_id="research",
+        stage_name="research gate",
+        threshold=100,
+        checks=[CheckResult("a", "scope", "a", 100, True)],
+        success_status="PASS_RESEARCH_ONLY",
+    )
+    assert report.status == "PASS_RESEARCH_ONLY"
+    assert report.is_success
+    assert report.to_dict()["decision_scope"] == "research_only"
+
+
+def test_unknown_success_status_is_rejected() -> None:
+    with pytest.raises(ValueError, match="success_status"):
+        score_stage(
+            stage_id="unsafe",
+            stage_name="unsafe gate",
+            threshold=100,
+            checks=[CheckResult("a", "scope", "a", 100, True)],
+            success_status="PASS_WHATEVER",
+        )
