@@ -15,7 +15,7 @@ set is opened.
 
 | Stage | Main score groups | Threshold | Blockers |
 |---|---|---:|---|
-| 0. Foundation | Runtime 35, storage 25, reproducibility 25, automation 15 | 85 | CUDA smoke, writable Drive, commit SHA, tests |
+| 0. Foundation | Runtime 35, storage 25, reproducibility 25, automation 15 | 85 | CUDA smoke, writable profiled storage, commit SHA, tests |
 | 1. Data | License/access 20, annotation integrity 25, split integrity 25, condition coverage 20, manifest 10 | 85 | Usage rights, corrupt files, train/test leakage |
 | 2. CSRNet smoke | Pipeline correctness 30, count preservation 25, tiny-set overfit 20, determinism 10, artifacts 15 | 80 | Density sum preservation, valid evaluation |
 | 3. Official reproduction | Paper gap 35, seed stability 15, evaluation integrity 20, traceability 15, runtime 15 | 85 | Test leakage, wrong split/metric; median paper gap must be within 5% |
@@ -52,3 +52,7 @@ At the end of every stage, review these four artifacts before proceeding:
 
 No test threshold may be relaxed after seeing the sealed test result without a
 new versioned gate and an explicit review note.
+
+New runs use `home5090_docker` by default; `colab_drive` is retained for
+historical reproduction and fallback. Runtime success remains separate from
+Stage 3C code, dataset, weight, and commercial-fit approval.

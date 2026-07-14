@@ -1,7 +1,24 @@
 from pathlib import Path
 
+import pytest
+
 from droneai.scoring import score_stage
 from droneai.stage3b import build_clean_split, build_stage3b_checks, write_split_manifest
+from scripts.run_stage3b_clean_smoke import build_parser
+
+
+def test_clean_smoke_parser_requires_explicit_upstream_dir() -> None:
+    with pytest.raises(SystemExit):
+        build_parser().parse_args(
+            [
+                "--data-dir",
+                "/data/part_A",
+                "--run-dir",
+                "/results/seed-2026",
+                "--work-dir",
+                "/work/seed-2026",
+            ]
+        )
 
 
 def _dataset(root: Path) -> Path:

@@ -8,13 +8,25 @@ Reproducible crowd-counting experiments for CCTV and drone safety monitoring.
 2. Measure generalization to festival CCTV and drone imagery.
 3. Evaluate whether count, density, latency, and failure behavior are useful for operators.
 
-## Storage policy
+## Runtime and storage policy
 
 - GitHub stores code, notebooks, configuration, small reports, and dataset manifests.
-- Google Drive stores datasets, checkpoints, and large run artifacts.
+- The home RTX 5090 SSD is the default for new datasets, checkpoints, and large run artifacts.
+- Google Drive remains the Colab fallback and preserves prior experiment provenance.
 - Raw videos, model weights, credentials, and mounted Drive contents must never be committed.
 
-Default Drive root:
+Default container paths:
+
+```text
+/workspace/
+├── source and harness
+└── data/
+    ├── datasets/
+    ├── checkpoints/
+    └── results/
+```
+
+Legacy/fallback Drive root:
 
 ```text
 MyDrive/DroneAI/
@@ -23,6 +35,8 @@ MyDrive/DroneAI/
 └── runs/
 ```
 
+See `docs/HOME5090_RUNBOOK.md` for safe SSH, sync, smoke, resume, and result-pull commands.
+
 ## Stage gates
 
 Every stage produces both `score.json` and `score.md`. A high average cannot
@@ -30,7 +44,7 @@ hide a failed integrity or safety blocker.
 
 | Stage | Question | Gate |
 |---|---|---:|
-| 0 | Can Colab, Git and Drive produce a reproducible run? | 85 |
+| 0 | Can the selected backend, Git and persistent storage produce a reproducible CUDA run? | 85 |
 | 1 | Is the selected dataset legal, intact and leakage-free? | 85 |
 | 2 | Does the CSRNet smoke pipeline preserve counts and learn a tiny subset? | 80 |
 | 3 | Does each official model reproduce its published result? | 85 |
@@ -64,6 +78,11 @@ The first model sequence is:
 4. Drone-view fine-tuning and field evaluation
 
 TensorFlow/Keras ports are kept separate until the official PyTorch baselines are reproduced.
+
+New execution defaults to the `home5090_docker` profile. Colab notebooks and
+their recorded Drive paths remain unchanged as legacy reproduction/fallback
+assets. A home5090 foundation smoke is always `research_only` and never grants
+commercial or production approval.
 
 Public datasets are research benchmarks, not automatic production-training
 assets. UP-COUNT is non-commercial, DroneCrowd currently lacks explicit license

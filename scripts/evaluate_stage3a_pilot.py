@@ -30,7 +30,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Evaluate a Stage 3A DM-Count pilot")
     parser.add_argument("--data-dir", type=Path, required=True)
     parser.add_argument("--run-dir", type=Path, required=True)
-    parser.add_argument("--upstream-dir", type=Path, default=Path("/content/DM-Count"))
+    parser.add_argument("--upstream-dir", type=Path, required=True)
     parser.add_argument("--device", default="cuda")
     parser.add_argument("--num-workers", type=int, default=1)
     parser.add_argument("--minimum-pilot-epoch", type=int, default=100)
@@ -230,7 +230,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     from torch.utils.data import DataLoader
 
     if not torch.cuda.is_available() and args.device.startswith("cuda"):
-        raise RuntimeError("CUDA is required for the Colab pilot evaluation")
+        raise RuntimeError("CUDA is required for the requested pilot evaluation device")
     state = load_state(args.run_dir)
     last_checkpoint = args.run_dir / str(state["checkpoint"])
     selected_checkpoint = choose_test_selected_checkpoint(args.run_dir / "best")

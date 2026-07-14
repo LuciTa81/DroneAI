@@ -1,4 +1,4 @@
-"""Run a one-epoch, test-isolated DM-Count clean-protocol smoke on Colab."""
+"""Run a one-epoch, test-isolated DM-Count clean-protocol smoke."""
 
 from __future__ import annotations
 
@@ -33,7 +33,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--data-dir", type=Path, required=True)
     parser.add_argument("--run-dir", type=Path, required=True)
     parser.add_argument("--work-dir", type=Path, required=True)
-    parser.add_argument("--upstream-dir", type=Path, default=Path("/content/DM-Count"))
+    parser.add_argument("--upstream-dir", type=Path, required=True)
     parser.add_argument("--seed", type=int, default=2026)
     parser.add_argument("--smoke-epochs", type=int, default=1)
     parser.add_argument("--device", default="0")

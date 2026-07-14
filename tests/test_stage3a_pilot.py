@@ -5,10 +5,18 @@ import pytest
 
 from scripts.evaluate_stage3a_pilot import (
     best_checkpoint_index,
+    build_parser,
     choose_test_selected_checkpoint,
     load_state,
     score_pilot,
 )
+
+
+def test_pilot_parser_requires_explicit_upstream_dir() -> None:
+    with pytest.raises(SystemExit):
+        build_parser().parse_args(
+            ["--data-dir", "/data/part_A", "--run-dir", "/results/seed-2026"]
+        )
 
 
 def test_choose_test_selected_checkpoint_uses_highest_index(tmp_path: Path) -> None:

@@ -18,7 +18,9 @@ def _args():
             "--run-dir",
             "/drive/seed-2026",
             "--work-dir",
-            "/content/seed-2026",
+            "/workspace/data/results/stage-3/work/seed-2026",
+            "--upstream-dir",
+            "/workspace/upstreams/DM-Count",
         ]
     )
 
@@ -38,6 +40,21 @@ def test_faithful_defaults_match_official_sha_contract() -> None:
     assert trainer_args.num_of_iter_in_ot == 100
     assert PINNED_COMMIT == "cc5f2132e0d1328909f31b6d665b8e0b15c30467"
     assert args.data_dir == Path("/data/part_A")
+    assert args.upstream_dir == Path("/workspace/upstreams/DM-Count")
+
+
+def test_faithful_parser_requires_explicit_upstream_dir() -> None:
+    with pytest.raises(SystemExit):
+        build_parser().parse_args(
+            [
+                "--data-dir",
+                "/data/part_A",
+                "--run-dir",
+                "/results/seed-2026",
+                "--work-dir",
+                "/work/seed-2026",
+            ]
+        )
 
 
 def test_checkpoint_schedule_includes_zero_interval_and_final() -> None:

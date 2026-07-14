@@ -1,0 +1,5 @@
+# Exact overlay for the pinned NGC base image in configs/runtime/home5090_docker.json.
+# PyTorch, torchvision, NumPy, SciPy, Pillow, and matplotlib come from the image.
+# Headless OpenCV replaces upstream opencv-python because this container has no GUI.
+gdown==5.2.2
+opencv-python-headless==4.13.0.92

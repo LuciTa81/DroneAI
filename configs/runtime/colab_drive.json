@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "backend_id": "colab_drive",
+  "role": "legacy_fallback",
+  "execution": {
+    "repo_root": "/content/DroneAI",
+    "container_name": null,
+    "container_image": null,
+    "container_image_digest": null
+  },
+  "storage": {
+    "root": "/content/drive/MyDrive/DroneAI",
+    "datasets_dir": "/content/drive/MyDrive/DroneAI/datasets",
+    "checkpoints_dir": "/content/drive/MyDrive/DroneAI/checkpoints",
+    "results_dir": "/content/drive/MyDrive/DroneAI/runs",
+    "host_bind_source": null
+  },
+  "policy": {
+    "license_scope": "research_only",
+    "large_artifacts_in_git": false
+  }
+}

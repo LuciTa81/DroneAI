@@ -1,14 +1,16 @@
-"""Stage 0: verify that Colab, Git and Drive can produce reproducible runs."""
+"""Stage 0: verify that one configured backend can produce reproducible runs."""
 
 from __future__ import annotations
 
 import json
+import hashlib
 import subprocess
 import sys
 from pathlib import Path
 from typing import Any, Sequence
 
 from droneai.runtime_probe import collect_environment
+from droneai.runtime_profile import RuntimeProfile
 from droneai.scoring import CheckResult, StageReport, score_stage
 
 DEFAULT_SEEDS = (17, 42, 2026)
@@ -23,6 +25,14 @@ def _version_tuple(version_text: str) -> tuple[int, int]:
 def _write_json(path: Path, payload: Any) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
+
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def _artifact_roundtrip(runs_dir: Path) -> tuple[bool, str]:
@@ -44,8 +54,12 @@ def _cuda_smoke(environment: dict[str, Any]) -> tuple[bool, str]:
     try:
         import torch
 
-        value = (torch.ones(8, device="cuda") * 2).sum().item()
-        return value == 16.0, f"CUDA tensor sum={value}"
+        size = 32
+        left = torch.ones((size, size), device="cuda")
+        right = torch.ones((size, size), device="cuda")
+        product = left @ right
+        maximum_error = float((product - size).abs().max().item())
+        return maximum_error == 0.0, f"CUDA matmul max_error={maximum_error}"
     except Exception as exc:  # pragma: no cover - requires a GPU runtime
         return False, f"{type(exc).__name__}: {exc}"
 
@@ -65,17 +79,24 @@ def run_unit_tests(repo_root: Path) -> tuple[bool, str]:
 def build_stage0_checks(
     *,
     environment: dict[str, Any],
-    drive_root: Path,
+    drive_root: Path | None = None,
+    storage_root: Path | None = None,
+    required_storage_dirs: Sequence[Path] | None = None,
+    results_dir: Path | None = None,
     seeds: Sequence[int],
     unit_tests_passed: bool,
     unit_test_evidence: str,
     environment_report_written: bool,
     config_snapshot_written: bool,
 ) -> list[CheckResult]:
+    storage_root = storage_root or drive_root
+    if storage_root is None:
+        raise ValueError("storage_root or drive_root is required")
+    results_dir = results_dir or storage_root / "runs"
     torch_info = environment.get("torch", {})
     gpu_names = torch_info.get("device_names") or []
-    required_dirs = [drive_root / name for name in REQUIRED_DRIVE_DIRS]
-    artifact_ok, artifact_evidence = _artifact_roundtrip(drive_root / "runs")
+    required_dirs = list(required_storage_dirs or (storage_root / name for name in REQUIRED_DRIVE_DIRS))
+    artifact_ok, artifact_evidence = _artifact_roundtrip(results_dir)
     cuda_ok, cuda_evidence = _cuda_smoke(environment)
 
     python_version = f"{sys.version_info.major}.{sys.version_info.minor}"
@@ -102,17 +123,17 @@ def build_stage0_checks(
         ),
         CheckResult(
             "runtime.cuda_smoke", "runtime", "A tensor operation succeeds on CUDA", 5, cuda_ok, True,
-            expected="sum=16.0", observed=cuda_evidence,
+            expected="matmul max_error=0.0", observed=cuda_evidence,
         ),
         CheckResult(
-            "storage.root", "storage", "Drive root exists", 5, drive_root.is_dir(),
-            expected=str(drive_root), observed=str(drive_root.resolve()) if drive_root.exists() else "missing",
+            "storage.root", "storage", "Configured storage root exists", 5, storage_root.is_dir(),
+            expected=str(storage_root), observed=str(storage_root.resolve()) if storage_root.exists() else "missing",
         ),
         CheckResult(
-            "storage.layout", "storage", "Dataset, checkpoint and run folders exist", 5,
+            "storage.layout", "storage", "Dataset, checkpoint and result folders exist", 5,
             all(path.is_dir() for path in required_dirs),
-            expected=", ".join(REQUIRED_DRIVE_DIRS),
-            observed=", ".join(path.name for path in required_dirs if path.is_dir()) or "none",
+            expected=", ".join(str(path) for path in required_dirs),
+            observed=", ".join(str(path) for path in required_dirs if path.is_dir()) or "none",
         ),
         CheckResult(
             "storage.writable", "storage", "Run artifacts survive a write/read roundtrip", 10, artifact_ok, True,
@@ -163,17 +184,55 @@ def build_stage0_checks(
 
 def run_stage0(
     *,
-    drive_root: str | Path,
+    drive_root: str | Path | None = None,
+    profile: RuntimeProfile | None = None,
     repo_root: str | Path,
     output_dir: str | Path | None = None,
     seeds: Sequence[int] = DEFAULT_SEEDS,
 ) -> StageReport:
-    drive_root = Path(drive_root)
     repo_root = Path(repo_root)
-    output_dir = Path(output_dir) if output_dir else drive_root / "runs" / "stage-0"
+    if profile is not None and drive_root is not None:
+        raise ValueError("profile and drive_root are mutually exclusive")
 
-    for directory in REQUIRED_DRIVE_DIRS:
-        (drive_root / directory).mkdir(parents=True, exist_ok=True)
+    if profile is not None:
+        storage_root = profile.storage.root
+        required_storage_dirs = (
+            profile.storage.datasets_dir,
+            profile.storage.checkpoints_dir,
+            profile.storage.results_dir,
+        )
+        results_dir = profile.storage.results_dir
+        backend = {
+            "id": profile.backend_id,
+            "role": profile.role,
+            "container_name": profile.container_name,
+            "container_image": profile.container_image,
+            "container_image_digest": profile.container_image_digest,
+        }
+        profile_record = {
+            "path": str(profile.source_path),
+            "sha256": profile.source_sha256,
+        }
+        license_scope = profile.license_scope
+    else:
+        if drive_root is None:
+            raise ValueError("profile or drive_root is required")
+        storage_root = Path(drive_root)
+        required_storage_dirs = tuple(storage_root / name for name in REQUIRED_DRIVE_DIRS)
+        results_dir = storage_root / "runs"
+        backend = {
+            "id": "colab_drive",
+            "role": "legacy_argument",
+            "container_name": None,
+            "container_image": None,
+            "container_image_digest": None,
+        }
+        profile_record = {"path": None, "sha256": None}
+        license_scope = "research_only"
+
+    output_dir = Path(output_dir) if output_dir else results_dir / "stage-0"
+    for directory in required_storage_dirs:
+        directory.mkdir(parents=True, exist_ok=True)
     output_dir.mkdir(parents=True, exist_ok=True)
 
     environment = collect_environment(cwd=repo_root)
@@ -188,10 +247,18 @@ def run_stage0(
     config = {
         "stage_id": "stage-0",
         "threshold": 85,
-        "drive_root": str(drive_root),
+        "runtime_backend": backend,
+        "storage": {
+            "root": str(storage_root),
+            "datasets_dir": str(required_storage_dirs[0]),
+            "checkpoints_dir": str(required_storage_dirs[1]),
+            "results_dir": str(results_dir),
+        },
         "repo_root": str(repo_root),
         "seeds": list(seeds),
-        "required_drive_dirs": list(REQUIRED_DRIVE_DIRS),
+        "profile": profile_record,
+        "license_scope": license_scope,
+        "production_approved": False,
     }
     try:
         _write_json(config_path, config)
@@ -202,7 +269,9 @@ def run_stage0(
     tests_passed, test_evidence = run_unit_tests(repo_root)
     checks = build_stage0_checks(
         environment=environment,
-        drive_root=drive_root,
+        storage_root=storage_root,
+        required_storage_dirs=required_storage_dirs,
+        results_dir=results_dir,
         seeds=seeds,
         unit_tests_passed=tests_passed,
         unit_test_evidence=test_evidence,
@@ -217,4 +286,37 @@ def run_stage0(
     )
     _write_json(output_dir / "score.json", report.to_dict())
     (output_dir / "score.md").write_text(report.to_markdown(), encoding="utf-8")
+
+    artifact_names = ("environment.json", "stage0_config.json", "score.json", "score.md")
+    artifacts = {}
+    for name in artifact_names:
+        path = output_dir / name
+        artifacts[name] = {
+            "path": name,
+            "bytes": path.stat().st_size,
+            "sha256": _sha256_file(path),
+        }
+    manifest = {
+        "schema_version": 1,
+        "run_type": "foundation_cuda_smoke",
+        "runtime_backend": backend,
+        "source": {
+            "git_commit": environment.get("git_commit"),
+            "git_dirty": environment.get("git_dirty"),
+            "upstream_commit": None,
+        },
+        "runtime": {
+            "python": environment.get("python"),
+            "torch": environment.get("torch"),
+            "nvidia_smi": environment.get("nvidia_smi"),
+        },
+        "dataset": {"id": None, "artifact_sha256": None},
+        "split": {"id": None, "sha256": None},
+        "seeds": list(seeds),
+        "license_scope": license_scope,
+        "production_approved": False,
+        "profile": profile_record,
+        "artifacts": artifacts,
+    }
+    _write_json(output_dir / "run_manifest.json", manifest)
     return report
