@@ -54,6 +54,19 @@ experiment for DroneAI.
 The faithful lane answers "can the official artifact be reproduced?" The clean
 lane answers "can we trust our own model-selection process?" Both are required.
 
+## Faithful pilot policy
+
+Before committing a suitable GPU server to the full 1000-epoch, three-seed
+experiment, a single-seed pilot may stop after at least 100 epochs. The pilot
+must evaluate both the latest test-selected `best_model_*.pth` and the last
+resumable checkpoint on all 182 test images. It records predictions, checkpoint
+hashes, the environment, and a separate 100-point pilot score.
+
+Passing the pilot review does **not** pass Stage 3. The full 1000-epoch faithful
+lane, three seeds, and the test-isolated clean lane remain required. The pilot
+must be labelled `PILOT_COMPLETE_FULL_1000_EPOCH_DEFERRED` so it cannot be
+mistaken for the paper reproduction or a production result.
+
 ## 100-point gate
 
 | Group | Points | Blocking evidence |
