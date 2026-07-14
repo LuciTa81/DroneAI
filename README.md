@@ -51,6 +51,11 @@ The Stage 3 official-checkpoint preflight passed on 2026-07-13 with MAE 60.03
 and RMSE 96.00 on all 182 Part A test images. Stage 3 itself remains in progress
 until the three-seed training and clean-lane gates are complete.
 
+The seed-2026 faithful-training pilot reached epoch 140 on 2026-07-14. Its
+test-selected checkpoint recorded MAE 71.28 and RMSE 113.21 on all 182 images,
+and the separate pilot harness passed 100/100. The full 1000-epoch run is
+deferred to a suitable GPU server; this pilot is not a Stage 3 pass.
+
 The first model sequence is:
 
 1. CSRNet pipeline smoke test

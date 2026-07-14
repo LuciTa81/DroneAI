@@ -67,6 +67,23 @@ lane, three seeds, and the test-isolated clean lane remain required. The pilot
 must be labelled `PILOT_COMPLETE_FULL_1000_EPOCH_DEFERRED` so it cannot be
 mistaken for the paper reproduction or a production result.
 
+### Seed 2026 pilot result (2026-07-14)
+
+The Colab T4 run was stopped after epoch 140 and evaluated on all 182 test
+images. The separate pilot harness passed 100/100. The test-selected checkpoint
+and the last resumable checkpoint were evaluated independently:
+
+| Checkpoint | MAE | RMSE | Images | Meaning |
+|---|---:|---:|---:|---|
+| `best_model_6.pth` | 71.2820 | 113.2125 | 182 | Best model selected using `test_data` |
+| `last_ckpt.tar` | 81.3608 | 129.0051 | 182 | Model state at the epoch-140 stop |
+
+The full result, predictions and score are stored under
+`MyDrive/DroneAI/runs/stage-3/faithful/seed-2026/evaluation/pilot-epoch-140`.
+The Git snapshot is `results/stage3/faithful_seed_2026_pilot.json`. This result
+does not pass the paper-gap gate; the 1000-epoch run is deferred until a
+suitable graphics server is available.
+
 ## 100-point gate
 
 | Group | Points | Blocking evidence |

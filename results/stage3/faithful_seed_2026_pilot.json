@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "stage": "stage-3a",
+  "status": "PILOT_COMPLETE_FULL_1000_EPOCH_DEFERRED",
+  "lane": "faithful",
+  "dataset": "ShanghaiTech Part A",
+  "seed": 2026,
+  "epoch_reached": 140,
+  "full_reproduction_epoch": 1000,
+  "full_reproduction_deferred": true,
+  "gpu": "Tesla T4",
+  "checkpoint_selection_warning": "The faithful lane selects its best checkpoint on the ShanghaiTech test set.",
+  "evaluations": {
+    "test_selected": {
+      "checkpoint": "best_model_6.pth",
+      "checkpoint_sha256": "33905136fbbe159f9ab092f102adb014e135bb3d53ade7abb28a0f721d263536",
+      "test_samples": 182,
+      "mae": 71.28204773284577,
+      "rmse": 113.21249811027421,
+      "elapsed_seconds": 15.187555313110352
+    },
+    "last_resumable": {
+      "checkpoint": "last_ckpt.tar",
+      "checkpoint_sha256": "6fc5507f776fa94b3875e4920c797daa54f0cd0f365fc2026d8f301623797df8",
+      "test_samples": 182,
+      "mae": 81.36075759720016,
+      "rmse": 129.0051044523339,
+      "elapsed_seconds": 15.431351661682129
+    }
+  },
+  "pilot_score": {
+    "score": 100,
+    "maximum": 100,
+    "review_threshold": 90,
+    "review_passed": true
+  },
+  "drive_artifact_dir": "MyDrive/DroneAI/runs/stage-3/faithful/seed-2026/evaluation/pilot-epoch-140",
+  "stage3_passed": false,
+  "production_use_claim": false
+}
