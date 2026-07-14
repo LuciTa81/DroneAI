@@ -101,6 +101,8 @@ Stage 3B passes at 90/100 only if all split, isolation and training blockers
 pass. Its validation accuracy is not a model-quality claim. The official 182
 test images remain sealed until the final clean-lane evaluation for each seed.
 
+Reproducible Colab notebook: `notebooks/05_stage3b_clean_smoke.ipynb`.
+
 ## 100-point gate
 
 | Group | Points | Blocking evidence |
