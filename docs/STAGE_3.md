@@ -84,6 +84,23 @@ The Git snapshot is `results/stage3/faithful_seed_2026_pilot.json`. This result
 does not pass the paper-gap gate; the 1000-epoch run is deferred until a
 suitable graphics server is available.
 
+## Stage 3B clean-protocol smoke
+
+Before any clean-lane long run, Stage 3B freezes a deterministic split inside
+the 300 official training images: 240 for training and 60 for validation. The
+split ranks image paths by SHA-256 with seed 2026 and persists the complete
+manifest and split hash before training begins.
+
+The official DM-Count loss, optimizer and training loop are preserved. Only the
+ShanghaiTech dataset binding is replaced so both training and validation load
+from `train_data`; `test_data` is neither loaded nor evaluated. A one-epoch
+smoke must produce a resumable checkpoint, a validation-selected model, finite
+validation metrics, environment metadata and a 100-point review bundle.
+
+Stage 3B passes at 90/100 only if all split, isolation and training blockers
+pass. Its validation accuracy is not a model-quality claim. The official 182
+test images remain sealed until the final clean-lane evaluation for each seed.
+
 ## 100-point gate
 
 | Group | Points | Blocking evidence |

@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "stage_id": "stage-3b",
+  "threshold": 90,
+  "model": "dm-count-official",
+  "dataset": "shanghaitech-part-a",
+  "upstream_commit": "cc5f2132e0d1328909f31b6d665b8e0b15c30467",
+  "split": {
+    "source": "train_data only",
+    "method": "sha256-ranked-image-path",
+    "seed": 2026,
+    "train_images": 240,
+    "validation_images": 60,
+    "test_images_used": 0
+  },
+  "smoke": {
+    "epochs": 1,
+    "validation_every_epoch": true,
+    "test_evaluations": 0
+  },
+  "blockers": [
+    "split.counts",
+    "split.reproducibility",
+    "evaluation.test_isolation",
+    "smoke.training"
+  ]
+}
