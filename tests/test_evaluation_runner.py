@@ -8,6 +8,7 @@ import numpy as np
 import pytest
 from PIL import Image
 
+import droneai.evaluation_runner as evaluation_runner
 from droneai.evaluation_contract import EvaluationSample, NativePrediction
 from droneai.evaluation_runner import EvaluationProtocol, run_evaluation
 from droneai.integrity import sha256_file
@@ -59,6 +60,23 @@ class NondeterministicRerunAdapter(FixtureAdapter):
             predicted_count=float(changed_density.sum()),
             density=changed_density,
         )
+
+
+class SameCountDifferentDensityAdapter(FixtureAdapter):
+    def predict(
+        self,
+        sample: EvaluationSample,
+        *,
+        retain_native: bool,
+    ) -> NativePrediction:
+        prediction = super().predict(sample, retain_native=retain_native)
+        if not retain_native:
+            return prediction
+        changed_density = np.asarray(prediction.density).copy()
+        delta = min(0.01, float(changed_density[0, 0]) / 2)
+        changed_density[0, 0] -= delta
+        changed_density[0, 1] += delta
+        return replace(prediction, density=changed_density)
 
 
 def _fixture(tmp_path: Path) -> tuple[FixtureAdapter, list[EvaluationSample], EvaluationProtocol]:
@@ -282,3 +300,104 @@ def test_runner_refuses_existing_report_artifacts_before_inference(
         )
 
     assert adapter.calls == []
+
+
+def test_checkpoint_hash_failure_blocks_before_inference_and_output(
+    tmp_path: Path,
+) -> None:
+    adapter, samples, protocol = _fixture(tmp_path)
+    Path(adapter.brief().checkpoint_path).write_bytes(b"tampered")
+    output = tmp_path / "bad-checkpoint-run"
+
+    with pytest.raises(ValueError, match="checkpoint hash"):
+        run_evaluation(
+            adapter=adapter,
+            samples=samples,
+            protocol=protocol,
+            output_dir=output,
+        )
+
+    assert adapter.calls == []
+    assert not output.exists()
+
+
+def test_missing_reviewed_code_blocks_before_inference_and_output(
+    tmp_path: Path,
+) -> None:
+    adapter, samples, protocol = _fixture(tmp_path)
+    Path(adapter.brief().reviewed_paths[0]).unlink()
+    output = tmp_path / "missing-reviewed-code-run"
+
+    with pytest.raises(ValueError, match="reviewed code path"):
+        run_evaluation(
+            adapter=adapter,
+            samples=samples,
+            protocol=protocol,
+            output_dir=output,
+        )
+
+    assert adapter.calls == []
+    assert not output.exists()
+
+
+def test_selected_rerun_must_match_first_pass_native_density(
+    tmp_path: Path,
+) -> None:
+    adapter, samples, protocol = _fixture(tmp_path)
+    changed = SameCountDifferentDensityAdapter(adapter.brief())
+
+    with pytest.raises(RuntimeError, match="native output is not deterministic"):
+        run_evaluation(
+            adapter=changed,
+            samples=samples,
+            protocol=protocol,
+            output_dir=tmp_path / "changed-native-run",
+        )
+
+
+def test_native_fingerprint_distinguishes_same_count_point_outputs() -> None:
+    first = NativePrediction(
+        "points",
+        "points",
+        2.0,
+        1.0,
+        1.0,
+        points=((1.0, 1.0), (2.0, 2.0)),
+        point_confidences=(0.9, 0.8),
+    )
+    changed = replace(first, points=((1.0, 2.0), (2.0, 1.0)))
+
+    assert evaluation_runner._native_output_fingerprint(first) != (
+        evaluation_runner._native_output_fingerprint(changed)
+    )
+
+
+def test_sample_order_is_canonicalized_before_artifact_writes(tmp_path: Path) -> None:
+    first_adapter, samples, protocol = _fixture(tmp_path)
+    second_adapter = FixtureAdapter(first_adapter.brief())
+    first_output = tmp_path / "ordered-run"
+    second_output = tmp_path / "reversed-run"
+
+    run_evaluation(
+        adapter=first_adapter,
+        samples=samples,
+        protocol=protocol,
+        output_dir=first_output,
+    )
+    run_evaluation(
+        adapter=second_adapter,
+        samples=list(reversed(samples)),
+        protocol=protocol,
+        output_dir=second_output,
+    )
+
+    assert (first_output / "predictions.csv").read_bytes() == (
+        second_output / "predictions.csv"
+    ).read_bytes()
+    first_manifest = json.loads(
+        (first_output / "sample-manifest.json").read_text(encoding="utf-8")
+    )
+    second_manifest = json.loads(
+        (second_output / "sample-manifest.json").read_text(encoding="utf-8")
+    )
+    assert first_manifest["samples"] == second_manifest["samples"]

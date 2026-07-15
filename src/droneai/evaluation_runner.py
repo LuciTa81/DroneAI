@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import math
 from dataclasses import asdict, dataclass, replace
@@ -18,6 +19,7 @@ from droneai.evaluation_artifacts import (
 from droneai.evaluation_contract import (
     EvaluationSample,
     ModelAdapter,
+    NativePrediction,
     ScalarEvaluation,
 )
 from droneai.evaluation_curation import select_review_samples, selection_manifest
@@ -258,6 +260,35 @@ def _json_size(payload: object) -> int:
     )
 
 
+def _native_output_fingerprint(prediction: NativePrediction) -> str:
+    digest = hashlib.sha256()
+    metadata = {
+        "sample_id": prediction.sample_id,
+        "output_type": prediction.output_type,
+        "predicted_count": prediction.predicted_count,
+        "points": prediction.points,
+        "point_confidences": prediction.point_confidences,
+        "confidence": prediction.confidence,
+        "failure_state": prediction.failure_state,
+        "coordinate_space": prediction.coordinate_space,
+    }
+    digest.update(
+        json.dumps(
+            metadata,
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+            allow_nan=False,
+        ).encode("utf-8")
+    )
+    if prediction.density is not None:
+        density = np.ascontiguousarray(prediction.density)
+        digest.update(density.dtype.str.encode("ascii"))
+        digest.update(json.dumps(density.shape).encode("ascii"))
+        digest.update(density.tobytes(order="C"))
+    return digest.hexdigest()
+
+
 def run_evaluation(
     *,
     adapter: ModelAdapter,
@@ -296,6 +327,10 @@ def run_evaluation(
         and sha256_file(checkpoint_path) == brief.checkpoint_sha256
     )
     reviewed_paths_verified = all(Path(path).is_file() for path in brief.reviewed_paths)
+    if not checkpoint_verified:
+        raise ValueError("checkpoint hash verification failed before inference")
+    if not reviewed_paths_verified:
+        raise ValueError("reviewed code path verification failed before inference")
     rights_source = Path(protocol.rights_decision_path)
     rights_verified = (
         rights_source.is_file()
@@ -320,6 +355,9 @@ def run_evaluation(
         for sample in samples
     ):
         raise ValueError("sample source hash verification failed before inference")
+    ordered_samples = tuple(
+        sorted(samples, key=lambda sample: sample.sample_id)
+    )
 
     output.mkdir(parents=True, exist_ok=True)
     rights_payload = json.loads(rights_source.read_text(encoding="utf-8"))
@@ -338,14 +376,18 @@ def run_evaluation(
                     "sample_id": sample.sample_id,
                     "source_sha256": sample.source_sha256,
                 }
-                for sample in samples
+                for sample in ordered_samples
             ],
         },
     )
 
     records: list[ScalarEvaluation] = []
-    for sample in samples:
+    first_pass_fingerprints: dict[str, str] = {}
+    for sample in ordered_samples:
         prediction = adapter.predict(sample, retain_native=False)
+        first_pass_fingerprints[sample.sample_id] = _native_output_fingerprint(
+            prediction
+        )
         records.append(
             evaluate_sample(
                 sample,
@@ -392,6 +434,13 @@ def run_evaluation(
         ):
             raise RuntimeError(
                 f"selected-sample rerun is not deterministic: {selection.sample_id}"
+            )
+        if _native_output_fingerprint(retained) != first_pass_fingerprints[
+            selection.sample_id
+        ]:
+            raise RuntimeError(
+                "selected-sample native output is not deterministic: "
+                f"{selection.sample_id}"
             )
         panel_paths.append(
             render_review_panel(
