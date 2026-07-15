@@ -71,7 +71,7 @@ cd /workspace
 python -m venv --system-site-packages .venvs/harness
 . .venvs/harness/bin/activate
 python -m pip install -e ".[dev,evaluation]"
-pytest -q
+python -m pytest -q
 python scripts/run_stage0.py --profile configs/runtime/home5090_docker.json
 '
 ```
@@ -306,7 +306,7 @@ worktree is clean on the reviewed commit. If that passes, rerun the persisted
 foundation evidence without downloading data or starting a model:
 
 ```powershell
-ssh home5090-pop "docker exec crowd-jupyter bash -lc 'cd /workspace && . .venvs/harness/bin/activate && pytest -q && python scripts/run_stage0.py --profile configs/runtime/home5090_docker.json'"
+ssh home5090-pop "docker exec crowd-jupyter bash -lc 'cd /workspace && . .venvs/harness/bin/activate && python -m pytest -q && python scripts/run_stage0.py --profile configs/runtime/home5090_docker.json'"
 ```
 
 The second command must end with Stage 0 `PASS`, a 100/100 score, and fresh
