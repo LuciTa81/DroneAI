@@ -2,8 +2,26 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
+from numbers import Real
+from pathlib import PurePosixPath
 
+from droneai.integrity import is_sha256
 from droneai.scoring import CheckResult, StageReport, score_stage
+
+
+@dataclass(frozen=True)
+class EvidenceArtifact:
+    path: str
+    sha256: str
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.path, str) or not self.path.strip():
+            raise ValueError("artifact reference path is required")
+        normalized = PurePosixPath(self.path.replace("\\", "/"))
+        if normalized.is_absolute() or ".." in normalized.parts:
+            raise ValueError("artifact reference path must be contained and relative")
+        if not is_sha256(self.sha256):
+            raise ValueError("artifact reference requires SHA-256")
 
 
 @dataclass(frozen=True)
@@ -31,9 +49,14 @@ class EvaluationEvidence:
     review_artifacts_verified: bool
     review_budget_ok: bool
     explicit_failures: int
+    artifact_references: tuple[EvidenceArtifact, ...]
+    spatial_target: str
+    spatial_observed: str
+    robustness_target: str
+    robustness_observed: str
 
     def __post_init__(self) -> None:
-        if not self.run_id.strip():
+        if not isinstance(self.run_id, str) or not self.run_id.strip():
             raise ValueError("run_id is required")
         counts = (
             self.expected_samples,
@@ -67,11 +90,15 @@ class EvaluationEvidence:
             "vram_max_mb",
         )
         if any(
-            not math.isfinite(float(getattr(self, name)))
-            or float(getattr(self, name)) < 0
+            not isinstance(getattr(self, name), Real)
+            or isinstance(getattr(self, name), bool)
+            or not math.isfinite(getattr(self, name))
+            or getattr(self, name) < 0
             for name in threshold_fields
         ):
-            raise ValueError("every frozen threshold must be finite and non-negative")
+            raise ValueError(
+                "every frozen threshold must be a finite non-negative real number"
+            )
 
         observed_fields = (
             "mae",
@@ -81,14 +108,44 @@ class EvaluationEvidence:
             "peak_vram_mb",
         )
         if any(
-            math.isnan(float(getattr(self, name)))
-            or float(getattr(self, name)) < 0
+            not isinstance(getattr(self, name), Real)
+            or isinstance(getattr(self, name), bool)
+            or not math.isfinite(getattr(self, name))
+            or getattr(self, name) < 0
             for name in observed_fields
         ):
-            raise ValueError("observed metrics must be non-negative and not NaN")
+            raise ValueError(
+                "observed metrics must be finite non-negative real numbers"
+            )
+        if self.median_latency_ms <= 0:
+            raise ValueError("median latency must be positive")
+
+        if (
+            not isinstance(self.artifact_references, tuple)
+            or not self.artifact_references
+            or any(
+                not isinstance(reference, EvidenceArtifact)
+                for reference in self.artifact_references
+            )
+            or len({reference.path for reference in self.artifact_references})
+            != len(self.artifact_references)
+        ):
+            raise ValueError("artifact references must be a non-empty unique tuple")
+        audit_text = (
+            self.spatial_target,
+            self.spatial_observed,
+            self.robustness_target,
+            self.robustness_observed,
+        )
+        if any(not isinstance(value, str) or not value.strip() for value in audit_text):
+            raise ValueError("spatial and robustness audit text is required")
 
 
 def build_evaluation_checks(evidence: EvaluationEvidence) -> list[CheckResult]:
+    artifact_evidence = "; ".join(
+        f"{reference.path}@{reference.sha256}"
+        for reference in evidence.artifact_references
+    )
     return [
         CheckResult(
             "data.split",
@@ -142,7 +199,9 @@ def build_evaluation_checks(evidence: EvaluationEvidence) -> list[CheckResult]:
             15,
             evidence.spatial_pass,
             False,
-            observed=str(evidence.spatial_pass),
+            expected=evidence.spatial_target,
+            observed=evidence.spatial_observed,
+            evidence=artifact_evidence,
         ),
         CheckResult(
             "condition.robustness",
@@ -151,7 +210,9 @@ def build_evaluation_checks(evidence: EvaluationEvidence) -> list[CheckResult]:
             10,
             evidence.robustness_pass,
             False,
-            observed=str(evidence.robustness_pass),
+            expected=evidence.robustness_target,
+            observed=evidence.robustness_observed,
+            evidence=artifact_evidence,
         ),
         CheckResult(
             "runtime.resources",
@@ -174,6 +235,7 @@ def build_evaluation_checks(evidence: EvaluationEvidence) -> list[CheckResult]:
             evidence.provenance_verified,
             True,
             observed=str(evidence.provenance_verified),
+            evidence=artifact_evidence,
         ),
         CheckResult(
             "review.bundle",
@@ -189,6 +251,7 @@ def build_evaluation_checks(evidence: EvaluationEvidence) -> list[CheckResult]:
                 f"artifacts={evidence.review_artifacts_verified}; "
                 f"budget={evidence.review_budget_ok}"
             ),
+            evidence=artifact_evidence,
         ),
     ]
 

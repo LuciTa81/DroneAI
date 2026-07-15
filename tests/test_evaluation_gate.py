@@ -3,6 +3,7 @@ from dataclasses import replace
 import pytest
 
 from droneai.evaluation_gate import (
+    EvidenceArtifact,
     EvaluationEvidence,
     build_evaluation_checks,
     run_evaluation_gate,
@@ -34,6 +35,14 @@ def _evidence() -> EvaluationEvidence:
         review_artifacts_verified=True,
         review_budget_ok=True,
         explicit_failures=0,
+        artifact_references=(
+            EvidenceArtifact("predictions.csv", "a" * 64),
+            EvidenceArtifact("metrics.json", "b" * 64),
+        ),
+        spatial_target="game_l1 <= 1.0",
+        spatial_observed="game_l1=0.1",
+        robustness_target="all condition coverage >= 0.95",
+        robustness_observed="minimum condition coverage=1.0",
     )
 
 
@@ -108,3 +117,40 @@ def test_frozen_thresholds_must_be_finite_and_non_negative() -> None:
 def test_gate_flags_must_be_actual_booleans() -> None:
     with pytest.raises(ValueError, match="boolean"):
         replace(_evidence(), split_verified="yes")
+
+
+@pytest.mark.parametrize("value", [float("inf"), "10.0", True])
+def test_observed_metrics_must_be_finite_real_numbers(value: object) -> None:
+    with pytest.raises(ValueError, match="observed metrics"):
+        replace(_evidence(), mae=value)
+
+
+def test_median_latency_must_be_positive() -> None:
+    with pytest.raises(ValueError, match="latency"):
+        replace(_evidence(), median_latency_ms=0.0)
+
+
+def test_run_id_must_be_a_nonblank_string() -> None:
+    with pytest.raises(ValueError, match="run_id"):
+        replace(_evidence(), run_id=123)
+
+
+def test_gate_checks_carry_artifact_and_frozen_target_evidence() -> None:
+    checks = {check.check_id: check for check in build_evaluation_checks(_evidence())}
+
+    assert "predictions.csv" in checks["provenance.bundle"].evidence
+    assert checks["spatial.quality"].expected == "game_l1 <= 1.0"
+    assert checks["spatial.quality"].observed == "game_l1=0.1"
+    assert checks["condition.robustness"].expected == (
+        "all condition coverage >= 0.95"
+    )
+
+
+def test_artifact_references_are_required_and_hash_validated() -> None:
+    with pytest.raises(ValueError, match="artifact reference"):
+        replace(_evidence(), artifact_references=())
+    with pytest.raises(ValueError, match="artifact reference"):
+        replace(
+            _evidence(),
+            artifact_references=(EvidenceArtifact("../escape.json", "c" * 64),),
+        )
