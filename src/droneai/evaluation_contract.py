@@ -94,7 +94,12 @@ class NativePrediction:
     def __post_init__(self) -> None:
         if not self.sample_id:
             raise ValueError("prediction sample identity is required")
-        if self.latency_ms <= 0 or self.peak_vram_mb < 0:
+        if (
+            not math.isfinite(self.latency_ms)
+            or not math.isfinite(self.peak_vram_mb)
+            or self.latency_ms <= 0
+            or self.peak_vram_mb < 0
+        ):
             raise ValueError("runtime values must be non-negative and latency positive")
         if self.failure_state:
             if self.predicted_count is not None or self.density is not None or self.points:

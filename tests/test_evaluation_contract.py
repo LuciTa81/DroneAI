@@ -98,6 +98,36 @@ def test_failed_prediction_still_rejects_invalid_runtime() -> None:
         )
 
 
+@pytest.mark.parametrize(
+    ("failure_state", "predicted_count"),
+    [(None, 1.0), ("fixture_failure", None)],
+)
+@pytest.mark.parametrize(
+    ("latency_ms", "peak_vram_mb"),
+    [
+        (float("nan"), 0.0),
+        (float("inf"), 0.0),
+        (1.0, float("nan")),
+        (1.0, float("inf")),
+    ],
+)
+def test_prediction_rejects_non_finite_runtime_values(
+    failure_state: str | None,
+    predicted_count: float | None,
+    latency_ms: float,
+    peak_vram_mb: float,
+) -> None:
+    with pytest.raises(ValueError, match="runtime values"):
+        NativePrediction(
+            sample_id="sample-1",
+            output_type="count",
+            predicted_count=predicted_count,
+            latency_ms=latency_ms,
+            peak_vram_mb=peak_vram_mb,
+            failure_state=failure_state,
+        )
+
+
 def test_zone_box_contains_right_and_bottom_exclusively() -> None:
     zone = ZoneBox("zone-a", 0, 0, 10, 10)
     assert zone.contains(0, 0)
