@@ -34,6 +34,7 @@ CPU fixture is available for local control-plane checks.
 
 ```bash
 python -m pip install -e ".[dev,evaluation]"
+python scripts/run_evaluation_fixture.py --config configs/evaluation/fixture_density.json --output-dir /tmp/droneai-fixture-cpu-$(date +%Y%m%d-%H%M%S) --device cpu
 python scripts/run_evaluation_fixture.py --config configs/evaluation/fixture_density.json --output-dir /workspace/data/results/fixture-density/smoke --device cuda
 python -m pytest -q
 ```
