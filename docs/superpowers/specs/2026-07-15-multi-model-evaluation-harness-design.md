@@ -98,13 +98,17 @@ domain-generalization lane rather than used as a same-domain leaderboard entry.
 
 ### Round 2: drone generalization
 
-Advance only the best two or three technically useful Round 1 models to
-UP-COUNT. Add Pixel Distill/Dot as a UAV-native localization candidate when its
-code, weight, and permitted research actions have passed Stage 3C review.
+Run every technically compatible and rights-authorized Round 1 model on
+UP-COUNT with its frozen Round 1 checkpoint and no fine-tuning. This mandatory
+cross-domain lane measures the performance loss caused by the change from
+web/static crowd imagery to high-resolution moving-drone imagery. Add Pixel
+Distill/Dot as a UAV-native localization candidate when its code, weight, and
+permitted research actions have passed Stage 3C review.
 
 Evaluate altitude, density, tiny-person localization, high-resolution input,
-tiling or resizing policy, latency, VRAM, and zone aggregation. UP-COUNT remains
-a non-commercial research benchmark and cannot approve production weights.
+tiling or resizing policy, latency, VRAM, zone aggregation, and the change from
+the UCF-QNRF score. UP-COUNT remains a non-commercial research benchmark and
+cannot approve production weights.
 
 ### Round 3: optional drone stress sets
 
@@ -119,13 +123,57 @@ Not every model is run on every optional dataset. A model advances only when
 the previous review identifies a concrete benefit that the next dataset can
 test.
 
-### Round 4: project-owned festival evidence
+### Round 4: select one winner and fine-tune last
 
-Final commercial candidates are fine-tuned and evaluated only on project-owned
-or separately granted festival data. The sealed test split is separated by
-camera, date, zone, event, or flight session, never by adjacent frames. This
-round evaluates zone risk, lighting, occlusion, camera angle, temporal trend,
-field calibration, and operator usefulness.
+No candidate is fine-tuned during UCF-QNRF screening, mandatory UP-COUNT
+cross-domain evaluation, or an authorized DroneCrowd evaluation. Those lanes
+use frozen eligible checkpoints so domain performance remains observable.
+
+After all approved no-training comparisons finish, select at most one winner
+with a frozen 100-point winner-selection protocol: common-benchmark quality 25,
+drone generalization 35, spatial/zone usefulness 15, runtime/resources 10,
+condition robustness 10, and reproducibility 5. Rights status is an eligibility
+blocker rather than score padding. The highest-scoring model with all technical
+and requested-scope blockers passing is the only fine-tuning candidate. If no
+model is eligible, the harness records `NO_FINE_TUNING_CANDIDATE`.
+
+A research-only UP-COUNT fine-tune is allowed only as a separately approved
+final research experiment and its derived weights remain research-only. A
+commercial-intent fine-tune uses only project-owned or separately granted
+festival data and a rights-approved base model and checkpoint.
+
+### Round 5: project-owned festival evidence
+
+The single selected commercial candidate is fine-tuned and evaluated only on
+project-owned or separately granted festival data. The sealed test split is
+separated by camera, date, zone, event, or flight session, never by adjacent
+frames. This round evaluates zone risk, lighting, occlusion, camera angle,
+temporal trend, field calibration, and operator usefulness.
+
+## Mandatory model briefing and code review
+
+Before any model-specific smoke or full evaluation, the harness produces a
+`model-brief.md` for user review. It explains:
+
+- paper, task, model family, and intended comparison role;
+- backbone, major blocks, feature scales, parameter count when measurable, and
+  the path from input to native output;
+- accepted image modality, shape, resizing/tiling/normalization policy, and
+  coordinate transforms;
+- whether the native output is density, points, count, localization,
+  confidence, association, or a combination;
+- exactly how predicted count and zone values are derived;
+- the losses and supervision used by the original work;
+- official reported metrics and the exact checkpoint/dataset protocol being
+  reproduced;
+- expected strengths, failure modes, runtime constraints, and 5090
+  compatibility risks;
+- code, dataset, checkpoint, and deployment-rights status.
+
+The adapter entry point, preprocessing path, model construction, checkpoint
+loader, and output conversion code are shown to the user before a full run.
+The brief records a review decision. A missing brief or unreviewed model code
+blocks full evaluation.
 
 ## Model adapter contract
 
@@ -220,6 +268,97 @@ Blocking conditions include:
 - model output transformed with an unrecorded scale or coordinate policy;
 - evidence or rights contradictions.
 
+## Final fine-tuning contract
+
+Fine-tuning is a separate final stage for the single selected winner. It cannot
+reuse the ordinary inference run ID or score. Before training starts, the
+harness writes and requires user approval of `training-plan.json` and
+`split-manifest.json`.
+
+### Frozen training plan
+
+`training-plan.json` records all decisions that affect optimization or model
+selection:
+
+- base model, upstream commit, base checkpoint and SHA-256;
+- fine-tuning scope, frozen and trainable layers, and initialization method;
+- minimum and maximum epochs, expected epoch duration, early-stopping metric,
+  patience, and minimum improvement;
+- optimizer, learning rate, parameter groups, weight decay, momentum or betas;
+- learning-rate scheduler, warm-up, and scheduler observation metric;
+- batch size, gradient accumulation, mixed precision, gradient clipping, and
+  input/crop/tiling policy;
+- every augmentation and its probability;
+- every loss term, implementation source, mathematical role, weight, and any
+  scheduled weight change;
+- train and validation metrics calculated each epoch;
+- checkpoint frequency, best-checkpoint rule, resumable state, and random
+  seeds;
+- hardware, container image, Python, PyTorch, CUDA, and dependency lock.
+
+The chosen epoch budget and technique are model- and dataset-specific and are
+not guessed in advance in this generic design. They must be frozen in the
+training plan after the winning model and permitted training dataset are known
+and before the first epoch starts. Any change creates a new protocol and run ID.
+
+### Split isolation
+
+`split-manifest.json` records the dataset version, every sample/group assignment,
+sample counts, group counts, split-generation seed and policy, and exact
+SHA-256 values. The following rules are blocking:
+
+- train, validation, and test have zero sample and group overlap;
+- adjacent frames and the same camera, flight, event, date, or zone group do
+  not cross a boundary prohibited by the protocol;
+- augmentation is train-only;
+- validation selects the best checkpoint and early-stopping point;
+- test is sealed during training and checkpoint selection;
+- the final selected checkpoint is evaluated on test exactly once;
+- thresholds or model choices do not change after the test result is seen.
+
+### Recorded training evidence
+
+Every epoch appends to `training-history.csv`:
+
+- epoch, global step, learning rate, component losses and total loss;
+- train metrics and validation metrics;
+- epoch wall-clock time, cumulative time, peak VRAM, and failure/retry state;
+- checkpoint path, checkpoint SHA-256, and whether it became the validation
+  best.
+
+The final report records:
+
+- planned, completed, and best epochs plus stop reason;
+- total wall-clock time, GPU hours, mean epoch time, interruptions, and resume
+  events;
+- exact optimization, regularization, augmentation, loss, and metric settings;
+- train/validation/test sample and group counts with overlap checks;
+- best validation result and one-time sealed test result;
+- MAE, RMSE, signed bias, density/zone metrics, or localization metrics that
+  apply to the selected model;
+- latency, throughput, peak VRAM, input resolution, and failure coverage;
+- official-checkpoint baseline versus fine-tuned result and absolute/relative
+  improvement or regression;
+- selected visual panels, known failure cases, score, blockers, and rights
+  scope.
+
+### Fine-tuning 100-point gate
+
+| Group | Points | Blocking evidence |
+|---|---:|---|
+| Split integrity | 20 | Frozen group-aware split, hashes, zero overlap, sealed test |
+| Training-plan completeness | 15 | Epochs, technique, optimizer, losses, metrics, seeds, resume |
+| Training execution | 15 | Finite losses, epoch history, checkpoints, interruption evidence |
+| Validation and model selection | 15 | Validation-only selection and frozen early stopping |
+| Final test quality | 20 | Exactly one complete test evaluation and pre/post comparison |
+| Runtime and reproducibility | 10 | Wall time, GPU hours, VRAM, environment, code and artifact hashes |
+| Review report | 5 | Readable methods, results, panels, failures, and rights status |
+
+The threshold is 85/100 with every blocker passing. Test leakage,
+test-selected checkpoints, missing loss or metric definitions, missing epoch or
+time history, unverified split hashes, and non-resumable long training are
+blockers regardless of score.
+
 ## Deterministic visual curation
 
 The default Git review bundle contains 12 sample panels per completed
@@ -282,6 +421,7 @@ Git stores a small review snapshot under:
 
 ```text
 reports/<model>/<dataset>/<run-id>/
+  model-brief.md
   summary.md
   metrics.json
   predictions.csv
@@ -292,6 +432,10 @@ reports/<model>/<dataset>/<run-id>/
   rights-decision.json
   figures/selected-01.png ... selected-12.png
 ```
+
+A final fine-tuning run also includes the small review artifacts
+`winner-selection.json`, `training-plan.json`, `split-manifest.json`,
+`training-history.csv`, `final-test.json`, and `fine-tuning-score.md/json`.
 
 The default Git review budget is 25 MiB per model-dataset run. If the selected
 panels exceed the budget, the review renderer reduces only output review
@@ -309,16 +453,25 @@ Each model advances through the same sequence:
 
 1. record code, dataset, weight, derived-weight, and deployment identities;
 2. run Stage 3C for the requested research action;
-3. build an isolated model environment and capture its lock/freeze;
-4. inspect the adapter and inference entry point before full execution;
-5. run synthetic CUDA and a five-to-ten-sample compatibility smoke drawn from
+3. generate and review `model-brief.md`, including architecture and native
+   input/output structure;
+4. show the adapter, preprocessing, model construction, checkpoint loading,
+   inference, and output conversion code to the user;
+5. build an isolated model environment and capture its lock/freeze;
+6. run synthetic CUDA and a five-to-ten-sample compatibility smoke drawn from
    synthetic input or an approved non-test partition;
-6. generate and review the first visual panels;
-7. freeze thresholds, protocol, selector settings, and test manifest;
-8. evaluate the complete labeled test split;
-9. calculate the 100-point technical score and rights-scoped decision;
-10. curate 12 panels, verify artifacts and hashes, and commit the small report;
-11. obtain explicit user review before advancing to the next model or dataset.
+7. generate and review the first visual panels;
+8. freeze thresholds, protocol, selector settings, and test manifest;
+9. evaluate the complete labeled test split;
+10. calculate the 100-point technical score and rights-scoped decision;
+11. curate 12 panels, verify artifacts and hashes, and commit the small report;
+12. obtain explicit user review before advancing to the next model or dataset.
+
+After all approved frozen-checkpoint evaluations finish, the harness generates
+`winner-selection.json`. Only the single eligible winner can enter the final
+fine-tuning contract. The user reviews its architecture again and approves its
+training plan and split manifest before training. The final fine-tuning report
+and 100-point gate are reviewed before any field or deployment claim.
 
 Long-running training uses checkpoint/resume and a non-interactive runner or
 tmux, but reboot recovery depends on persisted checkpoints rather than tmux.
@@ -352,6 +505,15 @@ Implementation tests must cover:
 - Git size-budget enforcement and large-artifact rejection;
 - explicit adapter failures rather than zero-count substitution;
 - per-run 100-point score, blockers, and independent Stage 3C rights state;
+- mandatory model briefing and review decision before full execution;
+- winner selection that admits at most one fine-tuning candidate;
+- training-plan completeness for epochs, method, optimizer, losses, metrics,
+  augmentations, checkpoint selection, and resume;
+- group-aware train/validation/test isolation, overlap rejection, validation-only
+  checkpoint selection, and exactly one final test evaluation;
+- epoch-level losses, metrics, learning rates, wall time, GPU hours, VRAM,
+  checkpoints, interruptions, and resume history;
+- pre-fine-tuning versus post-fine-tuning metric comparison;
 - compatibility with existing Stage 0 through Stage 3C tests;
 - the same unit suite and synthetic CUDA smoke in `home5090_docker`.
 
@@ -375,5 +537,10 @@ The harness design is successfully implemented when:
 6. every path, configuration, split, checkpoint, and small artifact needed for
    regeneration is hash-verified;
 7. existing historical experiments and tests remain valid;
-8. the user can review the adapter, visual bundle, score, blockers, and rights
-   state before authorizing the next model.
+8. the user can review model architecture, code, visual bundle, score, blockers,
+   and rights state before authorizing the next model;
+9. every eligible core model completes frozen-checkpoint UCF-QNRF and UP-COUNT
+   evaluation before winner selection;
+10. at most one winner can enter fine-tuning, and its approved training plan,
+    train/validation/test isolation, epoch/loss/metric history, timing, final
+    test result, accuracy, and pre/post comparison are fully recorded.
