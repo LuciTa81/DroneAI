@@ -105,6 +105,64 @@ def test_fixture_cli_refuses_to_overwrite_nonempty_output(tmp_path: Path) -> Non
     assert list(output.iterdir()) == [sentinel]
 
 
+def test_fixture_cli_rejects_invalid_config_before_creating_output(
+    tmp_path: Path,
+) -> None:
+    invalid_config = json.loads(CONFIG.read_text(encoding="utf-8"))
+    invalid_config["expected_samples"] = True
+    config_path = tmp_path / "invalid-config.json"
+    config_path.write_text(
+        json.dumps(invalid_config, sort_keys=True),
+        encoding="utf-8",
+    )
+    output = tmp_path / "invalid-run"
+
+    result = _run_fixture(output, config=config_path)
+
+    assert result.returncode != 0
+    assert "expected_samples must be the integer 36" in result.stderr
+    assert not output.exists()
+
+
+@pytest.mark.parametrize(
+    ("config_updates", "target_updates", "expected_error"),
+    (
+        ({"run_id": 7}, {}, "run_id must be a non-empty string"),
+        (
+            {"split_verified": "false"},
+            {},
+            "split_verified must be a boolean",
+        ),
+        (
+            {},
+            {"mae_max": True},
+            "mae_max must be a finite non-negative number",
+        ),
+    ),
+)
+def test_fixture_cli_strictly_validates_config_types_before_writes(
+    tmp_path: Path,
+    config_updates: dict[str, object],
+    target_updates: dict[str, object],
+    expected_error: str,
+) -> None:
+    invalid_config = json.loads(CONFIG.read_text(encoding="utf-8"))
+    invalid_config.update(config_updates)
+    invalid_config["targets"].update(target_updates)
+    config_path = tmp_path / "invalid-types.json"
+    config_path.write_text(
+        json.dumps(invalid_config, sort_keys=True),
+        encoding="utf-8",
+    )
+    output = tmp_path / "invalid-types-run"
+
+    result = _run_fixture(output, config=config_path)
+
+    assert result.returncode != 0
+    assert expected_error in result.stderr
+    assert not output.exists()
+
+
 @pytest.mark.parametrize(
     ("config_updates", "target_updates", "expected_status"),
     (

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import os
 import subprocess
 import sys
@@ -135,6 +136,89 @@ def _string_tuple(targets: dict[str, object], key: str) -> tuple[str, ...]:
     return tuple(values)
 
 
+def _nonempty_string(values: dict[str, object], key: str) -> str:
+    value = values.get(key)
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"fixture {key} must be a non-empty string")
+    return value
+
+
+def _boolean(values: dict[str, object], key: str) -> bool:
+    value = values.get(key)
+    if type(value) is not bool:
+        raise ValueError(f"fixture {key} must be a boolean")
+    return value
+
+
+def _nonnegative_number(values: dict[str, object], key: str) -> float:
+    value = values.get(key)
+    if (
+        isinstance(value, bool)
+        or not isinstance(value, (int, float))
+        or not math.isfinite(value)
+        or value < 0
+    ):
+        raise ValueError(
+            f"fixture {key} must be a finite non-negative number"
+        )
+    return float(value)
+
+
+def _validate_config(payload: dict[str, object]) -> None:
+    for key in ("run_id", "protocol_id", "model_id", "dataset_id", "split_id"):
+        _nonempty_string(payload, key)
+    split_role = _nonempty_string(payload, "split_role")
+    if split_role not in {"train", "validation", "test", "smoke"}:
+        raise ValueError("fixture split_role is invalid")
+    expected_samples = payload.get("expected_samples")
+    if type(expected_samples) is not int or expected_samples != 36:
+        raise ValueError("fixture expected_samples must be the integer 36")
+    seed = payload.get("seed")
+    if type(seed) is not int:
+        raise ValueError("fixture seed must be an integer")
+    for key in (
+        "split_verified",
+        "leakage_free",
+        "sealed_test_access_approved",
+        "require_clean_git",
+    ):
+        _boolean(payload, key)
+    _nonnegative_number(payload, "localization_radius")
+
+    targets = payload.get("targets")
+    if not isinstance(targets, dict):
+        raise ValueError("fixture targets must be an object")
+    for key in (
+        "mae_max",
+        "rmse_max",
+        "bias_max",
+        "band_bias_max",
+        "condition_bias_max",
+        "spatial_target",
+        "zone_warning_count",
+        "zone_critical_count",
+        "latency_max_ms",
+        "vram_max_mb",
+    ):
+        _nonnegative_number(targets, key)
+    _nonempty_string(targets, "spatial_metric_name")
+    spatial_direction = _nonempty_string(targets, "spatial_direction")
+    if spatial_direction not in {"minimize", "maximize"}:
+        raise ValueError("fixture spatial_direction is invalid")
+    for key in (
+        "required_density_bands",
+        "density_band_rules",
+        "required_condition_keys",
+    ):
+        _string_tuple(targets, key)
+    if float(targets["zone_critical_count"]) < float(
+        targets["zone_warning_count"]
+    ):
+        raise ValueError(
+            "fixture zone_critical_count must be at least zone_warning_count"
+        )
+
+
 def build_protocol(
     config: dict[str, object],
     *,
@@ -144,19 +228,22 @@ def build_protocol(
     if not isinstance(targets, dict):
         raise ValueError("fixture targets must be an object")
     return EvaluationProtocol(
-        run_id=str(config["run_id"]),
-        protocol_id=str(config["protocol_id"]),
-        dataset_id=str(config["dataset_id"]),
-        split_id=str(config["split_id"]),
+        run_id=cast(str, config["run_id"]),
+        protocol_id=cast(str, config["protocol_id"]),
+        dataset_id=cast(str, config["dataset_id"]),
+        split_id=cast(str, config["split_id"]),
         split_role=cast(
             Literal["train", "validation", "test", "smoke"],
-            str(config["split_role"]),
+            config["split_role"],
         ),
-        expected_samples=int(config["expected_samples"]),
-        split_verified=config["split_verified"],
-        leakage_free=config["leakage_free"],
-        sealed_test_access_approved=config["sealed_test_access_approved"],
-        require_clean_git=config["require_clean_git"],
+        expected_samples=cast(int, config["expected_samples"]),
+        split_verified=cast(bool, config["split_verified"]),
+        leakage_free=cast(bool, config["leakage_free"]),
+        sealed_test_access_approved=cast(
+            bool,
+            config["sealed_test_access_approved"],
+        ),
+        require_clean_git=cast(bool, config["require_clean_git"]),
         rights_decision_path=str(rights_decision_path.resolve()),
         rights_decision_sha256=sha256_file(rights_decision_path),
         localization_radius=float(config["localization_radius"]),
@@ -167,10 +254,10 @@ def build_protocol(
         condition_bias_max=float(targets["condition_bias_max"]),
         latency_max_ms=float(targets["latency_max_ms"]),
         vram_max_mb=float(targets["vram_max_mb"]),
-        spatial_metric_name=str(targets["spatial_metric_name"]),
+        spatial_metric_name=cast(str, targets["spatial_metric_name"]),
         spatial_direction=cast(
             Literal["minimize", "maximize"],
-            str(targets["spatial_direction"]),
+            targets["spatial_direction"],
         ),
         spatial_target=float(targets["spatial_target"]),
         required_density_bands=_string_tuple(targets, "required_density_bands"),
@@ -185,6 +272,7 @@ def _load_config(path: Path) -> dict[str, object]:
     payload = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(payload, dict) or payload.get("schema_version") != 1:
         raise ValueError("fixture config requires schema_version=1")
+    _validate_config(payload)
     return payload
 
 
@@ -215,9 +303,9 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     samples = build_fixture_samples(
         output_dir,
-        dataset_id=str(config["dataset_id"]),
-        split_id=str(config["split_id"]),
-        seed=int(config["seed"]),
+        dataset_id=cast(str, config["dataset_id"]),
+        split_id=cast(str, config["split_id"]),
+        seed=cast(int, config["seed"]),
     )
     checkpoint_path = output_dir / "fixture-input" / "fixture-checkpoint.bin"
     checkpoint_path.write_bytes(b"fixture-no-learned-weights-v1\n")
@@ -235,7 +323,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         text=True,
     ).strip()
     brief = ModelBrief(
-        model_id=str(config["model_id"]),
+        model_id=cast(str, config["model_id"]),
         paper="Synthetic harness fixture; no research claim",
         role="common harness integration proof",
         family="density",
