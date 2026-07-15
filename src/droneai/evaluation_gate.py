@@ -3,7 +3,7 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 from numbers import Real
-from pathlib import PurePosixPath
+from pathlib import PurePosixPath, PureWindowsPath
 
 from droneai.integrity import is_sha256
 from droneai.scoring import CheckResult, StageReport, score_stage
@@ -17,11 +17,19 @@ class EvidenceArtifact:
     def __post_init__(self) -> None:
         if not isinstance(self.path, str) or not self.path.strip():
             raise ValueError("artifact reference path is required")
-        normalized = PurePosixPath(self.path.replace("\\", "/"))
-        if normalized.is_absolute() or ".." in normalized.parts:
+        canonical_text = self.path.replace("\\", "/")
+        normalized = PurePosixPath(canonical_text)
+        if (
+            normalized.is_absolute()
+            or ".." in normalized.parts
+            or PureWindowsPath(self.path).drive
+            or ":" in canonical_text
+            or normalized.as_posix() == "."
+        ):
             raise ValueError("artifact reference path must be contained and relative")
         if not is_sha256(self.sha256):
             raise ValueError("artifact reference requires SHA-256")
+        object.__setattr__(self, "path", normalized.as_posix())
 
 
 @dataclass(frozen=True)

@@ -154,3 +154,24 @@ def test_artifact_references_are_required_and_hash_validated() -> None:
             _evidence(),
             artifact_references=(EvidenceArtifact("../escape.json", "c" * 64),),
         )
+
+
+def test_artifact_reference_rejects_windows_absolute_and_uri_paths() -> None:
+    with pytest.raises(ValueError, match="contained and relative"):
+        EvidenceArtifact(r"C:\outside.json", "a" * 64)
+    with pytest.raises(ValueError, match="contained and relative"):
+        EvidenceArtifact("https://example.com/evidence.json", "a" * 64)
+
+
+def test_artifact_reference_paths_are_canonical_before_uniqueness() -> None:
+    normalized = EvidenceArtifact(r"nested\metrics.json", "a" * 64)
+    assert normalized.path == "nested/metrics.json"
+
+    with pytest.raises(ValueError, match="unique"):
+        replace(
+            _evidence(),
+            artifact_references=(
+                EvidenceArtifact("nested/metrics.json", "a" * 64),
+                EvidenceArtifact(r"nested\metrics.json", "b" * 64),
+            ),
+        )
