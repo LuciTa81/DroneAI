@@ -82,6 +82,37 @@ def test_candidate_with_ambiguous_code_cannot_run_synthetic_smoke() -> None:
     assert decision.allowed_actions == ("catalog", "license_due_diligence")
 
 
+def test_verified_input_chain_allows_frozen_evaluation_but_not_training() -> None:
+    manifest = _manifest()
+    for component in manifest["components"]:
+        if component["component_type"] in {"derived_weights", "deployment"}:
+            component["rights"].update(
+                {
+                    "status": "pending",
+                    "license_id": None,
+                    "evidence_url": None,
+                    "commercial_use": None,
+                    "research_use": None,
+                    "basis": "pending_review",
+                }
+            )
+
+    decision = classify_rights(manifest)
+
+    assert decision.status == "PASS_COMMERCIAL_CANDIDATE"
+    assert {
+        "asset_download",
+        "synthetic_compatibility_smoke",
+        "frozen_checkpoint_evaluation",
+    }.issubset(decision.allowed_actions)
+    assert not {
+        "commercial_training",
+        "derived_weight_use",
+        "weight_reuse",
+        "deployment",
+    }.intersection(decision.allowed_actions)
+
+
 def test_explicit_noncommercial_bundle_is_research_only() -> None:
     manifest = _manifest()
     for component in manifest["components"]:
@@ -96,6 +127,9 @@ def test_explicit_noncommercial_bundle_is_research_only() -> None:
 def test_all_verified_components_are_production_approved() -> None:
     decision = classify_rights(_manifest())
     assert decision.status == "PRODUCTION_APPROVED"
+    assert "asset_download" in decision.allowed_actions
+    assert "synthetic_compatibility_smoke" in decision.allowed_actions
+    assert "frozen_checkpoint_evaluation" in decision.allowed_actions
     assert "commercial_training" in decision.allowed_actions
     assert "deployment" in decision.allowed_actions
 
@@ -157,3 +191,33 @@ def test_stage3c_persists_candidate_decision_and_score(tmp_path: Path) -> None:
         "score.md",
     ):
         assert (tmp_path / "run" / filename).is_file()
+    persisted = json.loads(
+        (tmp_path / "run" / "rights-decision.json").read_text(encoding="utf-8")
+    )
+    assert persisted["candidate_id"] == "fixture-bundle"
+    assert set(persisted["component_ids"]) == REQUIRED_COMPONENTS
+    assert len(persisted["manifest_semantic_sha256"]) == 64
+
+
+def test_dm_count_ucf_qnrf_manifest_authorizes_only_frozen_evaluation() -> None:
+    manifest_path = (
+        Path(__file__).parents[1]
+        / "configs"
+        / "candidates"
+        / "dm_count_ucf_qnrf.candidate.json"
+    )
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+
+    decision = classify_rights(manifest)
+
+    assert decision.status == "PASS_COMMERCIAL_CANDIDATE"
+    assert "frozen_checkpoint_evaluation" in decision.allowed_actions
+    assert "commercial_training" not in decision.allowed_actions
+    dataset = next(
+        component
+        for component in manifest["components"]
+        if component["component_type"] == "dataset"
+    )
+    assert dataset["rights"]["license_id"] == "Apache-2.0"
+    assert dataset["rights"]["commercial_use"] is True
+    assert "not the dataset owner" in dataset["rights"]["notes"]

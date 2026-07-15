@@ -271,6 +271,7 @@ def _native_output_fingerprint(prediction: NativePrediction) -> str:
         "confidence": prediction.confidence,
         "failure_state": prediction.failure_state,
         "coordinate_space": prediction.coordinate_space,
+        "metadata": prediction.metadata,
     }
     digest.update(
         json.dumps(
@@ -300,6 +301,7 @@ def run_evaluation(
     samples: Sequence[EvaluationSample],
     protocol: EvaluationProtocol,
     output_dir: str | Path,
+    provenance_artifacts: Sequence[str | Path] = (),
 ) -> StageReport:
     if protocol.split_role == "test" and not protocol.sealed_test_access_approved:
         raise PermissionError("sealed test evaluation requires explicit approval")
@@ -312,6 +314,7 @@ def run_evaluation(
         "model-brief.md",
         "summary.md",
         "sample-manifest.json",
+        "native-output-metadata.json",
         "rights-decision.json",
         "environment-summary.json",
         "evidence-manifest.json",
@@ -322,6 +325,27 @@ def run_evaluation(
     if any((output / name).exists() for name in reserved_outputs):
         raise FileExistsError(
             f"evaluation output already contains report artifacts: {output}"
+        )
+    output_root = output.resolve()
+    provenance_references: list[dict[str, str]] = []
+    seen_provenance: set[Path] = set()
+    for requested_path in provenance_artifacts:
+        provenance_path = Path(requested_path).resolve()
+        try:
+            provenance_path.relative_to(output_root)
+        except ValueError as error:
+            raise ValueError(
+                "provenance artifacts must stay inside the evaluation output"
+            ) from error
+        if provenance_path in seen_provenance:
+            raise ValueError("provenance artifact paths must be unique")
+        if not provenance_path.is_file():
+            raise FileNotFoundError(
+                f"provenance artifact must be an existing file: {provenance_path}"
+            )
+        seen_provenance.add(provenance_path)
+        provenance_references.append(
+            artifact_reference(provenance_path, base_dir=output_root)
         )
 
     brief = adapter.brief()
@@ -380,6 +404,7 @@ def run_evaluation(
                 {
                     "sample_id": sample.sample_id,
                     "source_sha256": sample.source_sha256,
+                    "annotation_sha256": sample.annotation_sha256,
                 }
                 for sample in ordered_samples
             ],
@@ -388,10 +413,14 @@ def run_evaluation(
 
     records: list[ScalarEvaluation] = []
     first_pass_fingerprints: dict[str, str] = {}
+    native_metadata: list[dict[str, object]] = []
     for sample in ordered_samples:
         prediction = adapter.predict(sample, retain_native=False)
         first_pass_fingerprints[sample.sample_id] = _native_output_fingerprint(
             prediction
+        )
+        native_metadata.append(
+            {"sample_id": sample.sample_id, "metadata": prediction.metadata}
         )
         records.append(
             evaluate_sample(
@@ -402,6 +431,10 @@ def run_evaluation(
         )
 
     predictions_path = write_predictions_csv(output / "predictions.csv", records)
+    native_metadata_path = write_json(
+        output / "native-output-metadata.json",
+        {"schema_version": 1, "samples": native_metadata},
+    )
     predictions_ref = artifact_reference(predictions_path, base_dir=output)
     summary = summarize_records(records, expected_samples=protocol.expected_samples)
     spatial_pass, spatial_mean = _spatial_pass(records, protocol)
@@ -504,6 +537,7 @@ def run_evaluation(
         sample_manifest_path,
         rights_path,
         predictions_path,
+        native_metadata_path,
         metrics_path,
         selection_path,
         brief_path,
@@ -511,8 +545,17 @@ def run_evaluation(
         environment_path,
         *panel_paths,
     ]
+    if not all(
+        verify_artifact_reference(reference, base_dir=output)[0]
+        for reference in provenance_references
+    ):
+        raise ValueError("provenance artifact changed during evaluation")
     references = [
-        artifact_reference(path, base_dir=output) for path in referenced_paths
+        *provenance_references,
+        *[
+            artifact_reference(path, base_dir=output)
+            for path in referenced_paths
+        ],
     ]
     references_verified = all(
         verify_artifact_reference(reference, base_dir=output)[0]

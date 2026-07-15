@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "dataset_id": "ucf-qnrf-kaggle-apache",
+  "display_name": "UCF-QNRF",
+  "role": "commercial_rnd_benchmark",
+  "intended_use": "commercial_product_rnd",
+  "inventory_path": "inventory.jsonl",
+  "source": {
+    "official_url": "https://www.crcv.ucf.edu/research/data-sets/ucf-qnrf/",
+    "download_url": "https://www.kaggle.com/datasets/faihajalamtopu/ucf-qnrf",
+    "citation": "Idrees et al., Composition Loss for Counting, Density Map Estimation and Localization in Dense Crowds, ECCV 2018"
+  },
+  "rights": {
+    "status": "verified",
+    "license_id": "Apache-2.0",
+    "evidence_url": "https://www.kaggle.com/datasets/faihajalamtopu/ucf-qnrf",
+    "allowed_uses": [
+      "research_reproduction",
+      "commercial_product_rnd"
+    ],
+    "commercial_use": true,
+    "research_use": true,
+    "restriction_basis": "internal_approval",
+    "decision_date": "2026-07-15",
+    "decision_authority": "project_owner",
+    "notes": "The project owner accepts the Kaggle Apache-2.0 label as permission. The Kaggle uploader states they are not the dataset owner; this provenance risk remains recorded and is not an automated blocker under the approved project policy."
+  },
+  "annotation": {
+    "format": "UCF-QNRF MAT dot annotations",
+    "point_semantics": "person_head_location",
+    "coordinate_system": "source-image zero-based xy after adapter normalization"
+  },
+  "split": {
+    "unit": "sequence",
+    "group_key": "sample_id",
+    "required_splits": [
+      "train",
+      "val",
+      "test"
+    ],
+    "test_policy": "official 334-image test partition remains sealed until explicit approval"
+  },
+  "coverage": {
+    "required_condition_tags": [
+      "density_band"
+    ]
+  }
+}

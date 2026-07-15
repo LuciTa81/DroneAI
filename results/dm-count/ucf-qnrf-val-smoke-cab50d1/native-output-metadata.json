@@ -1,0 +1,545 @@
+{
+  "samples": [
+    {
+      "metadata": {
+        "coordinate_transform": "mass-preserving bilinear resize to original-image /8 grid",
+        "evaluation_density_height": 356,
+        "evaluation_density_width": 536,
+        "native_density_height": 256,
+        "native_density_width": 384,
+        "original_height": 2848,
+        "original_width": 4288,
+        "processed_height": 2048,
+        "processed_width": 3084,
+        "resize_ratio": 0.7191011235955056
+      },
+      "sample_id": "img_0062"
+    },
+    {
+      "metadata": {
+        "coordinate_transform": "mass-preserving bilinear resize to original-image /8 grid",
+        "evaluation_density_height": 356,
+        "evaluation_density_width": 536,
+        "native_density_height": 256,
+        "native_density_width": 384,
+        "original_height": 2848,
+        "original_width": 4288,
+        "processed_height": 2048,
+        "processed_width": 3084,
+        "resize_ratio": 0.7191011235955056
+      },
+      "sample_id": "img_0067"
+    },
+    {
+      "metadata": {
+        "coordinate_transform": "mass-preserving bilinear resize to original-image /8 grid",
+        "evaluation_density_height": 67,
+        "evaluation_density_width": 100,
+        "native_density_height": 66,
+        "native_density_width": 100,
+        "original_height": 533,
+        "original_width": 800,
+        "processed_height": 533,
+        "processed_width": 800,
+        "resize_ratio": 1.0
+      },
+      "sample_id": "img_0097"
+    },
+    {
+      "metadata": {
+        "coordinate_transform": "mass-preserving bilinear resize to original-image /8 grid",
+        "evaluation_density_height": 351,
+        "evaluation_density_width": 526,
+        "native_density_height": 256,
+        "native_density_width": 384,
+        "original_height": 2804,
+        "original_width": 4206,
+        "processed_height": 2048,
+        "processed_width": 3072,
+        "resize_ratio": 0.7303851640513552
+      },
+      "sample_id": "img_0221"
+    },
+    {
+      "metadata": {
+        "coordinate_transform": "mass-preserving bilinear resize to original-image /8 grid",
+        "evaluation_density_height": 396,
+        "evaluation_density_width": 593,
+        "native_density_height": 256,
+        "native_density_width": 384,
+        "original_height": 3162,
+        "original_width": 4743,
+        "processed_height": 2048,
+        "processed_width": 3072,
+        "resize_ratio": 0.6476913345983555
+      },
+      "sample_id": "img_0257"
+    },
+    {
+      "metadata": {
+        "coordinate_transform": "mass-preserving bilinear resize to original-image /8 grid",
+        "evaluation_density_height": 342,
+        "evaluation_density_width": 456,
+        "native_density_height": 256,
+        "native_density_width": 340,
+        "original_height": 2736,
+        "original_width": 3648,
+        "processed_height": 2048,
+        "processed_width": 2731,
+        "resize_ratio": 0.7485380116959064
+      },
+      "sample_id": "img_0339"
+    },
+    {
+      "metadata": {
+        "coordinate_transform": "mass-preserving bilinear resize to original-image /8 grid",
+        "evaluation_density_height": 95,
+        "evaluation_density_width": 200,
+        "native_density_height": 94,
+        "native_density_width": 200,
+        "original_height": 757,
+        "original_width": 1600,
+        "processed_height": 757,
+        "processed_width": 1600,
+        "resize_ratio": 1.0
+      },
+      "sample_id": "img_0347"
+    },
+    {
+      "metadata": {
+        "coordinate_transform": "mass-preserving bilinear resize to original-image /8 grid",
+        "evaluation_density_height": 256,
+        "evaluation_density_width": 384,
+        "native_density_height": 256,
+        "native_density_width": 384,
+        "original_height": 2048,
+        "original_width": 3072,
+        "processed_height": 2048,
+        "processed_width": 3072,
+        "resize_ratio": 1.0
+      },
+      "sample_id": "img_0379"
+    },
+    {
+      "metadata": {
+        "coordinate_transform": "mass-preserving bilinear resize to original-image /8 grid",
+        "evaluation_density_height": 384,
+        "evaluation_density_width": 507,
+        "native_density_height": 256,
+        "native_density_width": 336,
+        "original_height": 3072,
+        "original_width": 4052,
+        "processed_height": 2048,
+        "processed_width": 2701,
+        "resize_ratio": 0.6666666666666666
+      },
+      "sample_id": "img_0382"
+    },
+    {
+      "metadata": {
+        "coordinate_transform": "mass-preserving bilinear resize to original-image /8 grid",
+        "evaluation_density_height": 213,
+        "evaluation_density_width": 284,
+        "native_density_height": 212,
+        "native_density_width": 284,
+        "original_height": 1704,
+        "original_width": 2272,
+        "processed_height": 1704,
+        "processed_width": 2272,
+        "resize_ratio": 1.0
+      },
+      "sample_id": "img_0385"
+    },
+    {
+      "metadata": {
+        "coordinate_transform": "mass-preserving bilinear resize to original-image /8 grid",
+        "evaluation_density_height": 111,
+        "evaluation_density_width": 148,
+        "native_density_height": 110,
+        "native_density_width": 146,
+        "original_height": 886,
+        "original_width": 1181,
+        "processed_height": 886,
+        "processed_width": 1181,
+        "resize_ratio": 1.0
+      },
+      "sample_id": "img_0477"
+    },
+    {
+      "metadata": {
+        "coordinate_transform": "mass-preserving bilinear resize to original-image /8 grid",
+        "evaluation_density_height": 243,
+        "evaluation_density_width": 324,
+        "native_density_height": 242,
+        "native_density_width": 324,
+        "original_height": 1944,
+        "original_width": 2592,
+        "processed_height": 1944,
+        "processed_width": 2592,
+        "resize_ratio": 1.0
+      },
+      "sample_id": "img_0485"
+    },
+    {
+      "metadata": {
+        "coordinate_transform": "mass-preserving bilinear resize to original-image /8 grid",
+        "evaluation_density_height": 255,
+        "evaluation_density_width": 384,
+        "native_density_height": 254,
+        "native_density_width": 384,
+        "original_height": 2040,
+        "original_width": 3072,
+        "processed_height": 2040,
+        "processed_width": 3072,
+        "resize_ratio": 1.0
+      },
+      "sample_id": "img_0536"
+    },
+    {
+      "metadata": {
+        "coordinate_transform": "mass-preserving bilinear resize to original-image /8 grid",
+        "evaluation_density_height": 113,
+        "evaluation_density_width": 150,
+        "native_density_height": 112,
+        "native_density_width": 150,
+        "original_height": 900,
+        "original_width": 1200,
+        "processed_height": 900,
+        "processed_width": 1200,
+        "resize_ratio": 1.0
+      },
+      "sample_id": "img_0542"
+    },
+    {
+      "metadata": {
+        "coordinate_transform": "mass-preserving bilinear resize to original-image /8 grid",
+        "evaluation_density_height": 432,
+        "evaluation_density_width": 648,
+        "native_density_height": 256,
+        "native_density_width": 384,
+        "original_height": 3456,
+        "original_width": 5184,
+        "processed_height": 2048,
+        "processed_width": 3072,
+        "resize_ratio": 0.5925925925925926
+      },
+      "sample_id": "img_0545"
+    },
+    {
+      "metadata": {
+        "coordinate_transform": "mass-preserving bilinear resize to original-image /8 grid",
+        "evaluation_density_height": 324,
+        "evaluation_density_width": 486,
+        "native_density_height": 256,
+        "native_density_width": 384,
+        "original_height": 2588,
+        "original_width": 3888,
+        "processed_height": 2048,
+        "processed_width": 3077,
+        "resize_ratio": 0.7913446676970634
+      },
+      "sample_id": "img_0557"
+    },
+    {
+      "metadata": {
+        "coordinate_transform": "mass-preserving bilinear resize to original-image /8 grid",
+        "evaluation_density_height": 356,
+        "evaluation_density_width": 267,
+        "native_density_height": 340,
+        "native_density_width": 256,
+        "original_height": 2848,
+        "original_width": 2136,
+        "processed_height": 2731,
+        "processed_width": 2048,
+        "resize_ratio": 0.9588014981273408
+      },
+      "sample_id": "img_0600"
+    },
+    {
+      "metadata": {
+        "coordinate_transform": "mass-preserving bilinear resize to original-image /8 grid",
+        "evaluation_density_height": 86,
+        "evaluation_density_width": 128,
+        "native_density_height": 84,
+        "native_density_width": 128,
+        "original_height": 683,
+        "original_width": 1024,
+        "processed_height": 683,
+        "processed_width": 1024,
+        "resize_ratio": 1.0
+      },
+      "sample_id": "img_0631"
+    },
+    {
+      "metadata": {
+        "coordinate_transform": "mass-preserving bilinear resize to original-image /8 grid",
+        "evaluation_density_height": 79,
+        "evaluation_density_width": 113,
+        "native_density_height": 78,
+        "native_density_width": 112,
+        "original_height": 626,
+        "original_width": 903,
+        "processed_height": 626,
+        "processed_width": 903,
+        "resize_ratio": 1.0
+      },
+      "sample_id": "img_0633"
+    },
+    {
+      "metadata": {
+        "coordinate_transform": "mass-preserving bilinear resize to original-image /8 grid",
+        "evaluation_density_height": 342,
+        "evaluation_density_width": 456,
+        "native_density_height": 256,
+        "native_density_width": 340,
+        "original_height": 2736,
+        "original_width": 3648,
+        "processed_height": 2048,
+        "processed_width": 2731,
+        "resize_ratio": 0.7485380116959064
+      },
+      "sample_id": "img_0638"
+    },
+    {
+      "metadata": {
+        "coordinate_transform": "mass-preserving bilinear resize to original-image /8 grid",
+        "evaluation_density_height": 229,
+        "evaluation_density_width": 456,
+        "native_density_height": 228,
+        "native_density_width": 456,
+        "original_height": 1826,
+        "original_width": 3648,
+        "processed_height": 1826,
+        "processed_width": 3648,
+        "resize_ratio": 1.0
+      },
+      "sample_id": "img_0775"
+    },
+    {
+      "metadata": {
+        "coordinate_transform": "mass-preserving bilinear resize to original-image /8 grid",
+        "evaluation_density_height": 288,
+        "evaluation_density_width": 384,
+        "native_density_height": 256,
+        "native_density_width": 340,
+        "original_height": 2304,
+        "original_width": 3072,
+        "processed_height": 2048,
+        "processed_width": 2731,
+        "resize_ratio": 0.8888888888888888
+      },
+      "sample_id": "img_0778"
+    },
+    {
+      "metadata": {
+        "coordinate_transform": "mass-preserving bilinear resize to original-image /8 grid",
+        "evaluation_density_height": 86,
+        "evaluation_density_width": 128,
+        "native_density_height": 84,
+        "native_density_width": 128,
+        "original_height": 683,
+        "original_width": 1024,
+        "processed_height": 683,
+        "processed_width": 1024,
+        "resize_ratio": 1.0
+      },
+      "sample_id": "img_0790"
+    },
+    {
+      "metadata": {
+        "coordinate_transform": "mass-preserving bilinear resize to original-image /8 grid",
+        "evaluation_density_height": 269,
+        "evaluation_density_width": 403,
+        "native_density_height": 256,
+        "native_density_width": 382,
+        "original_height": 2150,
+        "original_width": 3224,
+        "processed_height": 2048,
+        "processed_width": 3071,
+        "resize_ratio": 0.9525581395348838
+      },
+      "sample_id": "img_0856"
+    },
+    {
+      "metadata": {
+        "coordinate_transform": "mass-preserving bilinear resize to original-image /8 grid",
+        "evaluation_density_height": 229,
+        "evaluation_density_width": 616,
+        "native_density_height": 228,
+        "native_density_width": 616,
+        "original_height": 1827,
+        "original_width": 4928,
+        "processed_height": 1827,
+        "processed_width": 4928,
+        "resize_ratio": 1.0
+      },
+      "sample_id": "img_0916"
+    },
+    {
+      "metadata": {
+        "coordinate_transform": "mass-preserving bilinear resize to original-image /8 grid",
+        "evaluation_density_height": 324,
+        "evaluation_density_width": 484,
+        "native_density_height": 256,
+        "native_density_width": 382,
+        "original_height": 2592,
+        "original_width": 3872,
+        "processed_height": 2048,
+        "processed_width": 3059,
+        "resize_ratio": 0.7901234567901234
+      },
+      "sample_id": "img_0919"
+    },
+    {
+      "metadata": {
+        "coordinate_transform": "mass-preserving bilinear resize to original-image /8 grid",
+        "evaluation_density_height": 468,
+        "evaluation_density_width": 702,
+        "native_density_height": 256,
+        "native_density_width": 384,
+        "original_height": 3744,
+        "original_width": 5616,
+        "processed_height": 2048,
+        "processed_width": 3072,
+        "resize_ratio": 0.5470085470085471
+      },
+      "sample_id": "img_0975"
+    },
+    {
+      "metadata": {
+        "coordinate_transform": "mass-preserving bilinear resize to original-image /8 grid",
+        "evaluation_density_height": 622,
+        "evaluation_density_width": 415,
+        "native_density_height": 384,
+        "native_density_width": 256,
+        "original_height": 4975,
+        "original_width": 3317,
+        "processed_height": 3072,
+        "processed_width": 2048,
+        "resize_ratio": 0.617425384383479
+      },
+      "sample_id": "img_1019"
+    },
+    {
+      "metadata": {
+        "coordinate_transform": "mass-preserving bilinear resize to original-image /8 grid",
+        "evaluation_density_height": 84,
+        "evaluation_density_width": 125,
+        "native_density_height": 82,
+        "native_density_width": 124,
+        "original_height": 666,
+        "original_width": 998,
+        "processed_height": 666,
+        "processed_width": 998,
+        "resize_ratio": 1.0
+      },
+      "sample_id": "img_1022"
+    },
+    {
+      "metadata": {
+        "coordinate_transform": "mass-preserving bilinear resize to original-image /8 grid",
+        "evaluation_density_height": 135,
+        "evaluation_density_width": 240,
+        "native_density_height": 134,
+        "native_density_width": 240,
+        "original_height": 1080,
+        "original_width": 1920,
+        "processed_height": 1080,
+        "processed_width": 1920,
+        "resize_ratio": 1.0
+      },
+      "sample_id": "img_1072"
+    },
+    {
+      "metadata": {
+        "coordinate_transform": "mass-preserving bilinear resize to original-image /8 grid",
+        "evaluation_density_height": 614,
+        "evaluation_density_width": 920,
+        "native_density_height": 256,
+        "native_density_width": 382,
+        "original_height": 4912,
+        "original_width": 7360,
+        "processed_height": 2048,
+        "processed_width": 3069,
+        "resize_ratio": 0.4169381107491857
+      },
+      "sample_id": "img_1073"
+    },
+    {
+      "metadata": {
+        "coordinate_transform": "mass-preserving bilinear resize to original-image /8 grid",
+        "evaluation_density_height": 95,
+        "evaluation_density_width": 148,
+        "native_density_height": 94,
+        "native_density_width": 146,
+        "original_height": 758,
+        "original_width": 1180,
+        "processed_height": 758,
+        "processed_width": 1180,
+        "resize_ratio": 1.0
+      },
+      "sample_id": "img_1080"
+    },
+    {
+      "metadata": {
+        "coordinate_transform": "mass-preserving bilinear resize to original-image /8 grid",
+        "evaluation_density_height": 135,
+        "evaluation_density_width": 240,
+        "native_density_height": 134,
+        "native_density_width": 240,
+        "original_height": 1080,
+        "original_width": 1920,
+        "processed_height": 1080,
+        "processed_width": 1920,
+        "resize_ratio": 1.0
+      },
+      "sample_id": "img_1092"
+    },
+    {
+      "metadata": {
+        "coordinate_transform": "mass-preserving bilinear resize to original-image /8 grid",
+        "evaluation_density_height": 162,
+        "evaluation_density_width": 243,
+        "native_density_height": 162,
+        "native_density_width": 242,
+        "original_height": 1296,
+        "original_width": 1944,
+        "processed_height": 1296,
+        "processed_width": 1944,
+        "resize_ratio": 1.0
+      },
+      "sample_id": "img_1155"
+    },
+    {
+      "metadata": {
+        "coordinate_transform": "mass-preserving bilinear resize to original-image /8 grid",
+        "evaluation_density_height": 50,
+        "evaluation_density_width": 75,
+        "native_density_height": 64,
+        "native_density_width": 96,
+        "original_height": 399,
+        "original_width": 600,
+        "processed_height": 512,
+        "processed_width": 770,
+        "resize_ratio": 1.2832080200501252
+      },
+      "sample_id": "img_1181"
+    },
+    {
+      "metadata": {
+        "coordinate_transform": "mass-preserving bilinear resize to original-image /8 grid",
+        "evaluation_density_height": 226,
+        "evaluation_density_width": 533,
+        "native_density_height": 224,
+        "native_density_width": 532,
+        "original_height": 1802,
+        "original_width": 4264,
+        "processed_height": 1802,
+        "processed_width": 4264,
+        "resize_ratio": 1.0
+      },
+      "sample_id": "img_1199"
+    }
+  ],
+  "schema_version": 1
+}

@@ -490,8 +490,6 @@ def test_point_only_hybrid_uses_points_with_explicit_label(tmp_path: Path) -> No
     (
         ("ground_truth_count", 3.0),
         ("predicted_count", 3.0),
-        ("latency_ms", 6.0),
-        ("peak_vram_mb", 101.0),
     ),
 )
 def test_record_numeric_fields_must_match_sample_and_prediction(
@@ -514,6 +512,21 @@ def test_record_numeric_fields_must_match_sample_and_prediction(
         )
 
     assert not target.exists()
+
+
+def test_selected_rerun_runtime_can_differ_from_first_pass_record(tmp_path: Path) -> None:
+    path = render_review_panel(
+        _sample(tmp_path),
+        _density_prediction(),
+        replace(_density_record(), latency_ms=6.0, peak_vram_mb=101.0),
+        tmp_path / "runtime-rerun.png",
+        model_id="fixture",
+        checkpoint_sha256="b" * 64,
+        zone_warning_count=1.0,
+        zone_critical_count=2.0,
+    )
+
+    assert path.is_file()
 
 
 @pytest.mark.parametrize(

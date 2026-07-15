@@ -16,5 +16,25 @@
     "reported_requirement": "torch>=1.2",
     "backbone": "VGG-19",
     "loss_terms": ["counting", "optimal_transport", "total_variation"]
+  },
+  "architecture": {
+    "feature_extractor": "VGG-19 configuration E through the final convolutional block",
+    "pooling_stages": 4,
+    "regression_head": [512, 256, 128, 1],
+    "upsampling": "bilinear x2 before regression",
+    "output_type": "density",
+    "output_stride": 8,
+    "count_derivation": "sum of density-map mass"
+  },
+  "checkpoint": {
+    "repository_path": "pretrained_models/model_qnrf.pth",
+    "source_commit": "cc5f2132e0d1328909f31b6d665b8e0b15c30467",
+    "sha256": "record-at-download-before-use"
+  },
+  "reported_results": {
+    "ucf_qnrf": {
+      "mae": 85.6,
+      "rmse": 148.3
+    }
   }
 }

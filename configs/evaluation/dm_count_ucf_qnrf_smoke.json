@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "run_id": "dm-count-ucf-qnrf-validation-smoke",
+  "protocol_id": "dm-count-official-qnrf-val-smoke-v1",
+  "model_id": "dm-count-official-ucf-qnrf",
+  "dataset_id": "ucf-qnrf-kaggle-apache",
+  "split_id": "dm-count-upstream-qnrf-val-smoke-36-v1",
+  "split_role": "validation",
+  "expected_samples": 36,
+  "source_train_images": 1201,
+  "official_train_samples": 1081,
+  "official_validation_samples": 120,
+  "train_list_sha256": "e8a926b35e55f9e7bf38498ec722d9a7f051169f03dd994024a9e5c757694cb0",
+  "validation_list_sha256": "835f660ed3373118f4d76a36ebf013ef28d90fcbcc835ddb5c180a2b26524126",
+  "seed": 20260715,
+  "upstream_commit": "cc5f2132e0d1328909f31b6d665b8e0b15c30467",
+  "required_action": "frozen_checkpoint_evaluation",
+  "candidate_id": "dm-count-official-ucf-qnrf-apache",
+  "split_verified": true,
+  "leakage_free": true,
+  "sealed_test_access_approved": false,
+  "require_clean_git": true,
+  "localization_radius": 8.0,
+  "targets": {
+    "mae_max": 250.0,
+    "rmse_max": 400.0,
+    "bias_max": 250.0,
+    "band_bias_max": 400.0,
+    "condition_bias_max": 250.0,
+    "spatial_metric_name": "game_l1",
+    "spatial_direction": "minimize",
+    "spatial_target": 500.0,
+    "required_density_bands": [
+      "low",
+      "medium",
+      "high"
+    ],
+    "density_band_rules": [
+      "low: count < 500",
+      "medium: 500 <= count < 1500",
+      "high: count >= 1500"
+    ],
+    "required_condition_keys": [
+      "source_partition"
+    ],
+    "zone_warning_count": 50.0,
+    "zone_critical_count": 150.0,
+    "latency_max_ms": 2000.0,
+    "vram_max_mb": 24000.0
+  }
+}

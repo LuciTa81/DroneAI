@@ -9,14 +9,20 @@ weights, and deployment approval as separate components.
 | Outcome | Interpretation | Allowed next action |
 |---|---|---|
 | `PASS_RESEARCH_ONLY` | Every component permits the declared research lane; commercial use is restricted. | Research reproduction only |
-| `PASS_COMMERCIAL_CANDIDATE` | No explicit prohibition is recorded, but one or more permissions are silent, pending, or unverified. | Catalog and due diligence; synthetic smoke only when code rights are verified |
+| `PASS_COMMERCIAL_CANDIDATE` | No explicit prohibition is recorded, but one or more downstream permissions are silent, pending, or unverified. | Catalog and due diligence; synthetic smoke when code is verified; frozen evaluation when code, dataset, and pretrained weights are all verified |
 | `PRODUCTION_APPROVED` | All five components have verified evidence for commercial use. | Commercial training/deployment may proceed subject to the recorded scope |
 | `BLOCKED` | Explicit prohibition, metadata contradiction, or missing required provenance/component. | Review and replace or obtain permission |
 
-Candidate does not mean allowed. In particular, it omits ambiguous asset
-download, training, pretrained-weight reuse, derived-weight use, and deployment
-from its machine-readable `allowed_actions`. If even the code rights are
-ambiguous, synthetic smoke is omitted too.
+Candidate is not blanket permission. Its machine-readable actions are computed
+from the verified component chain. Verified code permits a synthetic smoke;
+verified code, dataset, and pretrained weights permit asset download and
+frozen-checkpoint evaluation. Commercial training, derived-weight use,
+product weight reuse, and deployment remain absent until their required
+components are verified.
+
+`PRODUCTION_APPROVED` retains all lower-scope actions, including synthetic
+compatibility smoke, asset download, and frozen-checkpoint evaluation. Raising
+the approval scope must never remove an already verified lower-scope action.
 
 ## DM-Count and ShanghaiTech current classification
 
@@ -26,6 +32,17 @@ checkpoint is not assumed to inherit the code license. Derived-weight and
 deployment approvals are also pending. The bundle is therefore retained as
 `PASS_COMMERCIAL_CANDIDATE` for rights investigation while its historical
 research reproduction remains isolated. It is not a product-training asset.
+
+## DM-Count and UCF-QNRF approved benchmark classification
+
+For the UCF-QNRF lane, the project owner accepts the Apache-2.0 label on the
+recorded Kaggle mirror as dataset permission. The manifest retains the mirror
+uploader's statement that they are not the dataset owner as a visible risk
+note. DM-Count code is MIT, and project policy treats the official checkpoint
+tracked in that repository as covered by the repository license. These three
+verified inputs authorize download and frozen-checkpoint evaluation. Derived
+weights and product deployment remain pending, so the bundle stays
+`PASS_COMMERCIAL_CANDIDATE` rather than `PRODUCTION_APPROVED`.
 
 ## Run
 
