@@ -158,6 +158,11 @@ def _require_matching_number(
         raise ValueError(f"{name} mismatch")
 
 
+def _require_finite_number(name: str, value: float) -> None:
+    if not math.isfinite(value):
+        raise ValueError(f"{name} must be finite")
+
+
 def _validate_panel_inputs(
     sample: EvaluationSample,
     prediction: NativePrediction,
@@ -179,12 +184,11 @@ def _validate_panel_inputs(
         record.predicted_count,
         prediction.predicted_count,
     )
-    _require_matching_number("latency_ms", record.latency_ms, prediction.latency_ms)
-    _require_matching_number(
-        "peak_vram_mb",
-        record.peak_vram_mb,
-        prediction.peak_vram_mb,
-    )
+    # Panels rerun selected samples to retain native spatial output. Runtime
+    # values naturally vary between passes, so display and validate the frozen
+    # first-pass record rather than requiring equality with the retained rerun.
+    _require_finite_number("latency_ms", record.latency_ms)
+    _require_finite_number("peak_vram_mb", record.peak_vram_mb)
 
 
 def render_review_panel(
