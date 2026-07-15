@@ -127,7 +127,18 @@ def test_fixture_cli_rejects_invalid_config_before_creating_output(
 @pytest.mark.parametrize(
     ("config_updates", "target_updates", "expected_error"),
     (
+        (
+            {"schema_version": True},
+            {},
+            "schema_version must be the integer 1",
+        ),
+        (
+            {"schema_version": 1.0},
+            {},
+            "schema_version must be the integer 1",
+        ),
         ({"run_id": 7}, {}, "run_id must be a non-empty string"),
+        ({"seed": -1}, {}, "seed must be a non-negative integer"),
         (
             {"split_verified": "false"},
             {},

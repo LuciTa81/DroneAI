@@ -174,8 +174,8 @@ def _validate_config(payload: dict[str, object]) -> None:
     if type(expected_samples) is not int or expected_samples != 36:
         raise ValueError("fixture expected_samples must be the integer 36")
     seed = payload.get("seed")
-    if type(seed) is not int:
-        raise ValueError("fixture seed must be an integer")
+    if type(seed) is not int or seed < 0:
+        raise ValueError("fixture seed must be a non-negative integer")
     for key in (
         "split_verified",
         "leakage_free",
@@ -270,8 +270,11 @@ def build_protocol(
 
 def _load_config(path: Path) -> dict[str, object]:
     payload = json.loads(path.read_text(encoding="utf-8"))
-    if not isinstance(payload, dict) or payload.get("schema_version") != 1:
-        raise ValueError("fixture config requires schema_version=1")
+    if not isinstance(payload, dict):
+        raise ValueError("fixture config must be a JSON object")
+    schema_version = payload.get("schema_version")
+    if type(schema_version) is not int or schema_version != 1:
+        raise ValueError("fixture schema_version must be the integer 1")
     _validate_config(payload)
     return payload
 
