@@ -233,7 +233,7 @@ def test_summary_preserves_signed_bias_groups_and_success_runtime(
         peak_vram_mb=75.0,
     )
     failed_prediction = NativePrediction(
-        sample_id="dense-2",
+        sample_id="dense-3",
         output_type="count",
         predicted_count=None,
         latency_ms=100.0,
@@ -243,7 +243,11 @@ def test_summary_preserves_signed_bias_groups_and_success_runtime(
     records = [
         evaluate_sample(sample_high, high_prediction, localization_radius=2.0),
         evaluate_sample(sample_low, low_prediction, localization_radius=2.0),
-        evaluate_sample(sample_low, failed_prediction, localization_radius=2.0),
+        evaluate_sample(
+            replace(sample_low, sample_id="dense-3"),
+            failed_prediction,
+            localization_radius=2.0,
+        ),
     ]
 
     summary = summarize_records(records, expected_samples=3)
@@ -260,3 +264,162 @@ def test_summary_preserves_signed_bias_groups_and_success_runtime(
         "density_band": {"high": -1.0, "low": 2.0},
         "lighting": {"night": 2.0},
     }
+
+
+def test_point_matching_maximizes_in_radius_matches_before_distance(
+    tmp_path: Path,
+) -> None:
+    sample = replace(
+        _sample(tmp_path),
+        width=4,
+        height=4,
+        ground_truth_count=2.0,
+        ground_truth_points=((0.0, 0.0), (1.0, 0.0)),
+        ground_truth_density=None,
+        zones=(),
+    )
+    prediction = NativePrediction(
+        sample_id="dense-1",
+        output_type="points",
+        predicted_count=2.0,
+        latency_ms=1.0,
+        peak_vram_mb=1.0,
+        points=((0.0, 0.0), (0.0, 0.6)),
+    )
+
+    record = evaluate_sample(sample, prediction, localization_radius=1.1)
+
+    assert record.extra_metrics["localization_recall"] == 1.0
+    assert record.extra_metrics["localization_precision"] == 1.0
+
+
+def test_condition_coverage_exposes_concentrated_failures(tmp_path: Path) -> None:
+    sample = replace(
+        _sample(tmp_path),
+        condition_tags={"density_band": "high", "lighting": "night"},
+    )
+    success = NativePrediction("dense-1", "count", 2.0, 1.0, 1.0)
+    failed = NativePrediction(
+        "dense-2",
+        "count",
+        None,
+        1.0,
+        1.0,
+        failure_state="oom",
+    )
+    records = [
+        evaluate_sample(sample, success, localization_radius=1.0),
+        evaluate_sample(
+            replace(sample, sample_id="dense-2"),
+            failed,
+            localization_radius=1.0,
+        ),
+    ]
+
+    summary = summarize_records(records, expected_samples=2)
+
+    assert summary["band_coverage"]["high"] == {
+        "expected_samples": 2,
+        "recorded_samples": 2,
+        "successful_samples": 1,
+        "explicit_failures": 1,
+        "coverage": 0.5,
+    }
+    assert summary["condition_coverage"]["lighting"]["night"]["coverage"] == 0.5
+
+
+def test_narrow_density_zone_uses_fractional_cell_mass(tmp_path: Path) -> None:
+    sample = replace(
+        _sample(tmp_path),
+        zones=(ZoneBox("narrow", 0.0, 0.0, 0.5, 8.0),),
+    )
+    predicted_density = np.asarray(sample.ground_truth_density, dtype=np.float32).copy()
+    predicted_density[0, 0] = 0.0
+    predicted_density[1, 1] += 1.0
+    prediction = NativePrediction(
+        "dense-1",
+        "density",
+        2.0,
+        1.0,
+        1.0,
+        density=predicted_density,
+    )
+
+    record = evaluate_sample(sample, prediction, localization_radius=1.0)
+
+    assert record.extra_metrics["density_zone_mae"] > 0.0
+
+
+def test_hybrid_preserves_density_and_point_spatial_metrics(tmp_path: Path) -> None:
+    sample = _sample(tmp_path)
+    prediction = NativePrediction(
+        "dense-1",
+        "hybrid",
+        2.0,
+        1.0,
+        1.0,
+        density=np.asarray(sample.ground_truth_density, dtype=np.float32),
+        points=((1.0, 1.0), (6.0, 6.0)),
+    )
+
+    record = evaluate_sample(sample, prediction, localization_radius=1.0)
+
+    assert record.spatial_metric_name == "game_l1"
+    assert record.extra_metrics["density_zone_mae"] == 0.0
+    assert record.extra_metrics["point_zone_mae"] == 0.0
+    assert record.extra_metrics["game_l1"] == 0.0
+    assert record.extra_metrics["localization_f1"] == 1.0
+
+
+def test_summary_rejects_duplicate_sample_ids(tmp_path: Path) -> None:
+    sample = _sample(tmp_path)
+    prediction = NativePrediction("dense-1", "count", 2.0, 1.0, 1.0)
+    record = evaluate_sample(sample, prediction, localization_radius=1.0)
+
+    with pytest.raises(ValueError, match="duplicate sample_id"):
+        summarize_records([record, record], expected_samples=2)
+
+
+def test_summary_marks_missing_records_as_incomplete(tmp_path: Path) -> None:
+    sample = _sample(tmp_path)
+    prediction = NativePrediction("dense-1", "count", 2.0, 1.0, 1.0)
+    record = evaluate_sample(sample, prediction, localization_radius=1.0)
+
+    summary = summarize_records([record], expected_samples=2)
+
+    assert summary["accounting_complete"] is False
+    assert summary["coverage"] == 0.5
+    assert summary["explicit_failures"] == 0
+
+
+def test_summary_rejects_ambiguous_success_or_failure_rows(tmp_path: Path) -> None:
+    sample = _sample(tmp_path)
+    prediction = NativePrediction("dense-1", "count", 2.0, 1.0, 1.0)
+    record = evaluate_sample(sample, prediction, localization_radius=1.0)
+    ambiguous = replace(record, predicted_count=None, failure_state=None)
+
+    with pytest.raises(ValueError, match="success or explicit failure"):
+        summarize_records([ambiguous], expected_samples=1)
+
+
+def test_small_density_map_keeps_non_ssim_metrics(tmp_path: Path) -> None:
+    density = np.asarray([[1.0, 1.0]], dtype=np.float32)
+    sample = replace(
+        _sample(tmp_path),
+        ground_truth_density=density,
+        ground_truth_count=2.0,
+        ground_truth_points=((1.0, 1.0), (6.0, 6.0)),
+    )
+    prediction = NativePrediction(
+        "dense-1",
+        "density",
+        2.0,
+        1.0,
+        1.0,
+        density=density.copy(),
+    )
+
+    record = evaluate_sample(sample, prediction, localization_radius=1.0)
+
+    assert "density_ssim" not in record.extra_metrics
+    assert record.extra_metrics["predicted_mass"] == 2.0
