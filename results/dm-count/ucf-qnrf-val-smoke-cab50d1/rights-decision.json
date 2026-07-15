@@ -1,0 +1,26 @@
+{
+  "allowed_actions": [
+    "catalog",
+    "license_due_diligence",
+    "synthetic_compatibility_smoke",
+    "asset_download",
+    "frozen_checkpoint_evaluation"
+  ],
+  "ambiguous_components": [
+    "deployment",
+    "derived_weights"
+  ],
+  "blockers": [],
+  "candidate_id": "dm-count-official-ucf-qnrf-apache",
+  "component_ids": {
+    "code": "dm-count-official-cc5f2132",
+    "dataset": "ucf-qnrf-kaggle-apache",
+    "deployment": "droneai-festival-deployment-pending",
+    "derived_weights": "droneai-derived-weights-not-created",
+    "pretrained_weights": "dm-count-model-qnrf-cc5f2132"
+  },
+  "manifest_semantic_sha256": "d512292b4c376b96c245c45f0958742becf7f0cb62418a75f0c0633c6626047a",
+  "rationale": "No explicit commercial prohibition is recorded, but at least one required permission is absent, silent, pending, or unverified.",
+  "restricted_components": [],
+  "status": "PASS_COMMERCIAL_CANDIDATE"
+}
