@@ -41,6 +41,13 @@ class FixtureAdapter:
             latency_ms=2.0,
             peak_vram_mb=1.0,
             density=predicted,
+            metadata={
+                "original_width": sample.width,
+                "original_height": sample.height,
+                "processed_width": sample.width,
+                "processed_height": sample.height,
+                "coordinate_transform": "identity",
+            },
         )
 
 
@@ -196,6 +203,7 @@ def test_end_to_end_runner_writes_small_review_bundle(tmp_path: Path) -> None:
         "model-brief.md",
         "summary.md",
         "sample-manifest.json",
+        "native-output-metadata.json",
         "rights-decision.json",
         "predictions.csv",
         "metrics.json",
@@ -211,6 +219,11 @@ def test_end_to_end_runner_writes_small_review_bundle(tmp_path: Path) -> None:
     assert adapter.calls.count(("low-00", False)) == 1
     assert sum(retained for _, retained in adapter.calls) == 12
     assert json.loads((output / "score.json").read_text())["score"] == 100
+    metadata = json.loads(
+        (output / "native-output-metadata.json").read_text(encoding="utf-8")
+    )
+    assert len(metadata["samples"]) == 36
+    assert metadata["samples"][0]["metadata"]["coordinate_transform"] == "identity"
 
 
 def test_sealed_test_requires_explicit_approval_before_output(tmp_path: Path) -> None:

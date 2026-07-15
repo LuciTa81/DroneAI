@@ -42,7 +42,8 @@ python -m pytest -q
 Use a new output directory for every fixture. The command refuses to overwrite
 a non-empty destination. A complete fixture contains `score.md`, `score.json`,
 `summary.md`, `predictions.csv`, frozen sample and rights evidence, environment
-provenance, and exactly 12 deterministic four-column review panels.
+provenance, per-sample native-output/preprocessing metadata, and exactly 12
+deterministic four-column review panels.
 
 ## Verified home5090 fixture
 

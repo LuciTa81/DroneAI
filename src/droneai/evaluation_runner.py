@@ -271,6 +271,7 @@ def _native_output_fingerprint(prediction: NativePrediction) -> str:
         "confidence": prediction.confidence,
         "failure_state": prediction.failure_state,
         "coordinate_space": prediction.coordinate_space,
+        "metadata": prediction.metadata,
     }
     digest.update(
         json.dumps(
@@ -312,6 +313,7 @@ def run_evaluation(
         "model-brief.md",
         "summary.md",
         "sample-manifest.json",
+        "native-output-metadata.json",
         "rights-decision.json",
         "environment-summary.json",
         "evidence-manifest.json",
@@ -380,6 +382,7 @@ def run_evaluation(
                 {
                     "sample_id": sample.sample_id,
                     "source_sha256": sample.source_sha256,
+                    "annotation_sha256": sample.annotation_sha256,
                 }
                 for sample in ordered_samples
             ],
@@ -388,10 +391,14 @@ def run_evaluation(
 
     records: list[ScalarEvaluation] = []
     first_pass_fingerprints: dict[str, str] = {}
+    native_metadata: list[dict[str, object]] = []
     for sample in ordered_samples:
         prediction = adapter.predict(sample, retain_native=False)
         first_pass_fingerprints[sample.sample_id] = _native_output_fingerprint(
             prediction
+        )
+        native_metadata.append(
+            {"sample_id": sample.sample_id, "metadata": prediction.metadata}
         )
         records.append(
             evaluate_sample(
@@ -402,6 +409,10 @@ def run_evaluation(
         )
 
     predictions_path = write_predictions_csv(output / "predictions.csv", records)
+    native_metadata_path = write_json(
+        output / "native-output-metadata.json",
+        {"schema_version": 1, "samples": native_metadata},
+    )
     predictions_ref = artifact_reference(predictions_path, base_dir=output)
     summary = summarize_records(records, expected_samples=protocol.expected_samples)
     spatial_pass, spatial_mean = _spatial_pass(records, protocol)
@@ -504,6 +515,7 @@ def run_evaluation(
         sample_manifest_path,
         rights_path,
         predictions_path,
+        native_metadata_path,
         metrics_path,
         selection_path,
         brief_path,

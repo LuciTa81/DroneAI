@@ -71,6 +71,21 @@ def test_sample_rejects_invalid_source_hash(tmp_path: Path) -> None:
         )
 
 
+def test_sample_rejects_invalid_optional_annotation_hash(tmp_path: Path) -> None:
+    with pytest.raises(ValueError, match="annotation SHA-256"):
+        EvaluationSample(
+            sample_id="sample-1",
+            dataset_id="fixture-v1",
+            split_id="validation",
+            image_path=tmp_path / "image.png",
+            source_sha256="a" * 64,
+            annotation_sha256="short",
+            width=32,
+            height=24,
+            ground_truth_count=0.0,
+        )
+
+
 def test_sample_rejects_density_whose_sum_does_not_preserve_count(tmp_path: Path) -> None:
     with pytest.raises(ValueError, match="density sum"):
         EvaluationSample(
@@ -95,6 +110,18 @@ def test_failed_prediction_still_rejects_invalid_runtime() -> None:
             latency_ms=-1.0,
             peak_vram_mb=0.0,
             failure_state="fixture_failure",
+        )
+
+
+def test_prediction_metadata_accepts_only_named_json_scalars() -> None:
+    with pytest.raises(ValueError, match="metadata"):
+        NativePrediction(
+            sample_id="sample-1",
+            output_type="count",
+            predicted_count=1.0,
+            latency_ms=1.0,
+            peak_vram_mb=0.0,
+            metadata={"processed_shape": [32, 32]},
         )
 
 

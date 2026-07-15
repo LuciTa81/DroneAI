@@ -119,6 +119,7 @@ Inspect the following paths before approving the next model:
 <run-dir>/summary.md
 <run-dir>/predictions.csv
 <run-dir>/sample-manifest.json
+<run-dir>/native-output-metadata.json
 <run-dir>/rights-decision.json
 <run-dir>/selection_manifest.json
 <run-dir>/environment-summary.json
@@ -144,6 +145,7 @@ Torch from the pinned image and installs the exact overlay separately:
 cd /workspace
 python -m venv --system-site-packages .venvs/dm-count
 . .venvs/dm-count/bin/activate
+python -m pip install -e ".[dev,evaluation]"
 python -m pip install -r requirements/models/dm_count-home5090.lock.txt
 python -m pip freeze > /workspace/data/results/dm-count-environment.freeze.txt
 ```
@@ -154,6 +156,87 @@ must instead be demonstrated against the pinned upstream commit with a
 synthetic forward/backward smoke before any data is opened. `h5py` and `pandas`
 are not imported by the pinned ShanghaiTech training path and must not be added
 to this venv unless a reviewed adapter requires them.
+
+## DM-Count UCF-QNRF frozen-checkpoint smoke
+
+This lane uses the project owner's approved policy: the Apache-2.0 label on the
+recorded Kaggle mirror is accepted as dataset permission, while the uploader's
+non-owner statement remains visible in the manifest. The action gate permits
+asset download and frozen-checkpoint evaluation, not training or deployment.
+
+Create a new pinned upstream checkout and copy the official checkpoint into the
+SSD checkpoint area. Do not replace an existing path:
+
+```bash
+cd /workspace
+test ! -e /workspace/upstreams/DM-Count
+git clone https://github.com/cvlab-stonybrook/DM-Count.git /workspace/upstreams/DM-Count
+git -C /workspace/upstreams/DM-Count checkout --detach cc5f2132e0d1328909f31b6d665b8e0b15c30467
+test "$(git -C /workspace/upstreams/DM-Count rev-parse HEAD)" = "cc5f2132e0d1328909f31b6d665b8e0b15c30467"
+mkdir -p /workspace/data/checkpoints/dm-count/cc5f2132
+test ! -e /workspace/data/checkpoints/dm-count/cc5f2132/model_qnrf.pth
+cp /workspace/upstreams/DM-Count/pretrained_models/model_qnrf.pth \
+  /workspace/data/checkpoints/dm-count/cc5f2132/model_qnrf.pth
+sha256sum /workspace/data/checkpoints/dm-count/cc5f2132/model_qnrf.pth
+```
+
+Generate the action-scoped decision, then run the dataset-free model/checkpoint
+compatibility smoke. Replace `<commit>` with the current short DroneAI commit
+and `<checkpoint-sha256>` with the preceding `sha256sum` value:
+
+```bash
+. /workspace/.venvs/dm-count/bin/activate
+python scripts/run_stage3c.py \
+  --manifest configs/candidates/dm_count_ucf_qnrf.candidate.json \
+  --output-dir /workspace/data/results/stage-3c/dm-count-ucf-qnrf-<commit>
+python scripts/run_dm_count_compatibility_smoke.py \
+  --upstream-dir /workspace/upstreams/DM-Count \
+  --checkpoint /workspace/data/checkpoints/dm-count/cc5f2132/model_qnrf.pth \
+  --checkpoint-sha256 <checkpoint-sha256> \
+  --output-dir /workspace/data/results/dm-count/compatibility-<commit> \
+  --device cuda
+```
+
+Only after that smoke passes, download the accepted public mirror into a new
+versioned directory. The `.part` file is retained for resumable transfer:
+
+```bash
+mkdir -p /workspace/data/datasets/ucf-qnrf-kaggle-apache/archive
+test ! -e /workspace/data/datasets/ucf-qnrf-kaggle-apache/archive/ucf-qnrf.zip
+curl -fL --retry 5 -C - \
+  -o /workspace/data/datasets/ucf-qnrf-kaggle-apache/archive/ucf-qnrf.zip.part \
+  https://www.kaggle.com/api/v1/datasets/download/faihajalamtopu/ucf-qnrf
+mv /workspace/data/datasets/ucf-qnrf-kaggle-apache/archive/ucf-qnrf.zip.part \
+  /workspace/data/datasets/ucf-qnrf-kaggle-apache/archive/ucf-qnrf.zip
+sha256sum /workspace/data/datasets/ucf-qnrf-kaggle-apache/archive/ucf-qnrf.zip
+mkdir -p /workspace/data/datasets/ucf-qnrf-kaggle-apache/raw
+unzip -q -n /workspace/data/datasets/ucf-qnrf-kaggle-apache/archive/ucf-qnrf.zip \
+  -d /workspace/data/datasets/ucf-qnrf-kaggle-apache/raw
+find /workspace/data/datasets/ucf-qnrf-kaggle-apache/raw -type d -name Train -print
+```
+
+Use the printed `Train` directory exactly. The runner has no test-root argument
+and verifies the pinned 1,081/120 upstream train/validation lists before it
+selects the 36 validation images:
+
+```bash
+python scripts/run_dm_count_ucf_qnrf_smoke.py \
+  --config configs/evaluation/dm_count_ucf_qnrf_smoke.json \
+  --train-root <printed-Train-directory> \
+  --upstream-dir /workspace/upstreams/DM-Count \
+  --train-list /workspace/upstreams/DM-Count/preprocess/qnrf_train.txt \
+  --validation-list /workspace/upstreams/DM-Count/preprocess/qnrf_val.txt \
+  --checkpoint /workspace/data/checkpoints/dm-count/cc5f2132/model_qnrf.pth \
+  --checkpoint-sha256 <checkpoint-sha256> \
+  --rights-decision /workspace/data/results/stage-3c/dm-count-ucf-qnrf-<commit>/rights-decision.json \
+  --rights-manifest configs/candidates/dm_count_ucf_qnrf.candidate.json \
+  --output-dir /workspace/data/results/dm-count/ucf-qnrf-val-smoke-<commit> \
+  --device cuda
+```
+
+Stop after reviewing `score.md`, `summary.md`, `predictions.csv`,
+`split-source-manifest.json`, `model-brief.md`, and the 12 panels. Do not open
+the official test split or start training in this checkpoint.
 
 ## Dataset transfer gate
 

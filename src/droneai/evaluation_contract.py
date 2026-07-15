@@ -42,6 +42,7 @@ class EvaluationSample:
     width: int
     height: int
     ground_truth_count: float
+    annotation_sha256: str | None = None
     ground_truth_points: tuple[Point, ...] = ()
     ground_truth_density: np.ndarray | None = field(default=None, compare=False)
     condition_tags: dict[str, str] = field(default_factory=dict, compare=False)
@@ -53,6 +54,8 @@ class EvaluationSample:
             raise ValueError("sample identity is required")
         if not is_sha256(self.source_sha256):
             raise ValueError("sample source SHA-256 is required")
+        if self.annotation_sha256 is not None and not is_sha256(self.annotation_sha256):
+            raise ValueError("sample annotation SHA-256 must be valid when provided")
         if self.width <= 0 or self.height <= 0:
             raise ValueError("sample dimensions must be positive")
         if any(zone.x0 < 0 or zone.y0 < 0 or zone.x1 > self.width or zone.y1 > self.height for zone in self.zones):
@@ -90,6 +93,9 @@ class NativePrediction:
     confidence: float | None = None
     failure_state: str | None = None
     coordinate_space: str = "original_pixels"
+    metadata: dict[str, str | int | float | bool | None] = field(
+        default_factory=dict, compare=False
+    )
 
     def __post_init__(self) -> None:
         if not self.sample_id:
@@ -101,6 +107,14 @@ class NativePrediction:
             or self.peak_vram_mb < 0
         ):
             raise ValueError("runtime values must be non-negative and latency positive")
+        if any(
+            not isinstance(key, str)
+            or not key.strip()
+            or not isinstance(value, (str, int, float, bool, type(None)))
+            or (isinstance(value, float) and not math.isfinite(value))
+            for key, value in self.metadata.items()
+        ):
+            raise ValueError("prediction metadata requires named finite JSON scalars")
         if self.failure_state:
             if self.predicted_count is not None or self.density is not None or self.points:
                 raise ValueError("failed predictions cannot contain a count or native output")

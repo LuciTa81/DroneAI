@@ -43,8 +43,8 @@ verified.
 
 1. Build a miniature filesystem fixture matching the accepted archive layout.
 2. Write failing tests for annotation parsing, point/count agreement, source
-   hashes, deterministic train/validation assignment, 36-sample stratified
-   selection, and refusal to enumerate any test path.
+   hashes, the complete/disjoint pinned upstream train and validation lists,
+   36-sample stratified selection, and refusal to enumerate any test path.
 3. Implement layout discovery through explicit train/annotation roots only.
 4. Add count-preserving max-size resize and transformed point coordinates.
 5. Run `python -m pytest -q tests/test_ucf_qnrf.py`.
@@ -112,8 +112,8 @@ verified.
    checkpoint to new paths under `/workspace/data`; never overwrite an existing
    artifact.
 2. Record archive/checkpoint byte size and SHA-256 before extraction/use.
-3. Build and freeze the train-derived validation/smoke manifest while proving
-   zero test-path access.
+3. Build and freeze the pinned 1,081/120 upstream train/validation split and
+   36-image validation smoke manifest while proving zero test-path access.
 4. Run one sample first; inspect finite density mass, count, latency, VRAM, and
    a panel.
 5. Run the 36-image smoke, then copy only the small review bundle into Git.

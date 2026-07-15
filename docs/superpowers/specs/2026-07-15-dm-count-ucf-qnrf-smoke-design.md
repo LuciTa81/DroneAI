@@ -46,7 +46,8 @@ Stage 3C remains component and action scoped:
 
 The official upstream repository remains outside Git at
 `/workspace/upstreams/DM-Count`. The adapter verifies the pinned upstream
-commit before importing reviewed code paths. Large checkpoints stay under
+commit and a clean upstream working tree before importing reviewed code paths.
+Large checkpoints stay under
 `/workspace/data/checkpoints/dm-count`; datasets stay under
 `/workspace/data/datasets/ucf-qnrf`; native outputs stay under
 `/workspace/data/results/dm-count`.
@@ -77,18 +78,24 @@ upstream checkout is not edited.
 The official UCF-QNRF identities remain 1,201 train images and 334 test images.
 The archive and every selected source image are SHA-256 recorded.
 
-The first run uses only a deterministic validation subset derived from the
-official training partition:
+The first run uses only the validation subset fixed by the pinned official
+DM-Count repository. That repository assigns 1,081 source-train images to
+training and 120 to validation:
 
 1. parse the training images and dot annotations without touching the test
    directory;
-2. assign a stable train/validation partition from sample identity and seed;
-3. select a deterministic 36-image smoke subset from validation, stratified by
+2. verify the complete, disjoint `preprocess/qnrf_train.txt` and
+   `preprocess/qnrf_val.txt` lists at the pinned upstream commit, including
+   their frozen SHA-256 values;
+3. select a deterministic 36-image smoke subset from the official 120-image
+   validation list, stratified by
    frozen density bands when the available data permits;
 4. write the complete split manifest before inference;
 5. assert that no test path was enumerated or opened.
 
-Thirty-six samples provide enough rows for low/medium/high-density evidence and
+Using the upstream split prevents the official checkpoint from being evaluated
+on images that it saw during training. Thirty-six samples provide enough rows
+for low/medium/high-density evidence and
 allow the existing deterministic curation logic to select exactly 12 review
 panels. The later full validation and sealed 334-image test runs require a new
 protocol freeze and explicit approval.
@@ -137,7 +144,10 @@ this checkpoint.
 - Existing tests remain green.
 - Rights classification permits only the verified frozen-evaluation action and
   keeps training/deployment pending.
-- Dataset indexing proves zero test access.
+- The persisted rights decision is bound to the expected candidate manifest
+  semantic hash and component IDs.
+- Dataset indexing proves zero test access and verifies the pinned 1,081/120
+  official train/validation split.
 - The adapter returns finite non-negative count-preserving density output or an
   explicit failure.
 - CUDA smoke records the RTX 5090 environment and hashes.

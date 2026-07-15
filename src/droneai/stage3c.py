@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
@@ -19,6 +20,9 @@ RESEARCH_ACTIONS = ("catalog", "research_reproduction")
 CANDIDATE_ACTIONS = ("catalog", "license_due_diligence")
 PRODUCTION_ACTIONS = (
     "catalog",
+    "synthetic_compatibility_smoke",
+    "asset_download",
+    "frozen_checkpoint_evaluation",
     "commercial_training",
     "derived_weight_use",
     "weight_reuse",
@@ -60,6 +64,16 @@ class RightsDecision:
 class Stage3CResult:
     report: StageReport
     decision: RightsDecision
+
+
+def manifest_semantic_sha256(manifest: dict[str, Any]) -> str:
+    canonical = json.dumps(
+        manifest,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+    ).encode("utf-8")
+    return hashlib.sha256(canonical).hexdigest()
 
 
 def _component_map(manifest: dict[str, Any]) -> tuple[dict[str, dict[str, Any]], list[str]]:
@@ -213,6 +227,9 @@ def classify_rights(manifest: dict[str, Any]) -> RightsDecision:
         actions = CANDIDATE_ACTIONS
         if inspection["commercial_verified"].get("code"):
             actions += ("synthetic_compatibility_smoke",)
+        frozen_inputs = ("code", "dataset", "pretrained_weights")
+        if all(inspection["commercial_verified"].get(kind) for kind in frozen_inputs):
+            actions += ("asset_download", "frozen_checkpoint_evaluation")
     else:
         actions = {
             "PASS_RESEARCH_ONLY": RESEARCH_ACTIONS,
@@ -296,11 +313,23 @@ def run_stage3c(*, manifest_path: str | Path, output_dir: str | Path) -> Stage3C
         success_status=success_status,
     )
     output_dir.mkdir(parents=True, exist_ok=True)
+    components, _ = _component_map(manifest)
+    decision_payload = decision.to_dict()
+    decision_payload.update(
+        {
+            "candidate_id": manifest.get("candidate_id"),
+            "manifest_semantic_sha256": manifest_semantic_sha256(manifest),
+            "component_ids": {
+                kind: component.get("component_id")
+                for kind, component in sorted(components.items())
+            },
+        }
+    )
     (output_dir / "manifest.snapshot.json").write_text(
         json.dumps(manifest, indent=2, ensure_ascii=False), encoding="utf-8"
     )
     (output_dir / "rights-decision.json").write_text(
-        json.dumps(decision.to_dict(), indent=2, ensure_ascii=False), encoding="utf-8"
+        json.dumps(decision_payload, indent=2, ensure_ascii=False), encoding="utf-8"
     )
     (output_dir / "rights-decision.md").write_text(decision.to_markdown(), encoding="utf-8")
     (output_dir / "score.json").write_text(
