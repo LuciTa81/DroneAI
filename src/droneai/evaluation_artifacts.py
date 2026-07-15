@@ -4,6 +4,8 @@ import csv
 import io
 import json
 import math
+import os
+import stat
 from dataclasses import asdict
 from pathlib import Path
 from typing import Iterable
@@ -12,6 +14,7 @@ from droneai.evaluation_contract import ScalarEvaluation
 from droneai.integrity import sha256_file
 
 REVIEW_BUDGET_BYTES = 25 * 1024 * 1024
+_REPARSE_POINT = getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400)
 
 
 def _json_safe(payload: object) -> object:
@@ -93,6 +96,41 @@ def artifact_reference(
     return {"path": relative.as_posix(), "sha256": sha256_file(target)}
 
 
+def _is_linklike(path: Path) -> bool:
+    metadata = os.lstat(path)
+    attributes = getattr(metadata, "st_file_attributes", 0)
+    if attributes & _REPARSE_POINT:
+        return True
+    return path.is_symlink()
+
+
+def _review_bundle_size(root: Path) -> int:
+    if _is_linklike(root):
+        raise ValueError(f"review bundle cannot contain a symlink or junction: {root}")
+    if not root.is_dir():
+        raise FileNotFoundError(f"review bundle directory missing: {root}")
+
+    total = 0
+    pending = [root]
+    while pending:
+        directory = pending.pop()
+        with os.scandir(directory) as entries:
+            children = sorted(entries, key=lambda entry: entry.name)
+        for entry in children:
+            path = Path(entry.path)
+            if _is_linklike(path):
+                raise ValueError(
+                    f"review bundle cannot contain a symlink or junction: {path}"
+                )
+            if entry.is_dir(follow_symlinks=False):
+                pending.append(path)
+            elif entry.is_file(follow_symlinks=False):
+                total += entry.stat(follow_symlinks=False).st_size
+            else:
+                raise ValueError(f"unsupported review bundle entry: {path}")
+    return total
+
+
 def enforce_review_budget(
     root: str | Path,
     limit_bytes: int = REVIEW_BUDGET_BYTES,
@@ -100,14 +138,7 @@ def enforce_review_budget(
     if limit_bytes < 0:
         raise ValueError("review budget limit must be non-negative")
     bundle_root = Path(root)
-    if not bundle_root.is_dir():
-        raise FileNotFoundError(f"review bundle directory missing: {bundle_root}")
-    paths = [bundle_root, *sorted(bundle_root.rglob("*"))]
-    for path in paths:
-        is_junction = getattr(path, "is_junction", lambda: False)
-        if path.is_symlink() or is_junction():
-            raise ValueError(f"review bundle cannot contain a symlink or junction: {path}")
-    total = sum(path.stat().st_size for path in paths[1:] if path.is_file())
+    total = _review_bundle_size(bundle_root)
     if total > limit_bytes:
         raise ValueError(
             f"review bundle exceeds budget: {total} bytes "

@@ -1,10 +1,13 @@
 import csv
 import json
+import os
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
 from droneai.evaluation_artifacts import (
+    _is_linklike,
     artifact_reference,
     enforce_review_budget,
     write_json,
@@ -125,6 +128,43 @@ def test_review_budget_rejects_symlinked_content(
     )
     with pytest.raises(ValueError, match="symlink or junction"):
         enforce_review_budget(bundle)
+
+
+def test_windows_reparse_point_is_linklike_without_path_is_junction(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    target = tmp_path / "junction"
+    target.mkdir()
+    original_lstat = os.lstat
+    monkeypatch.setattr(
+        os,
+        "lstat",
+        lambda path: (
+            SimpleNamespace(st_file_attributes=0x400)
+            if Path(path) == target
+            else original_lstat(path)
+        ),
+    )
+
+    assert _is_linklike(target)
+
+
+def test_review_budget_rejects_linklike_root_before_traversal(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import droneai.evaluation_artifacts as artifacts
+
+    monkeypatch.setattr(artifacts, "_is_linklike", lambda path: path == tmp_path)
+    monkeypatch.setattr(
+        artifacts.os,
+        "scandir",
+        lambda path: pytest.fail("linklike root must be rejected before traversal"),
+    )
+
+    with pytest.raises(ValueError, match="symlink or junction"):
+        enforce_review_budget(tmp_path)
 
 
 def test_custom_budget_error_reports_custom_limit(tmp_path: Path) -> None:
