@@ -52,6 +52,13 @@ def test_json_writer_converts_nested_non_finite_metrics_to_null(tmp_path: Path) 
     }
 
 
+def test_json_writer_rejects_keys_that_collide_after_normalization(
+    tmp_path: Path,
+) -> None:
+    with pytest.raises(ValueError, match="JSON key collision"):
+        write_json(tmp_path / "collision.json", {1: "integer", "1": "string"})
+
+
 def test_writers_refuse_to_overwrite_existing_artifacts(tmp_path: Path) -> None:
     target = tmp_path / "evidence.json"
     target.write_text("preserve", encoding="utf-8")
@@ -60,6 +67,12 @@ def test_writers_refuse_to_overwrite_existing_artifacts(tmp_path: Path) -> None:
         write_json(target, {"replace": True})
 
     assert target.read_text(encoding="utf-8") == "preserve"
+
+    csv_target = tmp_path / "predictions.csv"
+    csv_target.write_text("preserve", encoding="utf-8")
+    with pytest.raises(FileExistsError):
+        write_predictions_csv(csv_target, [_record()])
+    assert csv_target.read_text(encoding="utf-8") == "preserve"
 
 
 def test_predictions_csv_is_flat_deterministic_and_json_safe(tmp_path: Path) -> None:
@@ -94,3 +107,28 @@ def test_review_budget_allows_exact_limit(tmp_path: Path) -> None:
     (tmp_path / "exact.bin").write_bytes(b"0" * (25 * 1024 * 1024))
 
     assert enforce_review_budget(tmp_path) == 25 * 1024 * 1024
+
+
+def test_review_budget_rejects_symlinked_content(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    bundle = tmp_path / "bundle"
+    linked = bundle / "linked"
+    linked.mkdir(parents=True)
+    (linked / "hidden.bin").write_bytes(b"hidden")
+    original_is_symlink = Path.is_symlink
+    monkeypatch.setattr(
+        Path,
+        "is_symlink",
+        lambda self: self == linked or original_is_symlink(self),
+    )
+    with pytest.raises(ValueError, match="symlink or junction"):
+        enforce_review_budget(bundle)
+
+
+def test_custom_budget_error_reports_custom_limit(tmp_path: Path) -> None:
+    (tmp_path / "two.bin").write_bytes(b"01")
+
+    with pytest.raises(ValueError, match="limit=1 bytes"):
+        enforce_review_budget(tmp_path, limit_bytes=1)

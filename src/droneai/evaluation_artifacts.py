@@ -18,7 +18,13 @@ def _json_safe(payload: object) -> object:
     if isinstance(payload, float) and not math.isfinite(payload):
         return None
     if isinstance(payload, dict):
-        return {str(key): _json_safe(value) for key, value in payload.items()}
+        normalized: dict[str, object] = {}
+        for key, value in payload.items():
+            normalized_key = str(key)
+            if normalized_key in normalized:
+                raise ValueError(f"JSON key collision after normalization: {key!r}")
+            normalized[normalized_key] = _json_safe(value)
+        return normalized
     if isinstance(payload, (list, tuple)):
         return [_json_safe(value) for value in payload]
     return payload
@@ -96,14 +102,15 @@ def enforce_review_budget(
     bundle_root = Path(root)
     if not bundle_root.is_dir():
         raise FileNotFoundError(f"review bundle directory missing: {bundle_root}")
-    total = sum(
-        path.stat().st_size
-        for path in sorted(bundle_root.rglob("*"))
-        if path.is_file()
-    )
+    paths = [bundle_root, *sorted(bundle_root.rglob("*"))]
+    for path in paths:
+        is_junction = getattr(path, "is_junction", lambda: False)
+        if path.is_symlink() or is_junction():
+            raise ValueError(f"review bundle cannot contain a symlink or junction: {path}")
+    total = sum(path.stat().st_size for path in paths[1:] if path.is_file())
     if total > limit_bytes:
         raise ValueError(
-            f"review bundle exceeds 25 MiB budget: {total} bytes "
-            f"(limit={limit_bytes})"
+            f"review bundle exceeds budget: {total} bytes "
+            f"(limit={limit_bytes} bytes; default=25 MiB)"
         )
     return total
