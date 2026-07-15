@@ -289,6 +289,11 @@ def _native_output_fingerprint(prediction: NativePrediction) -> str:
     return digest.hexdigest()
 
 
+def _panel_filename(panel_index: int, sample_id: str) -> str:
+    sample_digest = hashlib.sha256(sample_id.encode("utf-8")).hexdigest()[:16]
+    return f"selected-{panel_index:02d}-{sample_digest}.png"
+
+
 def run_evaluation(
     *,
     adapter: ModelAdapter,
@@ -447,7 +452,9 @@ def run_evaluation(
                 sample,
                 retained,
                 first,
-                output / "figures" / f"selected-{panel_index:02d}-{selection.sample_id}.png",
+                output
+                / "figures"
+                / _panel_filename(panel_index, selection.sample_id),
                 model_id=brief.model_id,
                 checkpoint_sha256=brief.checkpoint_sha256,
                 zone_warning_count=protocol.zone_warning_count,

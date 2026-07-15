@@ -401,3 +401,17 @@ def test_sample_order_is_canonicalized_before_artifact_writes(tmp_path: Path) ->
         (second_output / "sample-manifest.json").read_text(encoding="utf-8")
     )
     assert first_manifest["samples"] == second_manifest["samples"]
+
+
+def test_panel_filename_cannot_escape_with_untrusted_sample_id() -> None:
+    filename = evaluation_runner._panel_filename(
+        1,
+        "../../../outside\\also-outside",
+    )
+
+    assert Path(filename).name == filename
+    assert "/" not in filename
+    assert "\\" not in filename
+    assert ".." not in filename
+    assert filename.startswith("selected-01-")
+    assert filename.endswith(".png")
