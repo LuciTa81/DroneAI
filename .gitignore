@@ -8,6 +8,7 @@ __pycache__/
 venv/
 /upstreams/
 /.worktrees/
+/.superpowers/
 
 # Jupyter
 .ipynb_checkpoints/
