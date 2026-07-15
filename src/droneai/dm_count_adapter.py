@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-import importlib.util
 import math
 import subprocess
 import time
+import types
 from pathlib import Path
 from typing import Protocol
 
@@ -93,6 +93,16 @@ def _git_status(upstream_dir: Path) -> str:
     return completed.stdout.strip()
 
 
+def _load_upstream_models(models_path: Path) -> types.ModuleType:
+    """Execute the pinned source without writing bytecode into its clean checkout."""
+
+    module = types.ModuleType("droneai_dm_count_upstream_models")
+    module.__file__ = str(models_path)
+    source = models_path.read_text(encoding="utf-8")
+    exec(compile(source, str(models_path), "exec"), module.__dict__)
+    return module
+
+
 class TorchDMCountBackend:
     """Lazy PyTorch backend that suppresses the upstream ImageNet download."""
 
@@ -103,11 +113,7 @@ class TorchDMCountBackend:
             raise RuntimeError("PyTorch is required for the official DM-Count backend") from error
 
         models_path = upstream_dir / "models.py"
-        spec = importlib.util.spec_from_file_location("droneai_dm_count_upstream_models", models_path)
-        if spec is None or spec.loader is None:
-            raise RuntimeError(f"cannot import official DM-Count models.py: {models_path}")
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
+        module = _load_upstream_models(models_path)
         module.model_zoo.load_url = lambda *args, **kwargs: {}
         model = module.vgg19()
         try:

@@ -10,6 +10,7 @@ from PIL import Image
 
 from droneai.dm_count_adapter import (
     DMCountAdapter,
+    _load_upstream_models,
     calculate_qnrf_size,
     resize_density_preserve_mass,
 )
@@ -122,6 +123,16 @@ def test_density_resize_preserves_nonnegative_mass() -> None:
     assert resized.shape == (5, 7)
     assert np.all(resized >= 0)
     assert float(resized.sum()) == pytest.approx(6.0, rel=1e-6)
+
+
+def test_loading_upstream_models_does_not_write_bytecode(tmp_path: Path) -> None:
+    models_path = tmp_path / "models.py"
+    models_path.write_text("sentinel = 42\n", encoding="utf-8")
+
+    module = _load_upstream_models(models_path)
+
+    assert module.sentinel == 42
+    assert not (tmp_path / "__pycache__").exists()
 
 
 def test_adapter_returns_count_preserving_density_and_model_brief(tmp_path: Path) -> None:
