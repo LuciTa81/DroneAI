@@ -70,7 +70,7 @@ set -eu
 cd /workspace
 python -m venv --system-site-packages .venvs/harness
 . .venvs/harness/bin/activate
-python -m pip install -e ".[dev]"
+python -m pip install -e ".[dev,evaluation]"
 pytest -q
 python scripts/run_stage0.py --profile configs/runtime/home5090_docker.json
 '
@@ -91,6 +91,49 @@ Review these small artifacts on the SSD:
 tag and digest, Python/PyTorch/CUDA/GPU data, seeds, `research_only`,
 `production_approved=false`, and recomputed SHA-256 entries for the other four
 artifacts.
+
+## Common evaluation fixture
+
+After the reviewed harness branch is clean and synchronized, run a new CUDA
+fixture directory. Replace `<commit>` with `git rev-parse --short HEAD` from the
+same repository checkout:
+
+```bash
+docker exec crowd-jupyter bash -lc '
+set -eu
+cd /workspace
+test ! -e /workspace/data/results/common-harness-fixture-<commit>
+. .venvs/harness/bin/activate
+python scripts/run_evaluation_fixture.py \
+  --config configs/evaluation/fixture_density.json \
+  --output-dir /workspace/data/results/common-harness-fixture-<commit> \
+  --device cuda
+'
+```
+
+Inspect the following paths before approving the next model:
+
+```text
+<run-dir>/score.md
+<run-dir>/score.json
+<run-dir>/summary.md
+<run-dir>/predictions.csv
+<run-dir>/sample-manifest.json
+<run-dir>/rights-decision.json
+<run-dir>/selection_manifest.json
+<run-dir>/environment-summary.json
+<run-dir>/figures/*.png
+```
+
+This synthetic fixture proves only the common harness and real CUDA execution.
+It is not a model-quality, dataset-rights, commercial-use, or production claim.
+
+The first verified CUDA fixture used code commit `a1620a9` on 2026-07-15. The
+container suite passed 200 tests, and the fixture produced
+`PASS_RESEARCH_ONLY`, 100/100, 36 prediction rows, 12 panels, and a 231630-byte
+review bundle. `environment-summary.json` recorded PyTorch
+`2.9.0a0+145a3a7bda.nv25.10`, CUDA 13.0, and the NVIDIA GeForce RTX 5090 with a
+clean Git worktree.
 
 ## DM-Count environment isolation
 

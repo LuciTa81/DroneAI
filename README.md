@@ -71,6 +71,11 @@ test-selected checkpoint recorded MAE 71.28 and RMSE 113.21 on all 182 images,
 and the separate pilot harness passed 100/100. The full 1000-epoch run is
 deferred to a suitable GPU server; this pilot is not a Stage 3 pass.
 
+Every new model-dataset run uses the
+[common evaluation harness](docs/COMMON_EVALUATION_HARNESS.md): architecture
+review first, complete labeled evaluation second, then a 100-point gate and 12
+deterministic review panels.
+
 The first model sequence is:
 
 1. CSRNet pipeline smoke test

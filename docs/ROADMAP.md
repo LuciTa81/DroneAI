@@ -24,6 +24,15 @@ set is opened.
 | 5. Controlled field | Count 20, area calibration 20, alert recall 25, latency 15, failure signaling 10, operator review 10 | 85 | Missed critical event, failure reported as zero people |
 | 6. Shadow mode | Event recall 25, false alarms 15, lead time 20, uptime/recovery 15, operator acceptance 15, audit completeness 10 | 85 | Critical-event recall and audit log completeness |
 
+## Common per-model review gate
+
+Before advancing to the next model, freeze the model brief,
+dataset/split/checkpoint identity, metric directions, thresholds, and expected
+sample count. Evaluate every sample as a success or explicit failure, then
+review `score.md`, `predictions.csv`, `selection_manifest.json`, and exactly 12
+selected four-column panels. Technical score and Stage 3C rights scope remain
+separate decisions.
+
 ## Model and data order
 
 1. Stage 0 uses no training dataset. It only verifies the experiment foundation.
