@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import math
 from pathlib import Path
+from typing import Literal
 
 import numpy as np
 from PIL import Image, ImageDraw, PngImagePlugin
@@ -10,6 +12,8 @@ from droneai.evaluation_contract import (
     NativePrediction,
     ScalarEvaluation,
 )
+
+SpatialKind = Literal["density", "points"]
 
 
 def fit_source(
@@ -80,11 +84,14 @@ def zone_counts(
     sample: EvaluationSample,
     prediction: NativePrediction,
 ) -> dict[str, float]:
-    if prediction.failure_state is not None:
-        raise ValueError("zone counts unavailable for failed prediction")
+    spatial_kind = _native_spatial_kind(prediction)
+    if spatial_kind is None:
+        raise ValueError("zone counts unavailable without native spatial output")
 
     counts: dict[str, float] = {}
-    if prediction.density is not None:
+    if spatial_kind == "density":
+        if prediction.density is None:
+            raise ValueError("declared density output is unavailable")
         density = np.asarray(prediction.density)
         map_height, map_width = density.shape
         for zone in sample.zones:
@@ -95,14 +102,28 @@ def zone_counts(
             counts[zone.zone_id] = float(density[y0:y1, x0:x1].sum())
         return counts
 
-    if prediction.output_type == "points" or prediction.points:
+    if spatial_kind == "points":
         for zone in sample.zones:
             counts[zone.zone_id] = float(
                 sum(zone.contains(x, y) for x, y in prediction.points)
             )
         return counts
 
-    raise ValueError("zone counts unavailable without native spatial output")
+    raise AssertionError("unreachable native spatial kind")
+
+
+def _native_spatial_kind(prediction: NativePrediction) -> SpatialKind | None:
+    if prediction.failure_state is not None or prediction.output_type == "count":
+        return None
+    if prediction.output_type == "density":
+        return "density"
+    if prediction.output_type == "points":
+        return "points"
+    if prediction.density is not None:
+        return "density"
+    if prediction.points:
+        return "points"
+    return None
 
 
 def _unavailable_view(size: tuple[int, int], message: str) -> Image.Image:
@@ -117,6 +138,55 @@ def _format_optional(value: float | None, places: int) -> str:
     return f"{value:.{places}f}"
 
 
+def _require_matching_number(
+    name: str,
+    record_value: float | None,
+    source_value: float | None,
+) -> None:
+    if record_value is None or source_value is None:
+        if record_value is not None or source_value is not None:
+            raise ValueError(f"{name} mismatch")
+        return
+    if not math.isfinite(record_value) or not math.isfinite(source_value):
+        raise ValueError(f"{name} must be finite")
+    if not math.isclose(
+        record_value,
+        source_value,
+        rel_tol=1e-9,
+        abs_tol=1e-9,
+    ):
+        raise ValueError(f"{name} mismatch")
+
+
+def _validate_panel_inputs(
+    sample: EvaluationSample,
+    prediction: NativePrediction,
+    record: ScalarEvaluation,
+) -> None:
+    if prediction.sample_id != sample.sample_id or record.sample_id != sample.sample_id:
+        raise ValueError("sample_id mismatch")
+    if record.output_type != prediction.output_type:
+        raise ValueError("output_type mismatch")
+    if record.failure_state != prediction.failure_state:
+        raise ValueError("failure_state mismatch")
+    _require_matching_number(
+        "ground_truth_count",
+        record.ground_truth_count,
+        sample.ground_truth_count,
+    )
+    _require_matching_number(
+        "predicted_count",
+        record.predicted_count,
+        prediction.predicted_count,
+    )
+    _require_matching_number("latency_ms", record.latency_ms, prediction.latency_ms)
+    _require_matching_number(
+        "peak_vram_mb",
+        record.peak_vram_mb,
+        prediction.peak_vram_mb,
+    )
+
+
 def render_review_panel(
     sample: EvaluationSample,
     prediction: NativePrediction,
@@ -129,6 +199,15 @@ def render_review_panel(
     zone_critical_count: float,
     category: str | None = None,
 ) -> Path:
+    _validate_panel_inputs(sample, prediction, record)
+    target = Path(output_path)
+    if target.suffix.lower() != ".png":
+        raise ValueError("output path must end with .png")
+    if target.resolve(strict=False) == sample.image_path.resolve(strict=False):
+        raise ValueError("output path resolves to source image")
+    if target.exists():
+        raise FileExistsError(f"panel target already exists: {target}")
+
     column_size = (320, 240)
     with Image.open(sample.image_path) as source_handle:
         source, image_scale, offset_x, offset_y = fit_source(
@@ -141,14 +220,33 @@ def render_review_panel(
         round(offset_x + sample.width * image_scale),
         round(offset_y + sample.height * image_scale),
     )
+    prediction_spatial_kind = _native_spatial_kind(prediction)
 
-    if sample.ground_truth_density is not None:
+    point_ground_truth_preferred = prediction.output_type == "points" or (
+        prediction.output_type == "hybrid"
+        and prediction_spatial_kind == "points"
+    )
+    if point_ground_truth_preferred and sample.has_point_annotations:
+        ground_truth = draw_points(
+            source,
+            sample.ground_truth_points,
+            scale=image_scale,
+            offset_x=offset_x,
+            offset_y=offset_y,
+            color="lime",
+        )
+        ground_truth_label = "ground-truth points"
+    elif sample.ground_truth_density is not None:
         ground_truth = render_heatmap(
             sample.ground_truth_density,
             column_size,
             content_box=content_box,
         )
-        ground_truth_label = "ground-truth density"
+        ground_truth_label = (
+            "derived ground-truth density"
+            if sample.has_point_annotations
+            else "ground-truth density"
+        )
     elif sample.has_point_annotations:
         ground_truth = draw_points(
             source,
@@ -166,14 +264,20 @@ def render_review_panel(
     if prediction.failure_state is not None:
         prediction_label = f"prediction unavailable: {prediction.failure_state}"
         predicted = _unavailable_view(column_size, prediction_label)
-    elif prediction.density is not None:
+    elif prediction_spatial_kind == "density":
+        if prediction.density is None:
+            raise ValueError("declared density output is unavailable")
         predicted = render_heatmap(
             prediction.density,
             column_size,
             content_box=content_box,
         )
-        prediction_label = "native predicted density"
-    elif prediction.output_type == "points" or prediction.points:
+        prediction_label = (
+            "native predicted density (hybrid)"
+            if prediction.output_type == "hybrid"
+            else "native predicted density"
+        )
+    elif prediction_spatial_kind == "points":
         predicted = draw_points(
             source,
             prediction.points,
@@ -182,18 +286,18 @@ def render_review_panel(
             offset_y=offset_y,
             color="red",
         )
-        prediction_label = "native predicted points"
+        prediction_label = (
+            "native predicted points (hybrid)"
+            if prediction.output_type == "hybrid"
+            else "native predicted points"
+        )
     else:
         prediction_label = "native spatial output unavailable"
         predicted = _unavailable_view(column_size, prediction_label)
 
     operator = source.copy()
     operator_draw = ImageDraw.Draw(operator)
-    has_native_spatial_output = prediction.failure_state is None and (
-        prediction.density is not None
-        or prediction.output_type == "points"
-        or bool(prediction.points)
-    )
+    has_native_spatial_output = prediction_spatial_kind is not None
     if not sample.zones:
         counts = None
         operator_label = "operator zones unavailable: none declared"
@@ -202,7 +306,11 @@ def render_review_panel(
         operator_label = "operator zones unavailable"
     else:
         counts = zone_counts(sample, prediction)
-        operator_label = "operator zones"
+        operator_label = (
+            f"operator zones (hybrid {prediction_spatial_kind})"
+            if prediction.output_type == "hybrid"
+            else "operator zones"
+        )
     if counts is None:
         for zone in sample.zones:
             box = (
@@ -286,10 +394,18 @@ def render_review_panel(
     for y, line in zip((280, 305, 330), annotation_lines):
         draw.text((4, y), line, fill="black")
 
-    target = Path(output_path)
     target.parent.mkdir(parents=True, exist_ok=True)
     png_info = PngImagePlugin.PngInfo()
     png_info.add_text("panel_columns", " | ".join(label for _, label in columns))
     png_info.add_text("panel_annotations", "\n".join(annotation_lines))
-    canvas.save(target, format="PNG", optimize=True, pnginfo=png_info)
+    try:
+        with target.open("xb") as target_handle:
+            canvas.save(
+                target_handle,
+                format="PNG",
+                optimize=True,
+                pnginfo=png_info,
+            )
+    except FileExistsError as error:
+        raise FileExistsError(f"panel target already exists: {target}") from error
     return target

@@ -68,6 +68,25 @@ def _density_record() -> ScalarEvaluation:
     )
 
 
+def _point_record(output_type: str = "points") -> ScalarEvaluation:
+    return ScalarEvaluation(
+        "s1",
+        2.0,
+        2.0,
+        0.0,
+        0.0,
+        0.0,
+        "medium",
+        5.0,
+        100.0,
+        output_type,
+        None,
+        "localization_f1",
+        1.0,
+        {"localization_f1": 1.0},
+    )
+
+
 def test_density_panel_has_four_equal_columns(tmp_path: Path) -> None:
     path = render_review_panel(
         _sample(tmp_path),
@@ -83,6 +102,7 @@ def test_density_panel_has_four_equal_columns(tmp_path: Path) -> None:
 
     with Image.open(path) as rendered:
         assert rendered.size == (4 * 320, 365)
+        assert rendered.mode == "RGB"
 
 
 def test_panel_records_visible_count_error_and_category_annotations(
@@ -317,3 +337,317 @@ def test_zone_counts_use_the_retained_native_family_output(tmp_path: Path) -> No
 
     assert density_counts == pytest.approx({"a": 1.0, "b": 1.0})
     assert point_counts == {"a": 1.0, "b": 1.0}
+
+
+def test_count_output_ignores_stray_spatial_payload(tmp_path: Path) -> None:
+    sample = _sample(tmp_path)
+    prediction = NativePrediction(
+        "s1",
+        "count",
+        2.0,
+        5.0,
+        100.0,
+        density=np.ones((12, 16), dtype=np.float32) / 96.0,
+        points=((11.0, 11.0), (20.0, 20.0)),
+    )
+    record = replace(_density_record(), output_type="count")
+
+    path = render_review_panel(
+        sample,
+        prediction,
+        record,
+        tmp_path / "count-with-stray-spatial.png",
+        model_id="fixture",
+        checkpoint_sha256="b" * 64,
+        zone_warning_count=1.0,
+        zone_critical_count=2.0,
+    )
+
+    with Image.open(path) as rendered:
+        assert "native spatial output unavailable" in rendered.info[
+            "panel_columns"
+        ]
+        assert "operator zones unavailable" in rendered.info["panel_columns"]
+    with pytest.raises(ValueError, match="zone counts unavailable"):
+        zone_counts(sample, prediction)
+
+
+def test_point_output_uses_point_gt_and_ignores_stray_density(
+    tmp_path: Path,
+) -> None:
+    sample = _sample(tmp_path)
+    prediction = NativePrediction(
+        "s1",
+        "points",
+        2.0,
+        5.0,
+        100.0,
+        density=np.ones((12, 16), dtype=np.float32) / 96.0,
+        points=((11.0, 11.0), (20.0, 20.0)),
+    )
+
+    path = render_review_panel(
+        sample,
+        prediction,
+        _point_record(),
+        tmp_path / "points-with-stray-density.png",
+        model_id="fixture",
+        checkpoint_sha256="b" * 64,
+        zone_warning_count=1.0,
+        zone_critical_count=2.0,
+    )
+
+    with Image.open(path) as rendered:
+        columns = rendered.info["panel_columns"]
+        assert "ground-truth points" in columns
+        assert "native predicted points" in columns
+        assert "predicted density" not in columns
+    assert zone_counts(sample, prediction) == {"a": 2.0, "b": 0.0}
+
+
+def test_point_derived_ground_truth_density_is_labelled_derived(
+    tmp_path: Path,
+) -> None:
+    path = render_review_panel(
+        _sample(tmp_path),
+        _density_prediction(),
+        _density_record(),
+        tmp_path / "derived-ground-truth.png",
+        model_id="fixture",
+        checkpoint_sha256="b" * 64,
+        zone_warning_count=1.0,
+        zone_critical_count=2.0,
+    )
+
+    with Image.open(path) as rendered:
+        assert "derived ground-truth density" in rendered.info["panel_columns"]
+
+
+def test_hybrid_output_uses_density_precedence_with_explicit_label(
+    tmp_path: Path,
+) -> None:
+    sample = _sample(tmp_path)
+    prediction = NativePrediction(
+        "s1",
+        "hybrid",
+        2.0,
+        5.0,
+        100.0,
+        density=np.ones((12, 16), dtype=np.float32) / 96.0,
+        points=((11.0, 11.0), (20.0, 20.0)),
+    )
+
+    path = render_review_panel(
+        sample,
+        prediction,
+        replace(_density_record(), output_type="hybrid"),
+        tmp_path / "hybrid-both.png",
+        model_id="fixture",
+        checkpoint_sha256="b" * 64,
+        zone_warning_count=1.0,
+        zone_critical_count=2.0,
+    )
+
+    with Image.open(path) as rendered:
+        columns = rendered.info["panel_columns"]
+        assert "native predicted density (hybrid)" in columns
+        assert "operator zones (hybrid density)" in columns
+    assert zone_counts(sample, prediction) == pytest.approx({"a": 1.0, "b": 1.0})
+
+
+def test_point_only_hybrid_uses_points_with_explicit_label(tmp_path: Path) -> None:
+    sample = _sample(tmp_path)
+    prediction = NativePrediction(
+        "s1",
+        "hybrid",
+        2.0,
+        5.0,
+        100.0,
+        points=((11.0, 11.0), (20.0, 20.0)),
+    )
+
+    path = render_review_panel(
+        sample,
+        prediction,
+        replace(_point_record(), output_type="hybrid"),
+        tmp_path / "hybrid-points.png",
+        model_id="fixture",
+        checkpoint_sha256="b" * 64,
+        zone_warning_count=1.0,
+        zone_critical_count=2.0,
+    )
+
+    with Image.open(path) as rendered:
+        columns = rendered.info["panel_columns"]
+        assert "ground-truth points" in columns
+        assert "native predicted points (hybrid)" in columns
+        assert "operator zones (hybrid points)" in columns
+    assert zone_counts(sample, prediction) == {"a": 2.0, "b": 0.0}
+
+
+@pytest.mark.parametrize(
+    ("record_field", "mismatched_value"),
+    (
+        ("ground_truth_count", 3.0),
+        ("predicted_count", 3.0),
+        ("latency_ms", 6.0),
+        ("peak_vram_mb", 101.0),
+    ),
+)
+def test_record_numeric_fields_must_match_sample_and_prediction(
+    tmp_path: Path,
+    record_field: str,
+    mismatched_value: float,
+) -> None:
+    target = tmp_path / "numeric-mismatch.png"
+
+    with pytest.raises(ValueError, match=rf"{record_field} mismatch"):
+        render_review_panel(
+            _sample(tmp_path),
+            _density_prediction(),
+            replace(_density_record(), **{record_field: mismatched_value}),
+            target,
+            model_id="fixture",
+            checkpoint_sha256="b" * 64,
+            zone_warning_count=1.0,
+            zone_critical_count=2.0,
+        )
+
+    assert not target.exists()
+
+
+@pytest.mark.parametrize(
+    ("record_field", "nonfinite_value"),
+    (
+        ("ground_truth_count", float("nan")),
+        ("predicted_count", float("inf")),
+        ("latency_ms", float("nan")),
+        ("peak_vram_mb", float("inf")),
+    ),
+)
+def test_record_numeric_integrity_rejects_nonfinite_values(
+    tmp_path: Path,
+    record_field: str,
+    nonfinite_value: float,
+) -> None:
+    with pytest.raises(ValueError, match=rf"{record_field} must be finite"):
+        render_review_panel(
+            _sample(tmp_path),
+            _density_prediction(),
+            replace(_density_record(), **{record_field: nonfinite_value}),
+            tmp_path / "nonfinite.png",
+            model_id="fixture",
+            checkpoint_sha256="b" * 64,
+            zone_warning_count=1.0,
+            zone_critical_count=2.0,
+        )
+
+
+def test_predicted_count_none_must_match_across_prediction_and_record(
+    tmp_path: Path,
+) -> None:
+    with pytest.raises(ValueError, match="predicted_count mismatch"):
+        render_review_panel(
+            _sample(tmp_path),
+            _density_prediction(),
+            replace(_density_record(), predicted_count=None),
+            tmp_path / "none-mismatch.png",
+            model_id="fixture",
+            checkpoint_sha256="b" * 64,
+            zone_warning_count=1.0,
+            zone_critical_count=2.0,
+        )
+
+
+@pytest.mark.parametrize(
+    "mismatch",
+    ("prediction_sample_id", "record_sample_id", "output_type", "failure_state"),
+)
+def test_cross_object_identity_fields_must_match(
+    tmp_path: Path,
+    mismatch: str,
+) -> None:
+    prediction = _density_prediction()
+    record = _density_record()
+    expected = mismatch
+    if mismatch == "prediction_sample_id":
+        prediction = replace(prediction, sample_id="other")
+        expected = "sample_id mismatch"
+    elif mismatch == "record_sample_id":
+        record = replace(record, sample_id="other")
+        expected = "sample_id mismatch"
+    elif mismatch == "output_type":
+        record = replace(record, output_type="points")
+        expected = "output_type mismatch"
+    else:
+        record = replace(record, failure_state="fixture_failure")
+        expected = "failure_state mismatch"
+
+    with pytest.raises(ValueError, match=expected):
+        render_review_panel(
+            _sample(tmp_path),
+            prediction,
+            record,
+            tmp_path / "identity-mismatch.png",
+            model_id="fixture",
+            checkpoint_sha256="b" * 64,
+            zone_warning_count=1.0,
+            zone_critical_count=2.0,
+        )
+
+
+def test_panel_output_requires_png_extension(tmp_path: Path) -> None:
+    target = tmp_path / "panel.jpg"
+
+    with pytest.raises(ValueError, match="output path must end with .png"):
+        render_review_panel(
+            _sample(tmp_path),
+            _density_prediction(),
+            _density_record(),
+            target,
+            model_id="fixture",
+            checkpoint_sha256="b" * 64,
+            zone_warning_count=1.0,
+            zone_critical_count=2.0,
+        )
+
+    assert not target.exists()
+
+
+def test_panel_output_cannot_resolve_to_source_image(tmp_path: Path) -> None:
+    sample = _sample(tmp_path)
+    source_hash = sha256_file(sample.image_path)
+
+    with pytest.raises(ValueError, match="output path resolves to source image"):
+        render_review_panel(
+            sample,
+            _density_prediction(),
+            _density_record(),
+            sample.image_path,
+            model_id="fixture",
+            checkpoint_sha256="b" * 64,
+            zone_warning_count=1.0,
+            zone_critical_count=2.0,
+        )
+
+    assert sha256_file(sample.image_path) == source_hash
+
+
+def test_panel_output_refuses_to_overwrite_existing_target(tmp_path: Path) -> None:
+    target = tmp_path / "existing.png"
+    Image.new("RGB", (3, 2), "purple").save(target)
+    existing_hash = sha256_file(target)
+
+    with pytest.raises(FileExistsError, match="panel target already exists"):
+        render_review_panel(
+            _sample(tmp_path),
+            _density_prediction(),
+            _density_record(),
+            target,
+            model_id="fixture",
+            checkpoint_sha256="b" * 64,
+            zone_warning_count=1.0,
+            zone_critical_count=2.0,
+        )
+
+    assert sha256_file(target) == existing_hash
