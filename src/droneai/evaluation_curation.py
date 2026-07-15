@@ -42,46 +42,7 @@ def select_review_samples(
         and row.absolute_error is not None
     ]
     used: set[str] = set()
-
-    spatial_rows = (
-        row for row in successful if row.spatial_metric_value is not None
-    )
-    if spatial_direction == "minimize":
-        spatial = sorted(
-            spatial_rows,
-            key=lambda row: (-float(row.spatial_metric_value), row.sample_id),
-        )
-    else:
-        spatial = sorted(
-            spatial_rows,
-            key=lambda row: (float(row.spatial_metric_value), row.sample_id),
-        )
-    failure_candidates = {
-        "worst spatial quality": _take_unique(spatial, used),
-        "severe undercount": _take_unique(
-            sorted(
-                successful,
-                key=lambda row: (float(row.signed_error), row.sample_id),
-            ),
-            used,
-        ),
-        "severe overcount": _take_unique(
-            sorted(
-                successful,
-                key=lambda row: (-float(row.signed_error), row.sample_id),
-            ),
-            used,
-        ),
-    }
-    selected = [
-        Selection(chosen.sample_id, "failure", chosen.density_band, reason)
-        for reason in (
-            "worst spatial quality",
-            "severe undercount",
-            "severe overcount",
-        )
-        if (chosen := failure_candidates[reason]) is not None
-    ]
+    selected: list[Selection] = []
 
     for band in ("low", "medium", "high"):
         band_rows = sorted(
@@ -117,6 +78,43 @@ def select_review_samples(
                         f"nearest error quantile {quantile:.2f}",
                     )
                 )
+
+    under = sorted(
+        (row for row in successful if float(row.signed_error) < 0),
+        key=lambda row: (float(row.signed_error), row.sample_id),
+    )
+    over = sorted(
+        (row for row in successful if float(row.signed_error) > 0),
+        key=lambda row: (-float(row.signed_error), row.sample_id),
+    )
+    spatial_rows = (
+        row for row in successful if row.spatial_metric_value is not None
+    )
+    if spatial_direction == "minimize":
+        spatial = sorted(
+            spatial_rows,
+            key=lambda row: (-float(row.spatial_metric_value), row.sample_id),
+        )
+    else:
+        spatial = sorted(
+            spatial_rows,
+            key=lambda row: (float(row.spatial_metric_value), row.sample_id),
+        )
+    for reason, candidates in (
+        ("severe undercount", under),
+        ("severe overcount", over),
+        ("worst spatial quality", spatial),
+    ):
+        chosen = _take_unique(candidates, used)
+        if chosen is not None:
+            selected.append(
+                Selection(
+                    chosen.sample_id,
+                    "failure",
+                    chosen.density_band,
+                    reason,
+                )
+            )
 
     return tuple(selected[:12])
 

@@ -104,9 +104,9 @@ def test_manifest_records_predictions_hash_and_shortfall() -> None:
 def test_maximize_spatial_metric_selects_lowest_value_as_worst() -> None:
     rows = [
         ScalarEvaluation(
-            "good",
-            1.0,
-            1.0,
+            "best",
+            100.0,
+            100.0,
             0.0,
             0.0,
             0.0,
@@ -119,12 +119,42 @@ def test_maximize_spatial_metric_selects_lowest_value_as_worst() -> None:
             0.9,
         ),
         ScalarEvaluation(
+            "strong",
+            100.0,
+            101.0,
+            1.0,
+            1.0,
+            0.01,
+            "high",
+            1.0,
+            2.0,
+            "points",
+            None,
+            "localization_f1",
+            0.8,
+        ),
+        ScalarEvaluation(
+            "typical",
+            100.0,
+            102.0,
+            2.0,
+            2.0,
+            0.02,
+            "high",
+            1.0,
+            2.0,
+            "points",
+            None,
+            "localization_f1",
+            0.7,
+        ),
+        ScalarEvaluation(
             "bad",
+            100.0,
+            200.0,
+            100.0,
+            100.0,
             1.0,
-            1.0,
-            0.0,
-            0.0,
-            0.0,
             "high",
             1.0,
             2.0,
@@ -132,6 +162,21 @@ def test_maximize_spatial_metric_selects_lowest_value_as_worst() -> None:
             None,
             "localization_f1",
             0.1,
+        ),
+        ScalarEvaluation(
+            "over",
+            100.0,
+            300.0,
+            200.0,
+            200.0,
+            2.0,
+            "high",
+            1.0,
+            2.0,
+            "points",
+            None,
+            "localization_f1",
+            0.5,
         ),
     ]
 
@@ -141,6 +186,64 @@ def test_maximize_spatial_metric_selects_lowest_value_as_worst() -> None:
         item.sample_id == "bad" and item.reason == "worst spatial quality"
         for item in selected
     )
+
+
+def test_positive_only_errors_do_not_create_false_undercount_failure() -> None:
+    rows = [
+        _row("positive-small", "unknown", 1.0, None),
+        _row("positive-large", "unknown", 2.0, None),
+    ]
+
+    selected = select_review_samples(rows, spatial_direction="minimize")
+    manifest = selection_manifest(
+        selected,
+        predictions_sha256="d" * 64,
+        spatial_direction="minimize",
+        density_band_rules=("unknown",),
+        expected_panels=2,
+    )
+
+    assert [(item.sample_id, item.reason) for item in selected] == [
+        ("positive-large", "severe overcount")
+    ]
+    assert manifest["shortfall"] == 1
+
+
+def test_negative_only_errors_do_not_create_false_overcount_failure() -> None:
+    rows = [
+        _row("negative-small", "unknown", -1.0, None),
+        _row("negative-large", "unknown", -2.0, None),
+    ]
+
+    selected = select_review_samples(rows, spatial_direction="minimize")
+    manifest = selection_manifest(
+        selected,
+        predictions_sha256="e" * 64,
+        spatial_direction="minimize",
+        density_band_rules=("unknown",),
+        expected_panels=2,
+    )
+
+    assert [(item.sample_id, item.reason) for item in selected] == [
+        ("negative-large", "severe undercount")
+    ]
+    assert manifest["shortfall"] == 1
+
+
+def test_quantile_rows_are_not_preempted_by_failure_case_selection() -> None:
+    rows = [
+        _row("best-row", "low", 0.0, 100.0),
+        _row("strong-row", "low", 10.0, 90.0),
+        _row("typical-row", "low", 20.0, 80.0),
+        _row("failure-row", "low", 30.0, 70.0),
+    ]
+
+    selected = select_review_samples(rows, spatial_direction="minimize")
+    by_sample_id = {item.sample_id: item for item in selected}
+
+    assert by_sample_id["best-row"].category == "best"
+    assert by_sample_id["strong-row"].category == "strong"
+    assert by_sample_id["typical-row"].category == "typical"
 
 
 def test_unavailable_spatial_metric_produces_shortfall_without_fabrication() -> None:
