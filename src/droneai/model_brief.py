@@ -88,7 +88,11 @@ class ModelBrief:
             raise ValueError("model brief requires commit and checkpoint SHA-256")
 
     def require_full_run_approval(self) -> None:
-        if self.review_status != "approved" or not self.reviewed_paths:
+        if (
+            self.review_status != "approved"
+            or not self.reviewed_paths
+            or any(not path.strip() for path in self.reviewed_paths)
+        ):
             raise ValueError(
                 "full run requires an approved model brief and reviewed code paths"
             )
