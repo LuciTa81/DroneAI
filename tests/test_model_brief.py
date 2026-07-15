@@ -1,0 +1,146 @@
+from dataclasses import replace
+from pathlib import Path
+
+import pytest
+
+from droneai.model_brief import ModelBrief, render_model_brief, write_model_brief
+
+
+def _brief(review_status: str = "approved") -> ModelBrief:
+    return ModelBrief(
+        model_id="fixture-density",
+        paper="Fixture Density Paper",
+        role="density baseline",
+        family="density",
+        backbone="three-layer fixture CNN",
+        parameter_count=128,
+        blocks=("frontend", "density head"),
+        feature_scales=("stride 4 density features",),
+        input_contract="RGB NCHW float32 normalized to [0,1]",
+        preprocessing_policy="resize to 32x32 without tiling",
+        coordinate_transform="density stride 4 to original pixels",
+        native_output="one-channel density map at stride 4",
+        count_derivation="sum of native density map",
+        zone_derivation="integrate density inside scaled zone boxes",
+        original_losses=("pixel MSE weight=1.0",),
+        official_protocol="fixture validation split",
+        official_reported_metrics=("fixture MAE 0.0",),
+        strengths=("deterministic",),
+        failure_modes=("texture false positives",),
+        runtime_risks=("none for fixture",),
+        rights_status="PASS_RESEARCH_ONLY",
+        code_rights_status="project fixture code",
+        dataset_rights_status="project synthetic data",
+        checkpoint_rights_status="project synthetic checkpoint",
+        deployment_rights_status="not production evidence",
+        upstream_commit="a" * 40,
+        checkpoint_path="fixture-checkpoint.bin",
+        checkpoint_sha256="b" * 64,
+        reviewed_paths=("src/droneai/model_brief.py",),
+        review_status=review_status,
+    )
+
+
+def test_approved_brief_renders_complete_required_structure() -> None:
+    rendered = render_model_brief(_brief())
+    required_fragments = (
+        "# Model brief: fixture-density",
+        "- Paper: Fixture Density Paper",
+        "- Role: density baseline",
+        "- Family: density",
+        "- Backbone: three-layer fixture CNN",
+        "- Parameter count: 128",
+        "- Input: RGB NCHW float32 normalized to [0,1]",
+        "- Preprocessing: resize to 32x32 without tiling",
+        "- Coordinate transform: density stride 4 to original pixels",
+        "- Native output: one-channel density map at stride 4",
+        "- Count derivation: sum of native density map",
+        "- Zone derivation: integrate density inside scaled zone boxes",
+        "- Official protocol: fixture validation split",
+        "- Rights status: PASS_RESEARCH_ONLY",
+        "- Code rights: project fixture code",
+        "- Dataset rights: project synthetic data",
+        "- Checkpoint rights: project synthetic checkpoint",
+        "- Deployment rights: not production evidence",
+        f"- Upstream commit: `{'a' * 40}`",
+        "- Checkpoint path: `fixture-checkpoint.bin`",
+        f"- Checkpoint SHA-256: `{'b' * 64}`",
+        "## Major blocks\n\n- frontend\n- density head",
+        "## Feature scales\n\n- stride 4 density features",
+        "## Original losses\n\n- pixel MSE weight=1.0",
+        "## Official reported metrics\n\n- fixture MAE 0.0",
+        "## Strengths\n\n- deterministic",
+        "## Failure modes\n\n- texture false positives",
+        "## Runtime risks\n\n- none for fixture",
+        "## Reviewed code\n\n- src/droneai/model_brief.py",
+        "Review status: **approved**",
+    )
+    assert all(fragment in rendered for fragment in required_fragments)
+
+
+def test_approved_brief_with_reviewed_code_authorizes_full_run() -> None:
+    assert _brief().require_full_run_approval() is None
+
+
+def test_pending_brief_cannot_authorize_full_run() -> None:
+    brief = _brief("pending")
+    with pytest.raises(ValueError, match="approved model brief"):
+        brief.require_full_run_approval()
+
+
+@pytest.mark.parametrize(
+    "reviewed_paths",
+    [(), ("",), (" \t ",)],
+    ids=("empty-tuple", "blank-string", "whitespace-only"),
+)
+def test_approved_brief_requires_nonblank_reviewed_code_paths(
+    reviewed_paths: tuple[str, ...],
+) -> None:
+    brief = replace(_brief(), reviewed_paths=reviewed_paths)
+    with pytest.raises(ValueError, match="reviewed code paths"):
+        brief.require_full_run_approval()
+
+
+def test_brief_rejects_missing_architecture_lists() -> None:
+    with pytest.raises(ValueError, match="architecture and review lists"):
+        replace(_brief(), blocks=())
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    (
+        ("model_id", ""),
+        ("backbone", " \t "),
+        ("checkpoint_path", "\n"),
+    ),
+)
+def test_brief_rejects_blank_required_text(field: str, value: str) -> None:
+    with pytest.raises(ValueError, match="fields cannot be empty"):
+        replace(_brief(), **{field: value})
+
+
+def test_brief_rejects_negative_parameter_count() -> None:
+    with pytest.raises(ValueError, match="parameter count must be non-negative"):
+        replace(_brief(), parameter_count=-1)
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    (
+        ("upstream_commit", "not-a-commit"),
+        ("checkpoint_sha256", "not-a-checkpoint-hash"),
+    ),
+)
+def test_brief_rejects_invalid_source_identity(field: str, value: str) -> None:
+    with pytest.raises(ValueError, match="commit and checkpoint SHA-256"):
+        replace(_brief(), **{field: value})
+
+
+def test_write_model_brief_persists_rendered_markdown(tmp_path: Path) -> None:
+    brief = _brief()
+    target = tmp_path / "briefs" / "fixture-density.md"
+
+    written = write_model_brief(target, brief)
+
+    assert written == target
+    assert target.read_text(encoding="utf-8") == render_model_brief(brief)

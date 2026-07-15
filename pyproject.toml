@@ -16,6 +16,10 @@ dependencies = [
 dev = [
   "pytest>=8.0",
 ]
+evaluation = [
+  "scipy>=1.13,<2",
+  "scikit-image>=0.24,<1",
+]
 colab = [
   "torch>=2.6",
   "torchvision>=0.21",
