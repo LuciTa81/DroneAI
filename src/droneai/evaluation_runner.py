@@ -301,6 +301,7 @@ def run_evaluation(
     samples: Sequence[EvaluationSample],
     protocol: EvaluationProtocol,
     output_dir: str | Path,
+    provenance_artifacts: Sequence[str | Path] = (),
 ) -> StageReport:
     if protocol.split_role == "test" and not protocol.sealed_test_access_approved:
         raise PermissionError("sealed test evaluation requires explicit approval")
@@ -324,6 +325,27 @@ def run_evaluation(
     if any((output / name).exists() for name in reserved_outputs):
         raise FileExistsError(
             f"evaluation output already contains report artifacts: {output}"
+        )
+    output_root = output.resolve()
+    provenance_references: list[dict[str, str]] = []
+    seen_provenance: set[Path] = set()
+    for requested_path in provenance_artifacts:
+        provenance_path = Path(requested_path).resolve()
+        try:
+            provenance_path.relative_to(output_root)
+        except ValueError as error:
+            raise ValueError(
+                "provenance artifacts must stay inside the evaluation output"
+            ) from error
+        if provenance_path in seen_provenance:
+            raise ValueError("provenance artifact paths must be unique")
+        if not provenance_path.is_file():
+            raise FileNotFoundError(
+                f"provenance artifact must be an existing file: {provenance_path}"
+            )
+        seen_provenance.add(provenance_path)
+        provenance_references.append(
+            artifact_reference(provenance_path, base_dir=output_root)
         )
 
     brief = adapter.brief()
@@ -523,8 +545,17 @@ def run_evaluation(
         environment_path,
         *panel_paths,
     ]
+    if not all(
+        verify_artifact_reference(reference, base_dir=output)[0]
+        for reference in provenance_references
+    ):
+        raise ValueError("provenance artifact changed during evaluation")
     references = [
-        artifact_reference(path, base_dir=output) for path in referenced_paths
+        *provenance_references,
+        *[
+            artifact_reference(path, base_dir=output)
+            for path in referenced_paths
+        ],
     ]
     references_verified = all(
         verify_artifact_reference(reference, base_dir=output)[0]

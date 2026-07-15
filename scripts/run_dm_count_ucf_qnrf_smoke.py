@@ -108,6 +108,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         samples=prepared.samples,
         protocol=protocol,
         output_dir=output_dir,
+        provenance_artifacts=(output_dir / "split-source-manifest.json",),
     )
     print(report.to_markdown())
     return 0 if report.is_success else 2

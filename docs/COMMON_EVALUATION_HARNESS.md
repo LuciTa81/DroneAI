@@ -45,6 +45,11 @@ a non-empty destination. A complete fixture contains `score.md`, `score.json`,
 provenance, per-sample native-output/preprocessing metadata, and exactly 12
 deterministic four-column review panels.
 
+Dataset-specific split/source manifests must be passed to the runner as
+`provenance_artifacts`. The runner accepts only files inside the run directory,
+freezes their hashes before inference, re-verifies them afterward, and includes
+them in `evidence-manifest.json` and the scored artifact chain.
+
 ## Verified home5090 fixture
 
 The 2026-07-15 verification used code commit `a1620a9` in

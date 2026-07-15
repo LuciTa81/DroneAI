@@ -226,6 +226,53 @@ def test_end_to_end_runner_writes_small_review_bundle(tmp_path: Path) -> None:
     assert metadata["samples"][0]["metadata"]["coordinate_transform"] == "identity"
 
 
+def test_runner_hashes_additional_provenance_inside_output(tmp_path: Path) -> None:
+    adapter, samples, protocol = _fixture(tmp_path)
+    output = tmp_path / "run-with-split-source"
+    output.mkdir()
+    split_source = output / "split-source-manifest.json"
+    split_source.write_text('{"split_verified":true}\n', encoding="utf-8")
+
+    report = run_evaluation(
+        adapter=adapter,
+        samples=samples,
+        protocol=protocol,
+        output_dir=output,
+        provenance_artifacts=(split_source,),
+    )
+
+    evidence = json.loads(
+        (output / "evidence-manifest.json").read_text(encoding="utf-8")
+    )
+    reference = next(
+        item
+        for item in evidence["artifacts"]
+        if item["path"] == "split-source-manifest.json"
+    )
+    assert reference["sha256"] == sha256_file(split_source)
+    assert report.status == "PASS_RESEARCH_ONLY"
+
+
+def test_runner_rejects_provenance_outside_output_before_inference(
+    tmp_path: Path,
+) -> None:
+    adapter, samples, protocol = _fixture(tmp_path)
+    outside = tmp_path / "outside.json"
+    outside.write_text("{}\n", encoding="utf-8")
+    output = tmp_path / "run"
+
+    with pytest.raises(ValueError, match="inside the evaluation output"):
+        run_evaluation(
+            adapter=adapter,
+            samples=samples,
+            protocol=protocol,
+            output_dir=output,
+            provenance_artifacts=(outside,),
+        )
+
+    assert adapter.calls == []
+
+
 def test_sealed_test_requires_explicit_approval_before_output(tmp_path: Path) -> None:
     adapter, samples, protocol = _fixture(tmp_path)
     output = tmp_path / "unapproved-test"
