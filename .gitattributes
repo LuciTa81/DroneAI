@@ -2,3 +2,7 @@ results/dm-count/**/*.json text eol=lf
 results/dm-count/**/*.csv text eol=lf
 results/dm-count/**/*.md text eol=lf
 results/dm-count/**/*.png binary
+results/steerer/**/*.json text eol=lf
+results/steerer/**/*.csv text eol=lf
+results/steerer/**/*.md text eol=lf
+results/steerer/**/*.png binary
