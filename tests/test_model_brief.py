@@ -154,9 +154,65 @@ def test_steerer_contract_separates_paper_and_harness_localization() -> None:
     config = json.loads((REPO_ROOT / "configs/models/steerer.official.json").read_text())
     assert config["architecture"]["backbone"] == "HRNet-W48"
     assert config["architecture"]["output_type"] == "hybrid"
+    assert config["architecture"]["blocks"] == [
+        "HRNet-W48 multi-resolution backbone",
+        "multi-resolution counting heads",
+        "selective inheritance/upsample module",
+        "Gaussian density/local-maximum point decoder",
+    ]
+    assert config["architecture"]["feature_scales"] == ["x1", "x4", "x8"]
     assert config["inference"]["long_side_cap"] == 3072
     assert config["inference"]["den_factor"] == 100
+    assert config["preprocessing"] == {
+        "input_color_space": "RGB",
+        "normalization": {
+            "policy": "ImageNet mean/std",
+            "mean": [0.485, 0.456, 0.406],
+            "std": [0.229, 0.224, 0.225],
+        },
+        "resize_policy": {
+            "preserve_native_size_when_long_side_lte": 3072,
+            "resize_only_when_long_side_gt": 3072,
+            "resized_long_side": 3072,
+        },
+        "padding_policy": {
+            "mode": "zero",
+            "dimensions": ["height", "width"],
+            "multiple": 32,
+        },
+    }
+    assert config["original_training_losses"] == [
+        "multi-resolution MSE",
+        "selective inheritance routing loss",
+        "uncertainty weighting where configured",
+    ]
     assert config["reported_results"]["ucf_qnrf"] == {
         "mae": 77.8, "rmse": 138.0, "f1": 75.6, "precision": 79.7, "recall": 72.0
     }
     assert config["measured_localization_metric"] == "harness F1@16px in original-image coordinates"
+    assert config["failure_modes"] == [
+        "tiny heads",
+        "extreme perspective",
+        "occlusion",
+        "domain shift",
+        "padding artifacts",
+        "threshold-sensitive localization",
+    ]
+
+    brief = (REPO_ROOT / "docs/models/STEERER.md").read_text()
+    required_preprocessing = (
+        "- Input color space: RGB",
+        "- Normalization: ImageNet mean `[0.485, 0.456, 0.406]` and std `[0.229, 0.224, 0.225]`",
+        "- Resize: preserve native size when long side <= 3072; resize only when above 3072, setting the long side to 3072",
+        "- Padding: zero-pad both dimensions to multiples of 32",
+    )
+    assert all(line in brief for line in required_preprocessing)
+    output_semantics = "\n".join(
+        (
+            "estimated_count = sum(highest_resolution_density / 100)",
+            "localization_points = official local maxima merged from x1/x4/x8",
+            "zone_count = integral of count-preserving density in the calibrated image zone",
+            "paper localization F1 != harness F1@16px",
+        )
+    )
+    assert f"```text\n{output_semantics}\n```" in brief

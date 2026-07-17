@@ -7,6 +7,13 @@
 - Inference long-side cap: 3072 pixels
 - Density normalization factor: 100
 
+## Official preprocessing
+
+- Input color space: RGB
+- Normalization: ImageNet mean `[0.485, 0.456, 0.406]` and std `[0.229, 0.224, 0.225]`
+- Resize: preserve native size when long side <= 3072; resize only when above 3072, setting the long side to 3072
+- Padding: zero-pad both dimensions to multiples of 32
+
 ## Major blocks
 
 - HRNet-W48 multi-resolution backbone

@@ -16,6 +16,24 @@
     "long_side_cap": 3072,
     "den_factor": 100
   },
+  "preprocessing": {
+    "input_color_space": "RGB",
+    "normalization": {
+      "policy": "ImageNet mean/std",
+      "mean": [0.485, 0.456, 0.406],
+      "std": [0.229, 0.224, 0.225]
+    },
+    "resize_policy": {
+      "preserve_native_size_when_long_side_lte": 3072,
+      "resize_only_when_long_side_gt": 3072,
+      "resized_long_side": 3072
+    },
+    "padding_policy": {
+      "mode": "zero",
+      "dimensions": ["height", "width"],
+      "multiple": 32
+    }
+  },
   "original_training_losses": [
     "multi-resolution MSE",
     "selective inheritance routing loss",
