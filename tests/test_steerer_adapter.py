@@ -9,6 +9,7 @@ import numpy as np
 import pytest
 from PIL import Image
 
+import droneai.steerer_adapter as steerer_module
 from droneai.evaluation_contract import EvaluationSample, ZoneBox
 from droneai.integrity import sha256_file
 from droneai.steerer_adapter import (
@@ -101,6 +102,10 @@ def _synthetic_upstream(root: Path, *, external_origin: Path | None = None) -> N
         "lib/utils/__init__.py": "",
         "mmcv_custom/__init__.py": "",
         "mmcv_custom/marker.py": 'MARKER = "official"\n',
+        "lib/deferred.py": (
+            'CONSTRUCTOR_MARKER = "official-constructor"\n'
+            'INFERENCE_MARKER = "official-inference"\n'
+        ),
         "lib/utils/points_from_den.py": (
             "def local_maximum_points(*args, **kwargs):\n"
             '    return "official-points"\n'
@@ -111,6 +116,12 @@ def _synthetic_upstream(root: Path, *, external_origin: Path | None = None) -> N
             "from mmcv_custom.marker import MARKER\n"
             "class Baseline_Counter:\n"
             "    marker = MARKER\n"
+            "    def __init__(self):\n"
+            "        from lib.deferred import CONSTRUCTOR_MARKER\n"
+            "        self.constructor_marker = CONSTRUCTOR_MARKER\n"
+            "    def inference_operation(self):\n"
+            "        from lib.deferred import INFERENCE_MARKER\n"
+            "        return INFERENCE_MARKER\n"
         )
     else:
         sources["lib/models/build_counter.py"] = (
@@ -189,17 +200,34 @@ def test_official_import_isolates_and_restores_generic_namespaces(
     monkeypatch.setitem(sys.modules, "mmcv_custom", conflicting_mmcv_custom)
     monkeypatch.setitem(sys.modules, "mmcv_custom.marker", conflicting_mmcv_child)
     before = _namespace_modules()
+    before_sys_path = tuple(sys.path)
+    before_dont_write_bytecode = sys.dont_write_bytecode
 
-    Config, Baseline_Counter, local_maximum_points = _load_official_components(
-        upstream
-    )
+    with steerer_module._official_namespace_scope(upstream):
+        Config, Baseline_Counter, local_maximum_points = _load_official_components(
+            upstream
+        )
+        model = Baseline_Counter()
 
     assert Config is fixture_config
     assert Baseline_Counter.marker == "official"
+    assert model.constructor_marker == "official-constructor"
     assert local_maximum_points() == "official-points"
     after = _namespace_modules()
     assert after.keys() == before.keys()
     assert all(after[name] is module for name, module in before.items())
+    assert tuple(sys.path) == before_sys_path
+    assert sys.dont_write_bytecode is before_dont_write_bytecode
+
+    with steerer_module._official_namespace_scope(upstream):
+        inference_marker = model.inference_operation()
+
+    assert inference_marker == "official-inference"
+    after_inference = _namespace_modules()
+    assert after_inference.keys() == before.keys()
+    assert all(after_inference[name] is module for name, module in before.items())
+    assert tuple(sys.path) == before_sys_path
+    assert sys.dont_write_bytecode is before_dont_write_bytecode
 
 
 def test_official_import_rejects_external_namespace_origin_and_restores_snapshot(
@@ -212,13 +240,18 @@ def test_official_import_rejects_external_namespace_origin_and_restores_snapshot
     mmcv.Config = fixture_config
     monkeypatch.setitem(sys.modules, "mmcv", mmcv)
     before = _namespace_modules()
+    before_sys_path = tuple(sys.path)
+    before_dont_write_bytecode = sys.dont_write_bytecode
 
     with pytest.raises(RuntimeError, match="outside the pinned STEERER upstream"):
-        _load_official_components(upstream)
+        with steerer_module._official_namespace_scope(upstream):
+            _load_official_components(upstream)
 
     after = _namespace_modules()
     assert after.keys() == before.keys()
     assert all(after[name] is module for name, module in before.items())
+    assert tuple(sys.path) == before_sys_path
+    assert sys.dont_write_bytecode is before_dont_write_bytecode
 
 
 def test_size_caps_long_side_and_pads_to_32() -> None:
@@ -405,7 +438,15 @@ def test_hybrid_prediction_keeps_density_count_separate_from_point_count(
     assert prediction.metadata["unexpected_checkpoint_key_count"] == 1
     assert brief.model_id == "steerer-official-ucf-qnrf"
     assert brief.native_output == "multi-resolution density maps and merged localization points"
-    assert brief.count_derivation == "sum of highest-resolution density-map mass"
+    assert brief.count_derivation == (
+        "sum of highest-resolution density mass within the valid resized image region"
+    )
+    assert "density integrates only the valid resized image region" in (
+        brief.coordinate_transform
+    )
+    assert "padding mass and points are discarded and recorded" in (
+        brief.coordinate_transform
+    )
 
 
 def test_adapter_turns_backend_error_into_explicit_failed_prediction(

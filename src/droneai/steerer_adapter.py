@@ -6,6 +6,7 @@ import importlib
 import math
 import sys
 import time
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Protocol, Sequence
 
@@ -353,8 +354,9 @@ def _validate_upstream_module_origins(upstream_dir: Path) -> None:
             )
 
 
-def _load_official_components(upstream_dir: Path):
-    """Import pinned components without leaking or reusing generic namespaces."""
+@contextmanager
+def _official_namespace_scope(upstream_dir: Path):
+    """Isolate generic upstream namespaces for one complete official operation."""
 
     namespace_snapshot = {
         name: module
@@ -367,19 +369,27 @@ def _load_official_components(upstream_dir: Path):
     sys.dont_write_bytecode = True
     sys.path.insert(0, str(upstream_dir))
     try:
-        try:
-            from mmcv import Config
-        except ImportError as error:  # pragma: no cover - exercised on home5090
-            raise RuntimeError("MMCV is required for the official STEERER backend") from error
-        build_counter = importlib.import_module("lib.models.build_counter")
-        points_from_den = importlib.import_module("lib.utils.points_from_den")
-        _validate_upstream_module_origins(upstream_dir)
-        return Config, build_counter.Baseline_Counter, points_from_den.local_maximum_points
+        yield
     finally:
-        _clear_upstream_namespaces()
-        sys.modules.update(namespace_snapshot)
-        sys.path[:] = previous_sys_path
-        sys.dont_write_bytecode = previous_dont_write_bytecode
+        try:
+            _validate_upstream_module_origins(upstream_dir)
+        finally:
+            _clear_upstream_namespaces()
+            sys.modules.update(namespace_snapshot)
+            sys.path[:] = previous_sys_path
+            sys.dont_write_bytecode = previous_dont_write_bytecode
+
+
+def _load_official_components(upstream_dir: Path):
+    """Load component references inside an active official namespace scope."""
+
+    try:
+        from mmcv import Config
+    except ImportError as error:  # pragma: no cover - exercised on home5090
+        raise RuntimeError("MMCV is required for the official STEERER backend") from error
+    build_counter = importlib.import_module("lib.models.build_counter")
+    points_from_den = importlib.import_module("lib.utils.points_from_den")
+    return Config, build_counter.Baseline_Counter, points_from_den.local_maximum_points
 
 
 class TorchSTEERERBackend:
@@ -391,31 +401,37 @@ class TorchSTEERERBackend:
         except ImportError as error:  # pragma: no cover - exercised on home5090
             raise RuntimeError("PyTorch is required for the official STEERER backend") from error
 
-        Config, Baseline_Counter, local_maximum_points = _load_official_components(
-            upstream_dir
-        )
         self._torch = torch
+        self._upstream_dir = upstream_dir.resolve()
         self._device = torch.device(device)
         if self._device.type != "cuda":
             raise ValueError("the official STEERER backend requires a CUDA device")
-        config = Config.fromfile(str(upstream_dir / "configs" / "QNRF_final.py"))
-        model = Baseline_Counter(
-            config.network,
-            config.dataset.den_factor,
-            config.train.route_size,
-            self._device,
-        )
-        try:
-            state = torch.load(checkpoint_path, map_location=self._device, weights_only=True)
-        except TypeError:  # pragma: no cover - old PyTorch compatibility
-            state = torch.load(checkpoint_path, map_location=self._device)
-        if isinstance(state, dict) and "state_dict" in state:
-            state = state["state_dict"]
-        incompatible = model.load_state_dict(state, strict=False)
-        self.missing_keys = tuple(incompatible.missing_keys)
-        self.unexpected_keys = tuple(incompatible.unexpected_keys)
-        self._model = model.to(self._device).eval()
-        self._local_maximum_points = local_maximum_points
+        with _official_namespace_scope(self._upstream_dir):
+            Config, Baseline_Counter, local_maximum_points = (
+                _load_official_components(self._upstream_dir)
+            )
+            config = Config.fromfile(
+                str(self._upstream_dir / "configs" / "QNRF_final.py")
+            )
+            model = Baseline_Counter(
+                config.network,
+                config.dataset.den_factor,
+                config.train.route_size,
+                self._device,
+            )
+            try:
+                state = torch.load(
+                    checkpoint_path, map_location=self._device, weights_only=True
+                )
+            except TypeError:  # pragma: no cover - old PyTorch compatibility
+                state = torch.load(checkpoint_path, map_location=self._device)
+            if isinstance(state, dict) and "state_dict" in state:
+                state = state["state_dict"]
+            incompatible = model.load_state_dict(state, strict=False)
+            self.missing_keys = tuple(incompatible.missing_keys)
+            self.unexpected_keys = tuple(incompatible.unexpected_keys)
+            self._model = model.to(self._device).eval()
+            self._local_maximum_points = local_maximum_points
 
     def infer(
         self, normalized_chw: np.ndarray
@@ -425,46 +441,48 @@ class TorchSTEERERBackend:
         float,
         float,
     ]:
-        torch = self._torch
-        batch = torch.from_numpy(np.ascontiguousarray(normalized_chw)).unsqueeze(0)
-        batch = batch.to(self._device)
+        with _official_namespace_scope(self._upstream_dir):
+            torch = self._torch
+            batch = torch.from_numpy(np.ascontiguousarray(normalized_chw)).unsqueeze(0)
+            batch = batch.to(self._device)
 
-        torch.cuda.reset_peak_memory_stats(self._device)
-        torch.cuda.synchronize(self._device)
-        started = time.perf_counter()
-        with torch.inference_mode():
-            outputs = self._model(batch, labels=None)
-        torch.cuda.synchronize(self._device)
-        latency_ms = (time.perf_counter() - started) * 1000.0
-        peak_vram_mb = torch.cuda.max_memory_allocated(self._device) / (1024**2)
+            torch.cuda.reset_peak_memory_stats(self._device)
+            torch.cuda.synchronize(self._device)
+            started = time.perf_counter()
+            with torch.inference_mode():
+                outputs = self._model(batch, labels=None)
+            torch.cuda.synchronize(self._device)
+            latency_ms = (time.perf_counter() - started) * 1000.0
+            peak_vram_mb = torch.cuda.max_memory_allocated(self._device) / (1024**2)
 
-        density_tensors = (
-            outputs[0] / _DENSITY_FACTOR,
-            outputs[-2] / _DENSITY_FACTOR,
-            outputs[-1] / _DENSITY_FACTOR,
-        )
-        point_sets = tuple(
-            self._local_maximum_points(
-                density.clone(),
-                self._model.gaussian_maximum,
-                patch_size=patch_size,
-                den_scale=density_scale,
-                threshold=0.15,
-            )["points"]
-            for density, patch_size, density_scale in zip(
-                density_tensors, (32, 32, 16), (1.0, 4.0, 8.0)
+            density_tensors = (
+                outputs[0] / _DENSITY_FACTOR,
+                outputs[-2] / _DENSITY_FACTOR,
+                outputs[-1] / _DENSITY_FACTOR,
             )
-        )
-        processed_points = _merge_multiscale_points(point_sets)
-        densities = tuple(
-            density[0, 0].detach().float().cpu().numpy() for density in density_tensors
-        )
-        return (
-            densities,
-            tuple((float(x), float(y)) for x, y in processed_points),
-            max(float(latency_ms), 1e-9),
-            float(peak_vram_mb),
-        )
+            point_sets = tuple(
+                self._local_maximum_points(
+                    density.clone(),
+                    self._model.gaussian_maximum,
+                    patch_size=patch_size,
+                    den_scale=density_scale,
+                    threshold=0.15,
+                )["points"]
+                for density, patch_size, density_scale in zip(
+                    density_tensors, (32, 32, 16), (1.0, 4.0, 8.0)
+                )
+            )
+            processed_points = _merge_multiscale_points(point_sets)
+            densities = tuple(
+                density[0, 0].detach().float().cpu().numpy()
+                for density in density_tensors
+            )
+            return (
+                densities,
+                tuple((float(x), float(y)) for x, y in processed_points),
+                max(float(latency_ms), 1e-9),
+                float(peak_vram_mb),
+            )
 
 
 class STEERERAdapter(ModelAdapter):
@@ -568,11 +586,16 @@ class STEERERAdapter(ModelAdapter):
                 "of 32, and ImageNet normalization"
             ),
             coordinate_transform=(
-                "density mass-preserving resize and merged points divided by the "
+                "density integrates only the valid resized image region via "
+                "overlap-weighted mass remapping; padding mass and points are "
+                "discarded and recorded; remaining points are divided by the "
                 "geometric resize ratio then clipped to original pixels"
             ),
             native_output="multi-resolution density maps and merged localization points",
-            count_derivation="sum of highest-resolution density-map mass",
+            count_derivation=(
+                "sum of highest-resolution density mass within the valid resized "
+                "image region"
+            ),
             zone_derivation="fractional integration of count-preserving density over calibrated image zones",
             original_losses=(
                 "multi-resolution MSE",
