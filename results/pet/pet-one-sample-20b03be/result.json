@@ -1,0 +1,69 @@
+{
+  "annotation_sha256": "12050f0ee82ae56e936d42000847b38b6b9e3dfaf240d92a9a50bb921d2ed3f2",
+  "checkpoint_sha256": "58324f86782051591075a923522f33d245ce97f2b50cc43f618313d884b966ad",
+  "dataset_id": "ucf-qnrf-kaggle-apache",
+  "environment_sha256": "340804dc407357e0d6b50bf28be9772580ead1240c5076172c1f64b4dd4c8088",
+  "evaluation_scope": "research_comparison_only",
+  "failure_state": null,
+  "gate": "one_sample",
+  "ground_truth_count": 1453.0,
+  "panel": {
+    "path": "one-sample-panel.png",
+    "sha256": "4019a06c025a5b6a1b801c7f6e08d0277c544024c141dbe263179656e8679b9c"
+  },
+  "parameter_count": 20909385,
+  "point_confidence_count": 1762,
+  "predicted_count": 1762.0,
+  "prediction_metadata": {
+    "clipped_point_count": 0,
+    "compatibility_patch": "boolean masks remain on prediction tensors; only the CPU query-coordinate array uses the same mask copied to CPU; threshold and selection are unchanged",
+    "missing_checkpoint_key_count": 0,
+    "native_density_available": false,
+    "original_height": 2848,
+    "original_width": 4288,
+    "point_probability_threshold": 0.5,
+    "resize_ratio": 0.35820895522388063,
+    "resized_height": 1020,
+    "resized_width": 1536,
+    "split_map_height": 16,
+    "split_map_width": 12,
+    "unexpected_checkpoint_key_count": 0
+  },
+  "record": {
+    "absolute_error": 309.0,
+    "condition_values": {
+      "density_band": "medium",
+      "source_partition": "official_validation"
+    },
+    "density_band": "medium",
+    "extra_metrics": {
+      "localization_f1": 0.640746500777605,
+      "localization_mean_distance": 8.693391018322556,
+      "localization_precision": 0.5845629965947786,
+      "localization_radius": 16.0,
+      "localization_recall": 0.7088781830695113,
+      "point_zone_mae": 77.25,
+      "zone_mae": 77.25
+    },
+    "failure_state": null,
+    "ground_truth_count": 1453.0,
+    "latency_ms": 231.27815399857354,
+    "normalized_error": 0.2126634549208534,
+    "output_type": "points",
+    "peak_vram_mb": 3444.79931640625,
+    "predicted_count": 1762.0,
+    "sample_id": "img_0067",
+    "signed_error": 309.0,
+    "spatial_metric_name": "localization_f1",
+    "spatial_metric_value": 0.640746500777605
+  },
+  "rights_decision_sha256": "40d5f7c9af3417567ae55d8f1e634c144a68a23b44314057313455cf27c438d7",
+  "sample_id": "img_0067",
+  "schema_version": 1,
+  "source_sha256": "0ae12709e570308bbdbfb860b7ac6f8a9df2df71ab844c57df63433bb9d3ec1c",
+  "split_id": "dm-count-upstream-qnrf-val-smoke-36-v1",
+  "split_manifest_sha256": "0c2ce85dc998a723c9534dae7ff9aea57987ac90dbd488bb85a64dac6bd41bf6",
+  "split_role": "validation",
+  "status": "PASS",
+  "upstream_commit": "5b4dd7da8b11568a3305a88bb7c99a7fc831a998"
+}

@@ -99,6 +99,18 @@
           "artifact_kind": "rights_decision",
           "path": "pet/pet-rights-99bfc15/rights-decision.json",
           "sha256": "40d5f7c9af3417567ae55d8f1e634c144a68a23b44314057313455cf27c438d7"
+        },
+        {
+          "gate": "preflight",
+          "artifact_kind": "environment_verification",
+          "path": "pet/pet-preflight-20b03be/verify-only.json",
+          "sha256": "d73a041835ab351a59d85952fa3997f9064c0c4795d2d0e40c2485c1a46cfbf9"
+        },
+        {
+          "gate": "one_sample",
+          "artifact_kind": "one_sample_result",
+          "path": "pet/pet-one-sample-20b03be/result.json",
+          "sha256": "46f0e79321f5ed4b39e1f865cdc850c17be88fd8ee4e564a91c611732baf85ce"
         }
       ]
     },
