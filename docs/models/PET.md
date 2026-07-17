@@ -73,6 +73,18 @@ key compatibility, CUDA execution, and one validation sample under the current
 RTX 5090 runtime. Dependency installation must not replace the base
 Torch/CUDA packages.
 
+From `/workspace` inside `crowd-jupyter`:
+
+```bash
+python scripts/setup_pet_home5090.py
+python scripts/setup_pet_home5090.py --verify-only
+```
+
+The script creates `/workspace/.venvs/pet` with access to the NGC system
+packages and installs only the frozen PET overlay with `--no-deps`. It rejects
+Torch, torchvision, NumPy, or other unreviewed additions, rejects GUI OpenCV,
+and verifies CUDA matmul plus the imported runtime before returning `PASS`.
+
 ## Expected failure modes
 
 - tiny or heavily occluded people

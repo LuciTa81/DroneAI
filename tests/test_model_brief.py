@@ -258,6 +258,7 @@ def test_pet_contract_is_point_only_and_research_only() -> None:
         "estimated_count = number of point queries with point_probability > 0.5",
         "zone_count = number of predicted points inside the calibrated image zone",
         "Commercial fine-tuning and deployment are blocked",
+        "python scripts/setup_pet_home5090.py --verify-only",
         "MAE: 79.53",
         "RMSE: 144.32",
     )
