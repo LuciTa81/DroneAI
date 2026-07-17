@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "model_id": "steerer-official-ucf-qnrf",
+  "architecture": {
+    "backbone": "HRNet-W48",
+    "output_type": "hybrid",
+    "blocks": [
+      "HRNet-W48 multi-resolution backbone",
+      "multi-resolution counting heads",
+      "selective inheritance/upsample module",
+      "Gaussian density/local-maximum point decoder"
+    ],
+    "feature_scales": ["x1", "x4", "x8"]
+  },
+  "inference": {
+    "long_side_cap": 3072,
+    "den_factor": 100
+  },
+  "original_training_losses": [
+    "multi-resolution MSE",
+    "selective inheritance routing loss",
+    "uncertainty weighting where configured"
+  ],
+  "reported_results": {
+    "ucf_qnrf": {
+      "mae": 77.8,
+      "rmse": 138.0,
+      "f1": 75.6,
+      "precision": 79.7,
+      "recall": 72.0
+    }
+  },
+  "measured_localization_metric": "harness F1@16px in original-image coordinates",
+  "failure_modes": [
+    "tiny heads",
+    "extreme perspective",
+    "occlusion",
+    "domain shift",
+    "padding artifacts",
+    "threshold-sensitive localization"
+  ]
+}

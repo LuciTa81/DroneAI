@@ -1,9 +1,13 @@
+import json
 from dataclasses import replace
 from pathlib import Path
 
 import pytest
 
 from droneai.model_brief import ModelBrief, render_model_brief, write_model_brief
+
+
+REPO_ROOT = Path(__file__).parents[1]
 
 
 def _brief(review_status: str = "approved") -> ModelBrief:
@@ -144,3 +148,15 @@ def test_write_model_brief_persists_rendered_markdown(tmp_path: Path) -> None:
 
     assert written == target
     assert target.read_text(encoding="utf-8") == render_model_brief(brief)
+
+
+def test_steerer_contract_separates_paper_and_harness_localization() -> None:
+    config = json.loads((REPO_ROOT / "configs/models/steerer.official.json").read_text())
+    assert config["architecture"]["backbone"] == "HRNet-W48"
+    assert config["architecture"]["output_type"] == "hybrid"
+    assert config["inference"]["long_side_cap"] == 3072
+    assert config["inference"]["den_factor"] == 100
+    assert config["reported_results"]["ucf_qnrf"] == {
+        "mae": 77.8, "rmse": 138.0, "f1": 75.6, "precision": 79.7, "recall": 72.0
+    }
+    assert config["measured_localization_metric"] == "harness F1@16px in original-image coordinates"
