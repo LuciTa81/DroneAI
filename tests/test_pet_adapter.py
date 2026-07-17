@@ -185,3 +185,4 @@ def test_backend_error_becomes_explicit_failed_prediction(tmp_path: Path) -> Non
     assert prediction.failure_state == "RuntimeError: boom"
     assert prediction.predicted_count is None
     assert prediction.points == ()
+    assert "RuntimeError: boom" in prediction.metadata["traceback"]

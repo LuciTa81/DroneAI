@@ -6,6 +6,7 @@ import importlib
 import math
 import sys
 import time
+import traceback
 from contextlib import contextmanager
 from pathlib import Path
 from types import MethodType, SimpleNamespace
@@ -430,6 +431,7 @@ class PETAdapter(ModelAdapter):
                 metadata=metadata,
             )
         except Exception as error:
+            metadata["traceback"] = traceback.format_exc()
             return NativePrediction(
                 sample_id=sample.sample_id,
                 output_type="points",
