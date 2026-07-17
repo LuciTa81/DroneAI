@@ -1,0 +1,92 @@
+{
+  "accounting_complete": true,
+  "band_coverage": {
+    "high": {
+      "coverage": 1.0,
+      "expected_samples": 12,
+      "explicit_failures": 0,
+      "recorded_samples": 12,
+      "successful_samples": 12
+    },
+    "low": {
+      "coverage": 1.0,
+      "expected_samples": 12,
+      "explicit_failures": 0,
+      "recorded_samples": 12,
+      "successful_samples": 12
+    },
+    "medium": {
+      "coverage": 1.0,
+      "expected_samples": 12,
+      "explicit_failures": 0,
+      "recorded_samples": 12,
+      "successful_samples": 12
+    }
+  },
+  "band_signed_bias": {
+    "high": 92.1152363621232,
+    "low": 6.117929060540873,
+    "medium": 33.537730887805374
+  },
+  "condition_coverage": {
+    "density_band": {
+      "high": {
+        "coverage": 1.0,
+        "expected_samples": 12,
+        "explicit_failures": 0,
+        "recorded_samples": 12,
+        "successful_samples": 12
+      },
+      "low": {
+        "coverage": 1.0,
+        "expected_samples": 12,
+        "explicit_failures": 0,
+        "recorded_samples": 12,
+        "successful_samples": 12
+      },
+      "medium": {
+        "coverage": 1.0,
+        "expected_samples": 12,
+        "explicit_failures": 0,
+        "recorded_samples": 12,
+        "successful_samples": 12
+      }
+    },
+    "source_partition": {
+      "official_validation": {
+        "coverage": 1.0,
+        "expected_samples": 36,
+        "explicit_failures": 0,
+        "recorded_samples": 36,
+        "successful_samples": 36
+      }
+    }
+  },
+  "condition_signed_bias": {
+    "density_band": {
+      "high": 92.1152363621232,
+      "low": 6.117929060540873,
+      "medium": 33.537730887805374
+    },
+    "source_partition": {
+      "official_validation": 43.92363210348982
+    }
+  },
+  "coverage": 1.0,
+  "expected_samples": 36,
+  "explicit_failures": 0,
+  "failures": 0,
+  "mae": 71.58789788775105,
+  "median_latency_ms": 130.69571800042468,
+  "peak_vram_mb": 3408.521484375,
+  "recorded_samples": 36,
+  "rmse": 97.96504379779495,
+  "robustness_pass": true,
+  "signed_bias": 43.92363210348982,
+  "spatial_direction": "minimize",
+  "spatial_mean": 79.15199264459251,
+  "spatial_metric_name": "game_l1",
+  "spatial_target": 500.0,
+  "successful_samples": 36,
+  "throughput_fps_batch1": 7.651360085085195
+}

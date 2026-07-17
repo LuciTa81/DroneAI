@@ -1,0 +1,154 @@
+{
+  "artifacts": [
+    {
+      "path": "split-source-manifest.json",
+      "sha256": "409fbf8593f9733d4ae6ca6bbe7fa80de4e7b7a43083633716caf5514e61eda2"
+    },
+    {
+      "path": "sample-manifest.json",
+      "sha256": "742f39bf63daaa6081df21989c6b75e8b848340c479dc95b0ae4bee8ba30ed2e"
+    },
+    {
+      "path": "rights-decision.json",
+      "sha256": "20c8ab2c056a2fca2b2904869073ff2615ce3cd2872525f29a6ddde23535f669"
+    },
+    {
+      "path": "predictions.csv",
+      "sha256": "2b442d0b35acca227cb70500175235aa05372cd172509a4e2f8eb46f280f9d28"
+    },
+    {
+      "path": "native-output-metadata.json",
+      "sha256": "5cbe169958829cdd9cbf75957269860e7309af658f07868d05ba896701d56094"
+    },
+    {
+      "path": "metrics.json",
+      "sha256": "496491bdbd9f50444c0a38841b060ae27a979ccfe34f49c906520c1895c75240"
+    },
+    {
+      "path": "selection_manifest.json",
+      "sha256": "baf10237caed4c238f4d36ebebc8e1feffff19739e2844f5c6c7986e08b36bd5"
+    },
+    {
+      "path": "model-brief.md",
+      "sha256": "44393bb3bdd5041b941ee5684712c32c7a6e9307aad739fa1520acacf5415178"
+    },
+    {
+      "path": "summary.md",
+      "sha256": "0ec6713acbf49aa1b80d922acda642b76c48b1de0738389c966764ae5252c803"
+    },
+    {
+      "path": "environment-summary.json",
+      "sha256": "a768f0bc18febbadbaa5b6a7e79287ad78f3258ec315ef05bd375a5dc4e89c03"
+    },
+    {
+      "path": "figures/selected-01-be864ad6ba22cb9a.png",
+      "sha256": "3e98fa49db0a51f2c0a3738435114aa0e9c56f50c4bc77e49bc2f6325852ecf6"
+    },
+    {
+      "path": "figures/selected-02-fd9373c130ac1077.png",
+      "sha256": "7a381dd32119579dc29ecb0037e08782fb0e45cfd5daf828f8303635f512a05d"
+    },
+    {
+      "path": "figures/selected-03-8e0a4dbe072725a1.png",
+      "sha256": "adbbfe53d3f4d6c29cfdaf4e23cb72e49d40ad90ffa2241215b6cbc6191d8a72"
+    },
+    {
+      "path": "figures/selected-04-d8fafefff7c52849.png",
+      "sha256": "aa28745a379d72e8396ddb39cefdbd5a6a24cf282e551cbe23d57d38b044b23b"
+    },
+    {
+      "path": "figures/selected-05-505273f34f445a8f.png",
+      "sha256": "13c213bb645395057e4e183e3008f7fda6f4726668cc1a54f60717e8462e85fe"
+    },
+    {
+      "path": "figures/selected-06-9e3a7ee5803445cf.png",
+      "sha256": "3928663cc5e092b5e62d5d11c9b6331f22906d93840a5fd29dda75921473a8ad"
+    },
+    {
+      "path": "figures/selected-07-c145cb679c8a0d04.png",
+      "sha256": "79ae099d3fe013855cb1f4e5221e8a5f405f34a1921734ff3d47574a18ac6b3f"
+    },
+    {
+      "path": "figures/selected-08-b136b5ac7f290f06.png",
+      "sha256": "5e122ac98c7234eb034d7f422ad4f2a836db50a6dea176c0fdc4e3868259dcb7"
+    },
+    {
+      "path": "figures/selected-09-c70e58b5e6bae0d3.png",
+      "sha256": "25934fe9b0c859717a9bc9eb71a689bf897a69a6762e8df38d343eb2ccc0cb95"
+    },
+    {
+      "path": "figures/selected-10-ca90cca47cd2592a.png",
+      "sha256": "0f87cfd87784fc4d6b2d82290fb69a60ed6814345ee5e35018eeaebef6baa931"
+    },
+    {
+      "path": "figures/selected-11-3124be1f1fb9e789.png",
+      "sha256": "ec6e85b6e3f4815f1411e838434b176870d63f5e63b2c251ea5f99ee88c6e961"
+    },
+    {
+      "path": "figures/selected-12-cc4e59a84ce60dd5.png",
+      "sha256": "fbb47fdf0a3e1ca3647d51332a0f72d721850715663510b3e92124b9330bbae4"
+    }
+  ],
+  "checkpoint": {
+    "path": "/workspace/data/checkpoints/steerer/QNRF_mae_77.8_mse_138.0_85f71763.pth",
+    "sha256": "85f71763595527e419257d459288e4a784766f41687ff0b859dcff65a151bbec",
+    "verified": true
+  },
+  "protocol": {
+    "band_bias_max": 400.0,
+    "bias_max": 250.0,
+    "condition_bias_max": 250.0,
+    "dataset_id": "ucf-qnrf-kaggle-apache",
+    "density_band_rules": [
+      "low: count < 500",
+      "medium: 500 <= count < 1500",
+      "high: count >= 1500"
+    ],
+    "expected_samples": 36,
+    "latency_max_ms": 2000.0,
+    "leakage_free": true,
+    "localization_radius": 16.0,
+    "mae_max": 250.0,
+    "protocol_id": "steerer-official-qnrf-val-smoke-v1",
+    "require_clean_git": true,
+    "required_condition_keys": [
+      "source_partition"
+    ],
+    "required_density_bands": [
+      "low",
+      "medium",
+      "high"
+    ],
+    "rights_decision_path": "/workspace/data/results/steerer/steerer-rights-20260717T170242Z-79f4c350d359/rights-decision.json",
+    "rights_decision_sha256": "ff6ee8ecbd535a80df5dc72015a13a1cb6e3713a529e2b080e0f3a36f188c922",
+    "rmse_max": 400.0,
+    "run_id": "steerer-ucf-qnrf-validation-smoke",
+    "sealed_test_access_approved": false,
+    "spatial_direction": "minimize",
+    "spatial_metric_name": "game_l1",
+    "spatial_target": 500.0,
+    "split_id": "dm-count-upstream-qnrf-val-smoke-36-v1",
+    "split_role": "validation",
+    "split_verified": true,
+    "vram_max_mb": 24000.0,
+    "zone_critical_count": 150.0,
+    "zone_warning_count": 50.0
+  },
+  "reviewed_paths": {
+    "paths": [
+      "/workspace/upstreams/STEERER/configs/QNRF_final.py",
+      "/workspace/upstreams/STEERER/lib/models/build_counter.py",
+      "/workspace/upstreams/STEERER/lib/utils/points_from_den.py",
+      "/workspace/upstreams/STEERER/lib/core/cc_function.py",
+      "/workspace/upstreams/STEERER/lib/datasets/base_dataset.py",
+      "/workspace/upstreams/STEERER/lib/datasets/nwpu.py"
+    ],
+    "verified": true
+  },
+  "rights_decision": {
+    "source_path": "/workspace/data/results/steerer/steerer-rights-20260717T170242Z-79f4c350d359/rights-decision.json",
+    "source_sha256": "ff6ee8ecbd535a80df5dc72015a13a1cb6e3713a529e2b080e0f3a36f188c922",
+    "verified": true
+  },
+  "schema_version": 1
+}

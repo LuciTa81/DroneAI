@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "round_id": "round-1-static-ucf-qnrf",
-  "active_model": "steerer",
+  "active_model": "pet",
   "models": [
     {
       "model_id": "dm-count",
@@ -33,7 +33,7 @@
     {
       "model_id": "steerer",
       "family": "density_and_points",
-      "queue_state": "active",
+      "queue_state": "completed",
       "rights_scope": "PASS_COMMERCIAL_CANDIDATE",
       "dataset_id": "ucf-qnrf-kaggle-apache",
       "split_id": "dm-count-upstream-qnrf-val-smoke-36-v1",
@@ -63,13 +63,25 @@
           "artifact_kind": "one_sample_result",
           "path": "steerer/steerer-one-sample-20260717T174031Z-444856076727/result.json",
           "sha256": "faa246122fac3b74109cca270bc2cd4797a70d620759f24015e6c11e4da5f07d"
+        },
+        {
+          "gate": "benchmark",
+          "artifact_kind": "score",
+          "path": "steerer/steerer-ucf-qnrf-val-smoke-7e6bebb/score.json",
+          "sha256": "1d21f48c69e1d2a4612923716e12e14b313bd08801075ba8f8fb323cc7eef185"
+        },
+        {
+          "gate": "benchmark",
+          "artifact_kind": "metrics",
+          "path": "steerer/steerer-ucf-qnrf-val-smoke-7e6bebb/metrics.json",
+          "sha256": "496491bdbd9f50444c0a38841b060ae27a979ccfe34f49c906520c1895c75240"
         }
       ]
     },
     {
       "model_id": "pet",
       "family": "points",
-      "queue_state": "queued",
+      "queue_state": "active",
       "rights_scope": "PENDING",
       "dataset_id": "ucf-qnrf-kaggle-apache",
       "split_id": "dm-count-upstream-qnrf-val-smoke-36-v1",
