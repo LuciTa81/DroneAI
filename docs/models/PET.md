@@ -90,6 +90,9 @@ CUDA predictions. Current Torch rejects that device mismatch. The DroneAI
 adapter keeps those masks on the prediction device while preserving the
 official `> 0.5` threshold and concatenation order; this compatibility shim is
 recorded in every prediction's metadata and does not change checkpoint values.
+The same rule is applied to mixed-device query construction: GPU feature masks
+remain on GPU, while the identical mask is copied to CPU only when indexing the
+official CPU coordinate array.
 
 ## Expected failure modes
 

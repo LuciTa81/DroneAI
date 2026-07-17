@@ -12,6 +12,7 @@ from droneai.evaluation_contract import EvaluationSample
 from droneai.integrity import sha256_file
 from droneai.pet_adapter import (
     PETAdapter,
+    _pet_query_embed_inference_current_torch,
     _pet_test_forward_current_torch,
     calculate_pet_size,
 )
@@ -118,6 +119,11 @@ def test_current_torch_compatibility_keeps_boolean_masks_on_device() -> None:
     assert "sparse_scores > threshold" in source
     assert "dense_scores > threshold" in source
     assert "threshold = 0.5" in source
+
+    query_source = inspect.getsource(_pet_query_embed_inference_current_torch)
+    assert "query_embed_win[:, v_idx]" in query_source
+    assert "query_feats_win[:, v_idx]" in query_source
+    assert "points_queries_win[:, v_idx.cpu()]" in query_source
 
 
 def test_adapter_returns_filtered_points_in_original_xy_coordinates(tmp_path: Path) -> None:

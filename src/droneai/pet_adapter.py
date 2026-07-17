@@ -169,6 +169,71 @@ def _pet_test_forward_current_torch(model, samples, features, pos, **kwargs):
     return combined
 
 
+def _pet_query_embed_inference_current_torch(
+    branch, samples, stride=8, src=None, **kwargs
+):
+    """Use a CPU copy of the selection mask only for CPU query coordinates."""
+
+    torch = importlib.import_module("torch")
+    window_partition = importlib.import_module(
+        "models.transformer.utils"
+    ).window_partition
+    dense_input_embed = kwargs["dense_input_embed"]
+    batch_size, channels = dense_input_embed.shape[:2]
+    image_shape = torch.tensor(samples.tensors.shape[2:])
+    shape = (image_shape + stride // 2 - 1) // stride
+
+    shift_x = ((torch.arange(0, shape[1]) + 0.5) * stride).long()
+    shift_y = ((torch.arange(0, shape[0]) + 0.5) * stride).long()
+    shift_y, shift_x = torch.meshgrid(shift_y, shift_x, indexing="ij")
+    points_queries = torch.vstack(
+        [shift_y.flatten(), shift_x.flatten()]
+    ).permute(1, 0)
+    height, width = shift_x.shape
+
+    query_embed = dense_input_embed[
+        :, :, points_queries[:, 0], points_queries[:, 1]
+    ]
+    shift_y_down = points_queries[:, 0] // stride
+    shift_x_down = points_queries[:, 1] // stride
+    query_feats = src[:, :, shift_y_down, shift_x_down]
+
+    query_embed = query_embed.reshape(batch_size, channels, height, width)
+    points_queries = points_queries.reshape(height, width, 2).permute(
+        2, 0, 1
+    ).unsqueeze(0)
+    query_feats = query_feats.reshape(batch_size, channels, height, width)
+
+    dec_win_width, dec_win_height = kwargs["dec_win_size"]
+    query_embed_win = window_partition(
+        query_embed,
+        window_size_h=dec_win_height,
+        window_size_w=dec_win_width,
+    )
+    points_queries_win = window_partition(
+        points_queries,
+        window_size_h=dec_win_height,
+        window_size_w=dec_win_width,
+    )
+    query_feats_win = window_partition(
+        query_feats,
+        window_size_h=dec_win_height,
+        window_size_w=dec_win_width,
+    )
+
+    div_win = window_partition(
+        kwargs["div"].unsqueeze(1),
+        window_size_h=dec_win_height,
+        window_size_w=dec_win_width,
+    )
+    valid_div = (div_win > 0.5).sum(dim=0)[:, 0]
+    v_idx = valid_div > 0
+    query_embed_win = query_embed_win[:, v_idx]
+    query_feats_win = query_feats_win[:, v_idx]
+    points_queries_win = points_queries_win[:, v_idx.cpu()].reshape(-1, 2)
+    return query_embed_win, points_queries_win, query_feats_win, v_idx
+
+
 class TorchPETBackend:
     """CUDA backend for the exact official PET source and checkpoint."""
 
@@ -218,9 +283,13 @@ class TorchPETBackend:
                 raise RuntimeError("PET checkpoint did not load strictly")
             self.parameter_count = sum(parameter.numel() for parameter in model.parameters())
             model.test_forward = MethodType(_pet_test_forward_current_torch, model)
+            for branch in (model.quadtree_sparse, model.quadtree_dense):
+                branch.points_queris_embed_inference = MethodType(
+                    _pet_query_embed_inference_current_torch, branch
+                )
             self.compatibility_patch = (
-                "official boolean query masks remain on the prediction tensor device; "
-                "threshold and selected values are unchanged"
+                "boolean masks remain on prediction tensors; only the CPU query-coordinate "
+                "array uses the same mask copied to CPU; threshold and selection are unchanged"
             )
             self._model = model.to(self._device).eval()
 
