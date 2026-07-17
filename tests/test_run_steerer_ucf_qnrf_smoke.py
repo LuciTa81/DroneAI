@@ -211,11 +211,16 @@ def test_rights_exceptions_are_not_converted_to_gate_failures(
         runner.main(valid_args(output_dir=output))
 
 
-def test_dependency_overlay_pins_only_the_eight_model_dependencies() -> None:
+def test_dependency_overlay_pins_only_the_thirteen_model_dependencies() -> None:
     overlay = Path("requirements/models/steerer-home5090.txt")
 
     assert overlay.read_text(encoding="utf-8").splitlines() == [
         "mmcv==1.7.2",
+        "addict==2.4.0",
+        "packaging==25.0",
+        "Pillow==11.3.0",
+        "PyYAML==6.0.2",
+        "yapf==0.43.0",
         "opencv-python-headless==4.12.0.88",
         "timm==1.0.19",
         "einops==0.8.1",

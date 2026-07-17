@@ -448,7 +448,7 @@ Expected: the status check is clean before checkout; checkout and pull are fast-
 - [ ] **Step 1: Create a model-isolated environment without replacing base Torch**
 
 ```bash
-ssh home5090-pop "docker exec crowd-jupyter bash -lc 'python -m venv --system-site-packages /workspace/.venvs/steerer && /workspace/.venvs/steerer/bin/python -m pip install -r /workspace/requirements/models/steerer-home5090.txt'"
+ssh home5090-pop "docker exec crowd-jupyter bash -lc 'cd /workspace && python scripts/setup_steerer_home5090.py'"
 ```
 
 - [ ] **Step 2: Run import and CUDA probes**
