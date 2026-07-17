@@ -216,3 +216,49 @@ def test_steerer_contract_separates_paper_and_harness_localization() -> None:
         )
     )
     assert f"```text\n{output_semantics}\n```" in brief
+
+
+def test_pet_contract_is_point_only_and_research_only() -> None:
+    config = json.loads((REPO_ROOT / "configs/models/pet.official.json").read_text())
+
+    assert config["repository"] == {
+        "url": "https://github.com/cxliu0/PET",
+        "commit": "5b4dd7da8b11568a3305a88bb7c99a7fc831a998",
+        "rights_scope": "PASS_RESEARCH_ONLY",
+    }
+    assert config["architecture"]["backbone"] == "VGG16-BN"
+    assert config["architecture"]["output_type"] == "points"
+    assert config["architecture"]["query_stride"] == 8
+    assert config["architecture"]["maximum_quadtree_depth"] == 2
+    assert config["architecture"]["hidden_dimension"] == 256
+    assert config["architecture"]["attention_heads"] == 8
+    assert config["architecture"]["encoder_layers"] == 4
+    assert config["architecture"]["decoder_layers"] == 2
+    assert config["inference"]["point_probability_threshold"] == 0.5
+    assert config["inference"]["ucf_qnrf_long_side_cap"] == 1536
+    assert config["outputs"] == {
+        "native": [
+            "point/non-point class probabilities",
+            "normalized point coordinates",
+            "quadtree split map",
+        ],
+        "count_derivation": "number of point queries above the point-class probability threshold",
+        "density_map_available": False,
+        "localization_available": True,
+        "zone_derivation": "count predicted points whose original-image coordinates fall inside each calibrated zone",
+    }
+    assert config["reported_results"]["ucf_qnrf"] == {"mae": 79.53, "rmse": 144.32}
+
+    brief = (REPO_ROOT / "docs/models/PET.md").read_text()
+    required_fragments = (
+        "# Model brief: pet-official-ucf-qnrf",
+        "- Rights scope: `PASS_RESEARCH_ONLY`",
+        "- Native output: point/non-point probabilities, normalized point coordinates, and quadtree split map",
+        "- Density map: unavailable natively",
+        "estimated_count = number of point queries with point_probability > 0.5",
+        "zone_count = number of predicted points inside the calibrated image zone",
+        "Commercial fine-tuning and deployment are blocked",
+        "MAE: 79.53",
+        "RMSE: 144.32",
+    )
+    assert all(fragment in brief for fragment in required_fragments)

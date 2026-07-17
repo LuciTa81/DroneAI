@@ -150,7 +150,77 @@ def test_explicit_noncommercial_bundle_is_research_only() -> None:
         )
     decision = classify_rights(manifest)
     assert decision.status == "PASS_RESEARCH_ONLY"
-    assert decision.allowed_actions == ("catalog", "research_reproduction")
+    assert decision.allowed_actions == (
+        "catalog",
+        "research_reproduction",
+        "research_asset_download",
+        "research_checkpoint_evaluation",
+    )
+
+
+def test_explicit_research_checkpoint_chain_ignores_pending_product_only_components() -> None:
+    manifest = _manifest()
+    for component in manifest["components"]:
+        kind = component["component_type"]
+        if kind in {"code", "pretrained_weights"}:
+            component["rights"].update(
+                {
+                    "license_id": "LicenseRef-Academic-Only",
+                    "commercial_use": False,
+                    "research_use": True,
+                    "basis": "explicit_terms",
+                }
+            )
+        elif kind in {"derived_weights", "deployment"}:
+            component["rights"].update(
+                {
+                    "status": "pending",
+                    "license_id": None,
+                    "evidence_url": None,
+                    "commercial_use": None,
+                    "research_use": None,
+                    "basis": "pending_review",
+                }
+            )
+
+    decision = classify_rights(manifest)
+
+    assert decision.status == "PASS_RESEARCH_ONLY"
+    assert decision.allowed_actions == (
+        "catalog",
+        "research_reproduction",
+        "research_asset_download",
+        "research_checkpoint_evaluation",
+    )
+    assert {"code", "pretrained_weights"}.issubset(decision.restricted_components)
+    assert not {
+        "asset_download",
+        "frozen_checkpoint_evaluation",
+        "commercial_training",
+        "derived_weight_use",
+        "deployment",
+    }.intersection(decision.allowed_actions)
+
+
+def test_pet_manifest_preserves_academic_only_notice_over_placeholder_mit_file() -> None:
+    manifest_path = (
+        Path(__file__).parents[1]
+        / "configs"
+        / "candidates"
+        / "pet_ucf_qnrf.candidate.json"
+    )
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+
+    decision = classify_rights(manifest)
+
+    assert decision.status == "PASS_RESEARCH_ONLY"
+    assert "research_checkpoint_evaluation" in decision.allowed_actions
+    assert "frozen_checkpoint_evaluation" not in decision.allowed_actions
+    components = {entry["component_type"]: entry for entry in manifest["components"]}
+    assert components["code"]["rights"]["license_id"] == "LicenseRef-PET-Academic-Only"
+    assert components["code"]["rights"]["commercial_use"] is False
+    assert components["pretrained_weights"]["rights"]["commercial_use"] is False
+    assert "placeholder" in components["code"]["rights"]["notes"].lower()
 
 
 def test_all_verified_components_are_production_approved() -> None:

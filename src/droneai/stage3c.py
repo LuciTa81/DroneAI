@@ -183,14 +183,20 @@ def _inspect_manifest(manifest: dict[str, Any]) -> dict[str, Any]:
     all_commercial = complete_ok and all(commercial_verified.get(k, False) for k in REQUIRED_COMPONENTS)
     all_research = complete_ok and all(research_verified.get(k, False) for k in REQUIRED_COMPONENTS)
     pretrained_rights = components.get("pretrained_weights", {}).get("rights")
+    pretrained_research_ok = bool(
+        research_verified.get("pretrained_weights")
+        or (
+            isinstance(pretrained_rights, dict)
+            and pretrained_rights.get("research_use") is True
+            and pretrained_rights.get("basis") == "internal_approval"
+            and pretrained_rights.get("evidence_url")
+        )
+    )
     research_checkpoint_ok = bool(
         complete_ok
         and research_verified.get("code")
         and research_verified.get("dataset")
-        and isinstance(pretrained_rights, dict)
-        and pretrained_rights.get("research_use") is True
-        and pretrained_rights.get("basis") == "internal_approval"
-        and pretrained_rights.get("evidence_url")
+        and pretrained_research_ok
     )
 
     if all_errors or prohibited:
@@ -199,9 +205,12 @@ def _inspect_manifest(manifest: dict[str, Any]) -> dict[str, Any]:
     elif all_commercial:
         status = "PRODUCTION_APPROVED"
         rationale = "All five required components have verified commercial evidence."
-    elif all_research and restricted:
+    elif restricted and (all_research or research_checkpoint_ok):
         status = "PASS_RESEARCH_ONLY"
-        rationale = "Every component permits research, while one or more explicitly exclude commercial use."
+        rationale = (
+            "The frozen research input chain permits research, while one or more "
+            "components explicitly exclude commercial use."
+        )
     elif not restricted:
         status = "PASS_COMMERCIAL_CANDIDATE"
         rationale = (
@@ -243,9 +252,12 @@ def classify_rights(manifest: dict[str, Any]) -> RightsDecision:
         frozen_inputs = ("code", "dataset", "pretrained_weights")
         if all(inspection["commercial_verified"].get(kind) for kind in frozen_inputs):
             actions += ("asset_download", "frozen_checkpoint_evaluation")
+    elif status == "PASS_RESEARCH_ONLY":
+        actions = RESEARCH_ACTIONS
+        if inspection["research_checkpoint_ok"]:
+            actions += ("research_asset_download", "research_checkpoint_evaluation")
     else:
         actions = {
-            "PASS_RESEARCH_ONLY": RESEARCH_ACTIONS,
             "PRODUCTION_APPROVED": PRODUCTION_ACTIONS,
             "BLOCKED": (),
         }[status]

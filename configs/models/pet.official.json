@@ -1,0 +1,83 @@
+{
+  "schema_version": 1,
+  "model_id": "pet-official-ucf-qnrf",
+  "paper": {
+    "title": "Point-Query Quadtree for Crowd Counting, Localization, and More",
+    "venue": "ICCV 2023",
+    "url": "https://openaccess.thecvf.com/content/ICCV2023/papers/Liu_Point-Query_Quadtree_for_Crowd_Counting_Localization_and_More_ICCV_2023_paper.pdf"
+  },
+  "repository": {
+    "url": "https://github.com/cxliu0/PET",
+    "commit": "5b4dd7da8b11568a3305a88bb7c99a7fc831a998",
+    "rights_scope": "PASS_RESEARCH_ONLY"
+  },
+  "architecture": {
+    "backbone": "VGG16-BN",
+    "output_type": "points",
+    "blocks": [
+      "VGG16-BN convolutional backbone",
+      "progressive encoder with rectangular-window attention",
+      "point-query quadtree decoder",
+      "point/non-point classification and coordinate heads"
+    ],
+    "query_stride": 8,
+    "maximum_quadtree_depth": 2,
+    "hidden_dimension": 256,
+    "attention_heads": 8,
+    "encoder_layers": 4,
+    "decoder_layers": 2
+  },
+  "inference": {
+    "point_probability_threshold": 0.5,
+    "ucf_qnrf_long_side_cap": 1536
+  },
+  "outputs": {
+    "native": [
+      "point/non-point class probabilities",
+      "normalized point coordinates",
+      "quadtree split map"
+    ],
+    "count_derivation": "number of point queries above the point-class probability threshold",
+    "density_map_available": false,
+    "localization_available": true,
+    "zone_derivation": "count predicted points whose original-image coordinates fall inside each calibrated zone"
+  },
+  "original_training": {
+    "optimizer": "Adam",
+    "weight_decay": 0.0005,
+    "backbone_learning_rate": 0.00001,
+    "transformer_learning_rate": 0.0001,
+    "losses": [
+      "point/non-point cross entropy",
+      "smooth L1 point-coordinate loss",
+      "quadtree split loss"
+    ],
+    "loss_weights": {
+      "point_coordinate": 5.0,
+      "split": 0.1
+    }
+  },
+  "official_environment": {
+    "python": "3.8",
+    "pytorch": "1.12.1",
+    "torchvision": "0.13.1"
+  },
+  "checkpoint": {
+    "url": "https://drive.google.com/file/d/129l__gW51UtTQnPKM-90lTZo508-Eh7I/view?usp=sharing",
+    "sha256": "record-at-download-before-use",
+    "rights_scope": "PASS_RESEARCH_ONLY"
+  },
+  "reported_results": {
+    "ucf_qnrf": {
+      "mae": 79.53,
+      "rmse": 144.32
+    }
+  },
+  "failure_modes": [
+    "tiny or heavily occluded people",
+    "large domain shift from the training viewpoint",
+    "threshold-sensitive point classification",
+    "coordinate errors near calibrated zone boundaries",
+    "high memory or latency on very large images"
+  ]
+}
