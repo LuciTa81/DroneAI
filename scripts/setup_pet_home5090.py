@@ -19,6 +19,10 @@ FROZEN_REQUIREMENTS = (
     "gdown==5.2.0",
     "opencv-python-headless==4.12.0.88",
     "PySocks==1.7.1",
+    "scikit-image==0.26.0",
+    "ImageIO==2.37.3",
+    "tifffile==2026.7.14",
+    "lazy_loader==0.4",
 )
 FROZEN_VERSIONS = {
     requirement.partition("==")[0]: requirement.partition("==")[2]
@@ -148,6 +152,7 @@ def _verify(python: Path, *, runner: Runner) -> dict[str, object]:
 
     runtime_code = (
         "import json, cv2, gdown, socks, torch, torchvision, numpy, scipy, matplotlib\n"
+        "import skimage, imageio, tifffile, lazy_loader\n"
         "from PIL import Image\n"
         "available=torch.cuda.is_available()\n"
         "gpu=torch.cuda.get_device_name(0) if available else None\n"

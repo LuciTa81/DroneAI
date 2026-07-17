@@ -14,6 +14,10 @@ FROZEN = (
     "gdown==5.2.0",
     "opencv-python-headless==4.12.0.88",
     "PySocks==1.7.1",
+    "scikit-image==0.26.0",
+    "ImageIO==2.37.3",
+    "tifffile==2026.7.14",
+    "lazy_loader==0.4",
 )
 
 
@@ -48,6 +52,10 @@ class FakeRunner:
                 "gdown": "5.2.0",
                 "opencv-python-headless": "4.12.0.88",
                 "PySocks": "1.7.1",
+                "scikit-image": "0.26.0",
+                "ImageIO": "2.37.3",
+                "tifffile": "2026.7.14",
+                "lazy_loader": "0.4",
                 "opencv-python": None,
             }
             return subprocess.CompletedProcess(call, 0, json.dumps(payload), "")
@@ -92,7 +100,7 @@ def test_setup_installs_overlay_without_dependencies_or_torch(tmp_path: Path) ->
     )
 
     install = next(call for call in runner.calls if "install" in call)
-    assert install[-4:] == ("--no-deps", *FROZEN)
+    assert install[-(len(FROZEN) + 1) :] == ("--no-deps", *FROZEN)
     assert not any(part.startswith(("torch==", "torchvision==")) for part in install)
     assert result["status"] == "PASS"
     assert result["cuda"]["cuda_available"] is True
