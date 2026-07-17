@@ -48,6 +48,22 @@ _FORBIDDEN_RESEARCH_ACTIONS = frozenset(
 )
 
 
+def _validate_steerer_smoke_config(config: dict[str, object]) -> None:
+    dm_count = load_smoke_config(_DM_COUNT_CONFIG)
+    expected = dict(dm_count)
+    expected.update(_STEERER_CONFIG_OVERRIDES)
+    if config != expected:
+        changed_keys = sorted(
+            key
+            for key in set(config) | set(expected)
+            if config.get(key) != expected.get(key)
+        )
+        raise ValueError(
+            "STEERER smoke config must preserve the frozen DM-Count validation "
+            f"protocol except for approved overrides; mismatched={changed_keys}"
+        )
+
+
 def load_steerer_smoke_config(path: str | Path) -> dict[str, object]:
     """Load a STEERER config that differs from the frozen DM-Count config only by scope."""
 
@@ -55,19 +71,7 @@ def load_steerer_smoke_config(path: str | Path) -> dict[str, object]:
     payload = json.loads(target.read_text(encoding="utf-8"))
     if not isinstance(payload, dict):
         raise ValueError("STEERER smoke config must be an object")
-    dm_count = load_smoke_config(_DM_COUNT_CONFIG)
-    expected = dict(dm_count)
-    expected.update(_STEERER_CONFIG_OVERRIDES)
-    if payload != expected:
-        changed_keys = sorted(
-            key
-            for key in set(payload) | set(expected)
-            if payload.get(key) != expected.get(key)
-        )
-        raise ValueError(
-            "STEERER smoke config must preserve the frozen DM-Count validation "
-            f"protocol except for approved overrides; mismatched={changed_keys}"
-        )
+    _validate_steerer_smoke_config(payload)
     return payload
 
 
@@ -76,6 +80,40 @@ def _load_object(path: str | Path, *, label: str) -> dict[str, object]:
     if not isinstance(payload, dict):
         raise ValueError(f"{label} must be an object")
     return payload
+
+
+def _validated_component_ids(manifest: dict[str, object]) -> dict[str, str]:
+    components = manifest.get("components")
+    if not isinstance(components, list) or len(components) != len(
+        REQUIRED_COMPONENTS
+    ):
+        raise PermissionError(
+            "rights manifest components must contain exactly five objects"
+        )
+    component_ids: dict[str, str] = {}
+    for component in components:
+        if not isinstance(component, dict):
+            raise PermissionError("rights manifest components must all be objects")
+        component_type = component.get("component_type")
+        component_id = component.get("component_id")
+        if not isinstance(component_type, str) or component_type not in REQUIRED_COMPONENTS:
+            raise PermissionError(
+                "rights manifest components require a known component_type"
+            )
+        if component_type in component_ids:
+            raise PermissionError(
+                "rights manifest components must contain each component_type exactly once"
+            )
+        if not isinstance(component_id, str) or not component_id.strip():
+            raise PermissionError(
+                "rights manifest components require non-empty string component_id values"
+            )
+        component_ids[component_type] = component_id
+    if set(component_ids) != REQUIRED_COMPONENTS:
+        raise PermissionError(
+            "rights manifest components must contain each required component_type"
+        )
+    return component_ids
 
 
 def validate_steerer_rights_decision(
@@ -88,12 +126,7 @@ def validate_steerer_rights_decision(
 
     payload = _load_object(path, label="rights decision")
     manifest = _load_object(manifest_path, label="rights manifest")
-    components = manifest.get("components")
-    component_ids = {
-        str(component.get("component_type")): component.get("component_id")
-        for component in components
-        if isinstance(component, dict)
-    } if isinstance(components, list) else {}
+    component_ids = _validated_component_ids(manifest)
     identity_matches = (
         expected_candidate_id == STEERER_CANDIDATE_ID
         and expected_candidate_id == manifest.get("candidate_id")
@@ -165,10 +198,7 @@ def build_steerer_protocol(
 ) -> EvaluationProtocol:
     """Build a common evaluation protocol after research-only rights validation."""
 
-    if config.get("required_action") != RESEARCH_CHECKPOINT_ACTION:
-        raise PermissionError(
-            f"STEERER protocol requires {RESEARCH_CHECKPOINT_ACTION}"
-        )
+    _validate_steerer_smoke_config(config)
     rights_path = Path(rights_decision_path).resolve()
     validate_steerer_rights_decision(
         rights_path,

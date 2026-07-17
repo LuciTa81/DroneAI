@@ -34,19 +34,22 @@ def _rights(
         "research_checkpoint_evaluation",
     ),
     status: str = "PASS_COMMERCIAL_CANDIDATE",
+    components: list[object] | None = None,
 ) -> tuple[Path, Path]:
     root.mkdir(parents=True, exist_ok=True)
-    manifest = {
-        "schema_version": 1,
-        "candidate_id": CANDIDATE_ID,
-        "intended_use": "commercial_product_rnd",
-        "components": [
+    if components is None:
+        components = [
             {
                 "component_type": component_type,
                 "component_id": f"fixture-{component_type}",
             }
             for component_type in sorted(REQUIRED_COMPONENTS)
-        ],
+        ]
+    manifest = {
+        "schema_version": 1,
+        "candidate_id": CANDIDATE_ID,
+        "intended_use": "commercial_product_rnd",
+        "components": components,
     }
     manifest_path = root / "candidate.json"
     manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
@@ -55,8 +58,9 @@ def _rights(
         "candidate_id": CANDIDATE_ID,
         "manifest_semantic_sha256": manifest_semantic_sha256(manifest),
         "component_ids": {
-            component["component_type"]: component["component_id"]
+            str(component.get("component_type")): component.get("component_id")
             for component in manifest["components"]
+            if isinstance(component, dict)
         },
         "allowed_actions": list(actions),
     }
@@ -135,7 +139,17 @@ def test_research_decision_requires_checkpoint_evaluation_action(tmp_path: Path)
         )
 
 
-@pytest.mark.parametrize("forbidden_action", ["frozen_checkpoint_evaluation", "deployment"])
+@pytest.mark.parametrize(
+    "forbidden_action",
+    [
+        "asset_download",
+        "frozen_checkpoint_evaluation",
+        "commercial_training",
+        "derived_weight_use",
+        "weight_reuse",
+        "deployment",
+    ],
+)
 def test_research_decision_rejects_commercial_or_deployment_actions(
     tmp_path: Path,
     forbidden_action: str,
@@ -151,6 +165,62 @@ def test_research_decision_rejects_commercial_or_deployment_actions(
     )
 
     with pytest.raises(PermissionError, match=forbidden_action):
+        validate_steerer_rights_decision(
+            decision_path,
+            manifest_path=manifest_path,
+            expected_candidate_id=CANDIDATE_ID,
+        )
+
+
+@pytest.mark.parametrize(
+    "defect",
+    [
+        "four-components",
+        "six-with-duplicate-code",
+        "non-object",
+        "missing-type",
+        "non-string-type",
+        "extra-type",
+        "missing-id",
+        "non-string-id",
+        "blank-id",
+    ],
+)
+def test_research_decision_rejects_malformed_component_structure(
+    tmp_path: Path,
+    defect: str,
+) -> None:
+    components: list[object] = [
+        {
+            "component_type": component_type,
+            "component_id": f"fixture-{component_type}",
+        }
+        for component_type in sorted(REQUIRED_COMPONENTS)
+    ]
+    if defect == "four-components":
+        components.pop()
+    elif defect == "six-with-duplicate-code":
+        components.append(
+            {"component_type": "code", "component_id": "duplicate-code"}
+        )
+    elif defect == "non-object":
+        components[0] = "not-an-object"
+    elif defect == "missing-type":
+        del components[0]["component_type"]  # type: ignore[index]
+    elif defect == "non-string-type":
+        components[0]["component_type"] = 7  # type: ignore[index]
+    elif defect == "extra-type":
+        components[0]["component_type"] = "unexpected"  # type: ignore[index]
+    elif defect == "missing-id":
+        del components[0]["component_id"]  # type: ignore[index]
+    elif defect == "non-string-id":
+        components[0]["component_id"] = 7  # type: ignore[index]
+    elif defect == "blank-id":
+        components[0]["component_id"] = " "  # type: ignore[index]
+
+    decision_path, manifest_path = _rights(tmp_path, components=components)
+
+    with pytest.raises(PermissionError, match="components"):
         validate_steerer_rights_decision(
             decision_path,
             manifest_path=manifest_path,
@@ -202,3 +272,29 @@ def test_protocol_references_research_decision_without_test_approval(
     assert protocol.sealed_test_access_approved is False
     assert protocol.localization_radius == 16.0
     assert len(protocol.rights_decision_sha256) == 64
+
+
+@pytest.mark.parametrize(
+    ("field", "mutated_value"),
+    [
+        ("dataset_id", "different-dataset"),
+        ("split_id", "different-validation-split"),
+        ("expected_samples", 35),
+    ],
+)
+def test_protocol_rejects_mutated_frozen_sample_identity(
+    tmp_path: Path,
+    field: str,
+    mutated_value: object,
+) -> None:
+    config = load_steerer_smoke_config(STEERER_CONFIG)
+    config[field] = mutated_value
+    decision_path, manifest_path = _rights(tmp_path)
+
+    with pytest.raises(ValueError, match="preserve the frozen DM-Count validation"):
+        build_steerer_protocol(
+            config,
+            rights_decision_path=decision_path,
+            rights_manifest_path=manifest_path,
+            split_verified=True,
+        )
