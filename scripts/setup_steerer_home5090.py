@@ -33,6 +33,10 @@ FROZEN_REQUIREMENTS = (
     "yacs==0.1.8",
     "tensorboardX==2.6.2.2",
     "fvcore==0.1.5.post20221221",
+    "scikit-image==0.26.0",
+    "ImageIO==2.37.3",
+    "tifffile==2026.7.14",
+    "lazy_loader==0.4",
 )
 KNOWN_PIP_CHECK_LINES = frozenset(
     {
@@ -53,6 +57,10 @@ REQUIRED_IMPORTS = (
     "fvcore",
     "dict_recursive_update",
     "tensorboardX",
+    "skimage",
+    "imageio",
+    "tifffile",
+    "lazy_loader",
 )
 _EXACT_PIN = re.compile(r"^(?P<name>[A-Za-z0-9][A-Za-z0-9._-]*)==(?P<version>[^\s;#]+)$")
 
@@ -122,7 +130,7 @@ def parse_requirements(path: str | Path) -> ParsedRequirements:
             if by_name[name] != FROZEN_BY_NAME[name]
         )
         raise ValueError(
-            "requirements must match the frozen 13-package allowlist; "
+            "requirements must match the frozen 17-package allowlist; "
             f"missing={missing}; unexpected={unexpected}; changed={changed}"
         )
 

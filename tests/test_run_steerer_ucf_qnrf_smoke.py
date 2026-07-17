@@ -266,7 +266,7 @@ def test_split_upstream_failure_stops_before_sample_or_adapter_work(
         runner.main(valid_args(output_dir=output))
 
 
-def test_dependency_overlay_pins_only_the_thirteen_model_dependencies() -> None:
+def test_dependency_overlay_pins_only_the_seventeen_model_and_evaluation_dependencies() -> None:
     overlay = Path("requirements/models/steerer-home5090.txt")
 
     assert overlay.read_text(encoding="utf-8").splitlines() == [
@@ -283,4 +283,8 @@ def test_dependency_overlay_pins_only_the_thirteen_model_dependencies() -> None:
         "yacs==0.1.8",
         "tensorboardX==2.6.2.2",
         "fvcore==0.1.5.post20221221",
+        "scikit-image==0.26.0",
+        "ImageIO==2.37.3",
+        "tifffile==2026.7.14",
+        "lazy_loader==0.4",
     ]

@@ -26,6 +26,10 @@ FROZEN_REQUIREMENTS = (
     "yacs==0.1.8",
     "tensorboardX==2.6.2.2",
     "fvcore==0.1.5.post20221221",
+    "scikit-image==0.26.0",
+    "ImageIO==2.37.3",
+    "tifffile==2026.7.14",
+    "lazy_loader==0.4",
 )
 FROZEN_VERSIONS = {
     name.replace("_", "-").lower(): version
@@ -148,7 +152,7 @@ def test_requirement_parser_rejects_torch_or_opencv_contrib(
 ) -> None:
     overlay = _write_overlay(tmp_path / "requirements.txt", forbidden_requirement)
 
-    with pytest.raises(ValueError, match="frozen 13-package allowlist"):
+    with pytest.raises(ValueError, match="frozen 17-package allowlist"):
         setup.parse_requirements(overlay)
 
 
@@ -166,7 +170,27 @@ def test_requirement_parser_rejects_any_frozen_allowlist_mutation(
     overlay = tmp_path / "requirements.txt"
     overlay.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
-    with pytest.raises(ValueError, match="frozen 13-package allowlist"):
+    with pytest.raises(ValueError, match="frozen 17-package allowlist"):
+        setup.parse_requirements(overlay)
+
+
+@pytest.mark.parametrize(
+    "required",
+    [
+        "scikit-image==0.26.0",
+        "ImageIO==2.37.3",
+        "tifffile==2026.7.14",
+        "lazy_loader==0.4",
+    ],
+)
+def test_requirement_parser_requires_frozen_evaluation_packages(
+    tmp_path: Path, required: str
+) -> None:
+    lines = [line for line in FROZEN_REQUIREMENTS if line != required]
+    overlay = tmp_path / "requirements.txt"
+    overlay.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="frozen 17-package allowlist"):
         setup.parse_requirements(overlay)
 
 

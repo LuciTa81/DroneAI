@@ -83,7 +83,7 @@ GUI `opencv-python` distribution, install every non-MMCV pin, install
 `mmcv==1.7.2 --no-deps`, and finally force-reinstall the exact headless wheel
 with `--no-deps`. The last step restores shared `cv2` files that a GUI-wheel
 uninstall may have removed. No venv or filesystem tree is deleted.
-The overlay must match the frozen 13-package name/version allowlist exactly;
+The overlay must match the frozen 17-package name/version allowlist exactly;
 missing, changed, or additional entries fail before installation. In
 particular, Torch/CUDA packages and `opencv-contrib-python` cannot be added to
 this model overlay, preserving the NGC base runtime.
