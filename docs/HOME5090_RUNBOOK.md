@@ -240,6 +240,22 @@ the official test split or start training in this checkpoint.
 
 ## STEERER UCF-QNRF frozen-checkpoint smoke
 
+Before opening the longer model-specific sections, obtain the compact verified
+queue status from inside `crowd-jupyter`:
+
+```bash
+cd /workspace
+python scripts/run_model_workflow.py status \
+  --queue configs/evaluation/model_queue.json \
+  --results-root /workspace/data/results \
+  --format markdown
+```
+
+The command re-hashes accepted SSD evidence and reports the active model, frozen
+dataset/split, rights scope, completed gates, next safe action, and approval
+requirement. A missing or changed accepted artifact is a hard failure. The status
+command never starts inference, training, or a download.
+
 STEERER reuses the exact DM-Count validation-list provenance, but the model and
 split-list upstreams are different repositories. Pass both explicitly:
 
