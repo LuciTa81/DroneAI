@@ -1,0 +1,104 @@
+{
+  "schema_version": 1,
+  "round_id": "round-1-static-ucf-qnrf",
+  "active_model": "steerer",
+  "models": [
+    {
+      "model_id": "dm-count",
+      "family": "density",
+      "queue_state": "completed",
+      "rights_scope": "PASS_COMMERCIAL_CANDIDATE",
+      "dataset_id": "ucf-qnrf-kaggle-apache",
+      "split_id": "dm-count-upstream-qnrf-val-smoke-36-v1",
+      "split_role": "validation",
+      "expected_samples": 36,
+      "gate_order": [
+        "benchmark"
+      ],
+      "accepted_evidence": [
+        {
+          "gate": "benchmark",
+          "artifact_kind": "score",
+          "path": "dm-count/ucf-qnrf-val-smoke-aeb92da/score.json",
+          "sha256": "7f2928edde727f9657dac77c72e96822e4c5da3c8574469e2cc680c0dab9643e"
+        },
+        {
+          "gate": "benchmark",
+          "artifact_kind": "metrics",
+          "path": "dm-count/ucf-qnrf-val-smoke-aeb92da/metrics.json",
+          "sha256": "1d032535924527ed0e3aab8ca6e444b815bfd994da13a53d0c429554e3293849"
+        }
+      ]
+    },
+    {
+      "model_id": "steerer",
+      "family": "density_and_points",
+      "queue_state": "active",
+      "rights_scope": "PASS_COMMERCIAL_CANDIDATE",
+      "dataset_id": "ucf-qnrf-kaggle-apache",
+      "split_id": "dm-count-upstream-qnrf-val-smoke-36-v1",
+      "split_role": "validation",
+      "expected_samples": 36,
+      "gate_order": [
+        "rights",
+        "preflight",
+        "one_sample",
+        "benchmark"
+      ],
+      "accepted_evidence": [
+        {
+          "gate": "rights",
+          "artifact_kind": "rights_decision",
+          "path": "steerer/steerer-rights-20260717T170242Z-79f4c350d359/rights-decision.json",
+          "sha256": "ff6ee8ecbd535a80df5dc72015a13a1cb6e3713a529e2b080e0f3a36f188c922"
+        },
+        {
+          "gate": "preflight",
+          "artifact_kind": "environment_verification",
+          "path": "steerer/environment-verified-20260717T164530Z-4e0d4ad6fb6f/verify-only.json",
+          "sha256": "f7d02cc20e574d398b3f78acf2db98a21e21ce4c8277770372425fbaa6cb121f"
+        },
+        {
+          "gate": "one_sample",
+          "artifact_kind": "one_sample_result",
+          "path": "steerer/steerer-one-sample-20260717T174031Z-444856076727/result.json",
+          "sha256": "faa246122fac3b74109cca270bc2cd4797a70d620759f24015e6c11e4da5f07d"
+        }
+      ]
+    },
+    {
+      "model_id": "pet",
+      "family": "points",
+      "queue_state": "queued",
+      "rights_scope": "PENDING",
+      "dataset_id": "ucf-qnrf-kaggle-apache",
+      "split_id": "dm-count-upstream-qnrf-val-smoke-36-v1",
+      "split_role": "validation",
+      "expected_samples": 36,
+      "gate_order": [
+        "rights",
+        "preflight",
+        "one_sample",
+        "benchmark"
+      ],
+      "accepted_evidence": []
+    },
+    {
+      "model_id": "csrnet",
+      "family": "density",
+      "queue_state": "blocked",
+      "rights_scope": "NOT_EVALUATED_NO_ELIGIBLE_WEIGHT",
+      "dataset_id": "ucf-qnrf-kaggle-apache",
+      "split_id": "dm-count-upstream-qnrf-val-smoke-36-v1",
+      "split_role": "validation",
+      "expected_samples": 36,
+      "gate_order": [
+        "rights",
+        "preflight",
+        "one_sample",
+        "benchmark"
+      ],
+      "accepted_evidence": []
+    }
+  ]
+}
