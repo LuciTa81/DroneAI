@@ -85,6 +85,12 @@ packages and installs only the frozen PET overlay with `--no-deps`. It rejects
 Torch, torchvision, NumPy, or other unreviewed additions, rejects GUI OpenCV,
 and verifies CUDA matmul plus the imported runtime before returning `PASS`.
 
+The official Torch 1.12 code moves boolean query masks to CPU before indexing
+CUDA predictions. Current Torch rejects that device mismatch. The DroneAI
+adapter keeps those masks on the prediction device while preserving the
+official `> 0.5` threshold and concatenation order; this compatibility shim is
+recorded in every prediction's metadata and does not change checkpoint values.
+
 ## Expected failure modes
 
 - tiny or heavily occluded people

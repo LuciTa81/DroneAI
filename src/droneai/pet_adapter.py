@@ -8,7 +8,7 @@ import sys
 import time
 from contextlib import contextmanager
 from pathlib import Path
-from types import SimpleNamespace
+from types import MethodType, SimpleNamespace
 from typing import Protocol
 
 import numpy as np
@@ -123,6 +123,51 @@ def _official_args(device: str) -> SimpleNamespace:
     )
 
 
+def _pet_test_forward_current_torch(model, samples, features, pos, **kwargs):
+    """Preserve official thresholding while keeping boolean indices on CUDA."""
+
+    torch = importlib.import_module("torch")
+    outputs = model.pet_forward(samples, features, pos, **kwargs)
+    out_dense, out_sparse = outputs["dense"], outputs["sparse"]
+    threshold = 0.5
+
+    index_sparse = None
+    if out_sparse is not None:
+        sparse_scores = torch.nn.functional.softmax(
+            out_sparse["pred_logits"], -1
+        )[..., 1]
+        index_sparse = sparse_scores > threshold
+
+    index_dense = None
+    if out_dense is not None:
+        dense_scores = torch.nn.functional.softmax(
+            out_dense["pred_logits"], -1
+        )[..., 1]
+        index_dense = dense_scores > threshold
+
+    combined: dict[str, object] = {}
+    source = out_sparse if out_sparse is not None else out_dense
+    if source is None:
+        raise RuntimeError("PET produced neither sparse nor dense query outputs")
+    for name in source:
+        if "pred" not in name:
+            combined[name] = source[name]
+        elif index_dense is None:
+            combined[name] = out_sparse[name][index_sparse].unsqueeze(0)
+        elif index_sparse is None:
+            combined[name] = out_dense[name][index_dense].unsqueeze(0)
+        else:
+            combined[name] = torch.cat(
+                [
+                    out_sparse[name][index_sparse].unsqueeze(0),
+                    out_dense[name][index_dense].unsqueeze(0),
+                ],
+                dim=1,
+            )
+    combined["split_map_raw"] = outputs["split_map_raw"]
+    return combined
+
+
 class TorchPETBackend:
     """CUDA backend for the exact official PET source and checkpoint."""
 
@@ -171,6 +216,11 @@ class TorchPETBackend:
             if self.missing_keys or self.unexpected_keys:
                 raise RuntimeError("PET checkpoint did not load strictly")
             self.parameter_count = sum(parameter.numel() for parameter in model.parameters())
+            model.test_forward = MethodType(_pet_test_forward_current_torch, model)
+            self.compatibility_patch = (
+                "official boolean query masks remain on the prediction tensor device; "
+                "threshold and selected values are unchanged"
+            )
             self._model = model.to(self._device).eval()
 
     def infer(self, normalized_chw: np.ndarray):
@@ -362,6 +412,9 @@ class PETAdapter(ModelAdapter):
                     "missing_checkpoint_key_count": len(self._backend.missing_keys),
                     "unexpected_checkpoint_key_count": len(
                         self._backend.unexpected_keys
+                    ),
+                    "compatibility_patch": getattr(
+                        self._backend, "compatibility_patch", "fixture backend"
                     ),
                 }
             )

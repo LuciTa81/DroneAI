@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import subprocess
+import inspect
 from pathlib import Path
 
 import numpy as np
@@ -9,7 +10,11 @@ from PIL import Image
 
 from droneai.evaluation_contract import EvaluationSample
 from droneai.integrity import sha256_file
-from droneai.pet_adapter import PETAdapter, calculate_pet_size
+from droneai.pet_adapter import (
+    PETAdapter,
+    _pet_test_forward_current_torch,
+    calculate_pet_size,
+)
 
 
 class _Backend:
@@ -105,6 +110,14 @@ def test_pet_size_uses_official_1536_long_side_flooring() -> None:
     assert calculate_pet_size(1000, 700) == (1000, 700, 1.0)
     with pytest.raises(ValueError, match="dimensions"):
         calculate_pet_size(0, 100)
+
+
+def test_current_torch_compatibility_keeps_boolean_masks_on_device() -> None:
+    source = inspect.getsource(_pet_test_forward_current_torch)
+    assert ".cpu()" not in source
+    assert "sparse_scores > threshold" in source
+    assert "dense_scores > threshold" in source
+    assert "threshold = 0.5" in source
 
 
 def test_adapter_returns_filtered_points_in_original_xy_coordinates(tmp_path: Path) -> None:
