@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import subprocess
+import sys
+import types
 from pathlib import Path
 
 import numpy as np
@@ -11,6 +13,7 @@ from droneai.evaluation_contract import EvaluationSample, ZoneBox
 from droneai.integrity import sha256_file
 from droneai.steerer_adapter import (
     STEERERAdapter,
+    _load_official_components,
     calculate_steerer_size,
     extract_steerer_points,
 )
@@ -91,6 +94,50 @@ def _adapter(tmp_path: Path, backend: _Backend) -> STEERERAdapter:
     )
 
 
+def _synthetic_upstream(root: Path, *, external_origin: Path | None = None) -> None:
+    sources = {
+        "lib/__init__.py": "",
+        "lib/models/__init__.py": "",
+        "lib/utils/__init__.py": "",
+        "mmcv_custom/__init__.py": "",
+        "mmcv_custom/marker.py": 'MARKER = "official"\n',
+        "lib/utils/points_from_den.py": (
+            "def local_maximum_points(*args, **kwargs):\n"
+            '    return "official-points"\n'
+        ),
+    }
+    if external_origin is None:
+        sources["lib/models/build_counter.py"] = (
+            "from mmcv_custom.marker import MARKER\n"
+            "class Baseline_Counter:\n"
+            "    marker = MARKER\n"
+        )
+    else:
+        sources["lib/models/build_counter.py"] = (
+            "import sys, types\n"
+            'alien = types.ModuleType("lib.alien")\n'
+            f"alien.__file__ = {str(external_origin)!r}\n"
+            'sys.modules["lib.alien"] = alien\n'
+            "class Baseline_Counter:\n"
+            '    marker = "official"\n'
+        )
+    for relative, source in sources.items():
+        path = root / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(source, encoding="utf-8")
+
+
+def _namespace_modules() -> dict[str, types.ModuleType]:
+    return {
+        name: module
+        for name, module in sys.modules.items()
+        if name == "lib"
+        or name.startswith("lib.")
+        or name == "mmcv_custom"
+        or name.startswith("mmcv_custom.")
+    }
+
+
 def _sample(
     tmp_path: Path,
     *,
@@ -119,6 +166,59 @@ def _sample(
         condition_tags={"density_band": "low"},
         zones=zones,
     )
+
+
+def test_official_import_isolates_and_restores_generic_namespaces(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    upstream = tmp_path / "synthetic-upstream"
+    _synthetic_upstream(upstream)
+    fixture_config = type("FixtureConfig", (), {})
+    mmcv = types.ModuleType("mmcv")
+    mmcv.Config = fixture_config
+    monkeypatch.setitem(sys.modules, "mmcv", mmcv)
+
+    conflicting_lib = types.ModuleType("lib")
+    conflicting_lib.sentinel = object()
+    conflicting_lib_child = types.ModuleType("lib.preexisting")
+    conflicting_mmcv_custom = types.ModuleType("mmcv_custom")
+    conflicting_mmcv_child = types.ModuleType("mmcv_custom.marker")
+    conflicting_mmcv_child.MARKER = "conflicting"
+    monkeypatch.setitem(sys.modules, "lib", conflicting_lib)
+    monkeypatch.setitem(sys.modules, "lib.preexisting", conflicting_lib_child)
+    monkeypatch.setitem(sys.modules, "mmcv_custom", conflicting_mmcv_custom)
+    monkeypatch.setitem(sys.modules, "mmcv_custom.marker", conflicting_mmcv_child)
+    before = _namespace_modules()
+
+    Config, Baseline_Counter, local_maximum_points = _load_official_components(
+        upstream
+    )
+
+    assert Config is fixture_config
+    assert Baseline_Counter.marker == "official"
+    assert local_maximum_points() == "official-points"
+    after = _namespace_modules()
+    assert after.keys() == before.keys()
+    assert all(after[name] is module for name, module in before.items())
+
+
+def test_official_import_rejects_external_namespace_origin_and_restores_snapshot(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    upstream = tmp_path / "synthetic-upstream"
+    _synthetic_upstream(upstream, external_origin=tmp_path / "outside" / "alien.py")
+    fixture_config = type("FixtureConfig", (), {})
+    mmcv = types.ModuleType("mmcv")
+    mmcv.Config = fixture_config
+    monkeypatch.setitem(sys.modules, "mmcv", mmcv)
+    before = _namespace_modules()
+
+    with pytest.raises(RuntimeError, match="outside the pinned STEERER upstream"):
+        _load_official_components(upstream)
+
+    after = _namespace_modules()
+    assert after.keys() == before.keys()
+    assert all(after[name] is module for name, module in before.items())
 
 
 def test_size_caps_long_side_and_pads_to_32() -> None:
@@ -177,6 +277,59 @@ def test_rgb_imagenet_normalization_and_zero_padding(tmp_path: Path) -> None:
     assert prediction.metadata["processed_width"] == 64
     assert prediction.metadata["processed_height"] == 32
     assert prediction.metadata["resize_ratio"] == 1.0
+
+
+def test_density_excludes_padding_mass_and_keeps_valid_spatial_geometry(
+    tmp_path: Path,
+) -> None:
+    x1 = np.zeros((4, 4), dtype=np.float32)
+    x1[1, 1] = 8.0  # Full cell over valid x=[16, 32), y=[8, 16).
+    x1[1, 2] = 8.0  # Only 1/16 of this cell is inside valid width 33.
+    x1[1, 3] = 4.0  # Entirely inside right padding of the 64-pixel canvas.
+    backend = _Backend(
+        (x1, np.zeros((1, 1), np.float32), np.zeros((1, 1), np.float32)),
+        points=((24.5, 12.0), (56.0, 12.0)),
+    )
+    adapter = _adapter(tmp_path, backend)
+
+    prediction = adapter.predict(
+        _sample(
+            tmp_path,
+            width=33,
+            height=31,
+            ground_truth_density=np.zeros((31, 33), dtype=np.float32),
+        ),
+        retain_native=True,
+    )
+
+    assert prediction.failure_state is None
+    assert prediction.density is not None
+    assert prediction.predicted_count == pytest.approx(8.5)
+    assert prediction.metadata["discarded_padding_mass"] == pytest.approx(11.5)
+    assert prediction.metadata["discarded_padding_mass_fraction"] == pytest.approx(
+        11.5 / 20.0
+    )
+    assert np.isfinite(prediction.metadata["discarded_padding_mass_fraction"])
+    assert prediction.points == ((24.5, 12.0),)
+    assert prediction.metadata["discarded_padding_point_count"] == 1
+    assert float(prediction.density[:, :16].sum()) == pytest.approx(0.0)
+    assert float(prediction.density[:, 32:].sum()) == pytest.approx(0.5)
+
+    x_centroid = float(
+        (
+            prediction.density.sum(axis=0)
+            * (np.arange(prediction.density.shape[1], dtype=np.float64) + 0.5)
+        ).sum()
+        / prediction.predicted_count
+    )
+    y_centroid = float(
+        (
+            prediction.density.sum(axis=1)
+            * (np.arange(prediction.density.shape[0], dtype=np.float64) + 0.5)
+        ).sum()
+        / prediction.predicted_count
+    )
+    assert (x_centroid, y_centroid) == pytest.approx(prediction.points[0])
 
 
 def test_adapter_rejects_dirty_upstream_and_checkpoint_hash_mismatch(

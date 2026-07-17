@@ -12,11 +12,7 @@ from typing import Protocol, Sequence
 import numpy as np
 from PIL import Image
 
-from droneai.dm_count_adapter import (
-    _git_head,
-    _git_status,
-    resize_density_preserve_mass,
-)
+from droneai.dm_count_adapter import _git_head, _git_status
 from droneai.evaluation_contract import (
     EvaluationSample,
     ModelAdapter,
@@ -37,6 +33,7 @@ _REVIEWED_PATHS = (
     "lib/datasets/base_dataset.py",
     "lib/datasets/nwpu.py",
 )
+_UPSTREAM_NAMESPACE_ROOTS = ("lib", "mmcv_custom")
 
 
 class STEERERBackend(Protocol):
@@ -177,6 +174,120 @@ def _points_to_original(
     return tuple((float(x), float(y)) for x, y in array)
 
 
+def _exclude_padding_points(
+    points: Sequence[Point] | np.ndarray, *, valid_size: tuple[int, int]
+) -> tuple[np.ndarray, int]:
+    valid_width, valid_height = valid_size
+    if valid_width <= 0 or valid_height <= 0:
+        raise ValueError("valid resized point extent is required")
+    array = np.asarray(points, dtype=np.float64).reshape(-1, 2)
+    if not np.isfinite(array).all():
+        raise ValueError("STEERER points must contain finite coordinates")
+    keep = (array[:, 0] < valid_width) & (array[:, 1] < valid_height)
+    return array[keep], int((~keep).sum())
+
+
+def _remap_density_axis(
+    density: np.ndarray,
+    *,
+    axis: int,
+    processed_extent: int,
+    valid_extent: int,
+    target_cells: int,
+) -> np.ndarray:
+    """Integrate uniform source-cell mass into target cells over a valid extent."""
+
+    source_cells = density.shape[axis]
+    boundary_positions = np.linspace(
+        0.0,
+        valid_extent * source_cells / processed_extent,
+        target_cells + 1,
+        dtype=np.float64,
+    )
+    np.clip(boundary_positions, 0.0, float(source_cells), out=boundary_positions)
+    source_indices = np.floor(boundary_positions).astype(np.int64)
+    fractions = boundary_positions - source_indices
+    fractions[source_indices == source_cells] = 0.0
+
+    prefix_shape = list(density.shape)
+    prefix_shape[axis] = 1
+    cumulative = np.concatenate(
+        (
+            np.zeros(prefix_shape, dtype=np.float64),
+            np.cumsum(density, axis=axis, dtype=np.float64),
+        ),
+        axis=axis,
+    )
+    boundary_mass = np.take(cumulative, source_indices, axis=axis)
+    cell_mass = np.take(
+        density,
+        np.minimum(source_indices, source_cells - 1),
+        axis=axis,
+    )
+    fraction_shape = [1] * density.ndim
+    fraction_shape[axis] = fractions.size
+    boundary_mass += cell_mass * fractions.reshape(fraction_shape)
+    return np.diff(boundary_mass, axis=axis)
+
+
+def _remap_density_to_valid_extent(
+    density: np.ndarray,
+    *,
+    processed_size: tuple[int, int],
+    valid_size: tuple[int, int],
+    target_shape: tuple[int, int],
+) -> tuple[np.ndarray, float, float]:
+    """Remap padded native-cell mass to valid image space and report discarded mass."""
+
+    source = np.asarray(density, dtype=np.float64)
+    if source.ndim != 2 or not np.isfinite(source).all() or np.any(source < 0):
+        raise ValueError("STEERER density must be finite, non-negative, and two-dimensional")
+    processed_width, processed_height = processed_size
+    valid_width, valid_height = valid_size
+    target_height, target_width = target_shape
+    if (
+        processed_width <= 0
+        or processed_height <= 0
+        or valid_width <= 0
+        or valid_height <= 0
+        or valid_width > processed_width
+        or valid_height > processed_height
+        or target_width <= 0
+        or target_height <= 0
+    ):
+        raise ValueError("valid processed, resized, and density target sizes are required")
+
+    remapped_x = _remap_density_axis(
+        source,
+        axis=1,
+        processed_extent=processed_width,
+        valid_extent=valid_width,
+        target_cells=target_width,
+    )
+    remapped = _remap_density_axis(
+        remapped_x,
+        axis=0,
+        processed_extent=processed_height,
+        valid_extent=valid_height,
+        target_cells=target_height,
+    )
+    np.maximum(remapped, 0.0, out=remapped)
+    valid_mass = float(remapped.sum(dtype=np.float64))
+    source_mass = float(source.sum(dtype=np.float64))
+    discarded_mass = max(source_mass - valid_mass, 0.0)
+    discarded_fraction = discarded_mass / source_mass if source_mass > 0.0 else 0.0
+
+    output = np.asarray(remapped, dtype=np.float32)
+    output_mass = float(output.sum(dtype=np.float64))
+    if valid_mass == 0.0:
+        output.fill(0.0)
+    elif output_mass <= 0.0 or not math.isfinite(output_mass):
+        raise ValueError("STEERER density remap lost positive valid-image mass")
+    else:
+        output *= valid_mass / output_mass
+    return output, float(discarded_mass), float(discarded_fraction)
+
+
 def extract_steerer_points(
     densities: Sequence[np.ndarray],
     gaussian_maximum: float,
@@ -214,10 +325,45 @@ def extract_steerer_points(
     )
 
 
-def _load_official_components(upstream_dir: Path):
-    """Import the pinned upstream without writing bytecode into its checkout."""
+def _is_upstream_namespace(name: str) -> bool:
+    return any(
+        name == root or name.startswith(f"{root}.")
+        for root in _UPSTREAM_NAMESPACE_ROOTS
+    )
 
+
+def _clear_upstream_namespaces() -> None:
+    for name in tuple(sys.modules):
+        if _is_upstream_namespace(name):
+            del sys.modules[name]
+
+
+def _validate_upstream_module_origins(upstream_dir: Path) -> None:
+    upstream_root = upstream_dir.resolve()
+    for name, module in tuple(sys.modules.items()):
+        if not _is_upstream_namespace(name):
+            continue
+        origin = getattr(module, "__file__", None)
+        if origin is None:
+            continue
+        if not Path(origin).resolve().is_relative_to(upstream_root):
+            raise RuntimeError(
+                f"official namespace module {name} originated outside the pinned "
+                f"STEERER upstream: {origin}"
+            )
+
+
+def _load_official_components(upstream_dir: Path):
+    """Import pinned components without leaking or reusing generic namespaces."""
+
+    namespace_snapshot = {
+        name: module
+        for name, module in sys.modules.items()
+        if _is_upstream_namespace(name)
+    }
     previous_dont_write_bytecode = sys.dont_write_bytecode
+    previous_sys_path = list(sys.path)
+    _clear_upstream_namespaces()
     sys.dont_write_bytecode = True
     sys.path.insert(0, str(upstream_dir))
     try:
@@ -227,9 +373,12 @@ def _load_official_components(upstream_dir: Path):
             raise RuntimeError("MMCV is required for the official STEERER backend") from error
         build_counter = importlib.import_module("lib.models.build_counter")
         points_from_den = importlib.import_module("lib.utils.points_from_den")
+        _validate_upstream_module_origins(upstream_dir)
         return Config, build_counter.Baseline_Counter, points_from_den.local_maximum_points
     finally:
-        sys.path.remove(str(upstream_dir))
+        _clear_upstream_namespaces()
+        sys.modules.update(namespace_snapshot)
+        sys.path[:] = previous_sys_path
         sys.dont_write_bytecode = previous_dont_write_bytecode
 
 
@@ -485,11 +634,31 @@ class STEERERAdapter(ModelAdapter):
                 if sample.ground_truth_density is not None
                 else (sample.height, sample.width)
             )
-            density = resize_density_preserve_mass(
-                native_density, target_shape=target_shape
+            density, discarded_padding_mass, discarded_padding_fraction = (
+                _remap_density_to_valid_extent(
+                    native_density,
+                    processed_size=(
+                        int(metadata["processed_width"]),
+                        int(metadata["processed_height"]),
+                    ),
+                    valid_size=(
+                        int(metadata["resized_width"]),
+                        int(metadata["resized_height"]),
+                    ),
+                    target_shape=target_shape,
+                )
+            )
+            valid_processed_points, discarded_padding_point_count = (
+                _exclude_padding_points(
+                    processed_points,
+                    valid_size=(
+                        int(metadata["resized_width"]),
+                        int(metadata["resized_height"]),
+                    ),
+                )
             )
             points = _points_to_original(
-                processed_points,
+                valid_processed_points,
                 resize_ratio=float(metadata["resize_ratio"]),
                 original_size=(sample.width, sample.height),
             )
@@ -501,6 +670,9 @@ class STEERERAdapter(ModelAdapter):
                     "native_density_height": int(native_density.shape[0]),
                     "evaluation_density_width": int(density.shape[1]),
                     "evaluation_density_height": int(density.shape[0]),
+                    "discarded_padding_mass": discarded_padding_mass,
+                    "discarded_padding_mass_fraction": discarded_padding_fraction,
+                    "discarded_padding_point_count": discarded_padding_point_count,
                     "localization_point_count": len(points),
                     "missing_checkpoint_key_count": len(missing_keys),
                     "unexpected_checkpoint_key_count": len(unexpected_keys),
