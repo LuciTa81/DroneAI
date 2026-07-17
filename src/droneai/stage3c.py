@@ -182,6 +182,16 @@ def _inspect_manifest(manifest: dict[str, Any]) -> dict[str, Any]:
     all_errors = tuple(errors + metadata_errors + provenance_errors)
     all_commercial = complete_ok and all(commercial_verified.get(k, False) for k in REQUIRED_COMPONENTS)
     all_research = complete_ok and all(research_verified.get(k, False) for k in REQUIRED_COMPONENTS)
+    pretrained_rights = components.get("pretrained_weights", {}).get("rights")
+    research_checkpoint_ok = bool(
+        complete_ok
+        and research_verified.get("code")
+        and research_verified.get("dataset")
+        and isinstance(pretrained_rights, dict)
+        and pretrained_rights.get("research_use") is True
+        and pretrained_rights.get("basis") == "internal_approval"
+        and pretrained_rights.get("evidence_url")
+    )
 
     if all_errors or prohibited:
         status = "BLOCKED"
@@ -217,6 +227,7 @@ def _inspect_manifest(manifest: dict[str, Any]) -> dict[str, Any]:
         "restricted": tuple(sorted(restricted)),
         "prohibited": tuple(sorted(prohibited)),
         "commercial_verified": commercial_verified,
+        "research_checkpoint_ok": research_checkpoint_ok,
     }
 
 
@@ -227,6 +238,8 @@ def classify_rights(manifest: dict[str, Any]) -> RightsDecision:
         actions = CANDIDATE_ACTIONS
         if inspection["commercial_verified"].get("code"):
             actions += ("synthetic_compatibility_smoke",)
+        if inspection["research_checkpoint_ok"]:
+            actions += ("research_asset_download", "research_checkpoint_evaluation")
         frozen_inputs = ("code", "dataset", "pretrained_weights")
         if all(inspection["commercial_verified"].get(kind) for kind in frozen_inputs):
             actions += ("asset_download", "frozen_checkpoint_evaluation")

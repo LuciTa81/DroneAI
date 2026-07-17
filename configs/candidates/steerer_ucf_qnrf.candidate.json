@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "candidate_id": "steerer-official-ucf-qnrf-research-comparison",
+  "intended_use": "commercial_product_rnd",
+  "components": [
+    {
+      "component_type": "code",
+      "component_id": "steerer-official-5b1854db",
+      "source_url": "https://github.com/taohan10200/STEERER/tree/5b1854dbc2d280f2326d67c65515d8baf9083810",
+      "rights": {
+        "status": "verified",
+        "license_id": "MIT",
+        "evidence_url": "https://github.com/taohan10200/STEERER/blob/5b1854dbc2d280f2326d67c65515d8baf9083810/LICENSE",
+        "commercial_use": true,
+        "research_use": true,
+        "basis": "explicit_terms"
+      }
+    },
+    {
+      "component_type": "dataset",
+      "component_id": "ucf-qnrf-kaggle-apache",
+      "source_url": "https://www.kaggle.com/datasets/faihajalamtopu/ucf-qnrf",
+      "rights": {
+        "status": "verified",
+        "license_id": "Apache-2.0",
+        "evidence_url": "https://www.kaggle.com/datasets/faihajalamtopu/ucf-qnrf",
+        "commercial_use": true,
+        "research_use": true,
+        "basis": "internal_approval",
+        "notes": "The project owner accepts the Kaggle Apache-2.0 label as permission. The Kaggle uploader states they are not the dataset owner; the risk is retained in the record."
+      }
+    },
+    {
+      "component_type": "pretrained_weights",
+      "component_id": "steerer-official-ucf-qnrf-checkpoint",
+      "source_url": "https://github.com/taohan10200/STEERER#reproduce-counting-and-localization-performance",
+      "rights": {
+        "status": "unverified",
+        "license_id": null,
+        "evidence_url": "https://github.com/taohan10200/STEERER#reproduce-counting-and-localization-performance",
+        "commercial_use": null,
+        "research_use": true,
+        "basis": "internal_approval",
+        "notes": "Internal approval permits only a frozen research comparison. The repository does not establish commercial checkpoint terms."
+      }
+    },
+    {
+      "component_type": "derived_weights",
+      "component_id": "droneai-derived-weights-not-created",
+      "source_url": "project://DroneAI/derived-weights-policy",
+      "rights": {
+        "status": "pending",
+        "license_id": null,
+        "evidence_url": null,
+        "commercial_use": null,
+        "research_use": null,
+        "basis": "pending_review",
+        "notes": "This comparison performs no training or fine-tuning. Derived-weight permission remains pending."
+      }
+    },
+    {
+      "component_type": "deployment",
+      "component_id": "droneai-festival-deployment-pending",
+      "source_url": "project://DroneAI/deployment-approval",
+      "rights": {
+        "status": "pending",
+        "license_id": null,
+        "evidence_url": null,
+        "commercial_use": null,
+        "research_use": null,
+        "basis": "pending_review",
+        "notes": "Research checkpoint comparison is authorized; product deployment remains a separate decision."
+      }
+    }
+  ]
+}

@@ -113,6 +113,35 @@ def test_verified_input_chain_allows_frozen_evaluation_but_not_training() -> Non
     }.intersection(decision.allowed_actions)
 
 
+def test_public_checkpoint_with_internal_research_approval_stays_noncommercial() -> None:
+    manifest = _manifest()
+    weight = next(
+        c for c in manifest["components"] if c["component_type"] == "pretrained_weights"
+    )
+    weight["rights"].update(
+        {
+            "status": "unverified",
+            "license_id": None,
+            "evidence_url": (
+                "https://github.com/taohan10200/STEERER"
+                "#reproduce-counting-and-localization-performance"
+            ),
+            "commercial_use": None,
+            "research_use": True,
+            "basis": "internal_approval",
+        }
+    )
+    decision = classify_rights(manifest)
+    assert decision.status == "PASS_COMMERCIAL_CANDIDATE"
+    assert {"research_asset_download", "research_checkpoint_evaluation"}.issubset(
+        decision.allowed_actions
+    )
+    assert "frozen_checkpoint_evaluation" not in decision.allowed_actions
+    assert not {"commercial_training", "weight_reuse", "deployment"}.intersection(
+        decision.allowed_actions
+    )
+
+
 def test_explicit_noncommercial_bundle_is_research_only() -> None:
     manifest = _manifest()
     for component in manifest["components"]:
@@ -163,6 +192,19 @@ def test_prohibited_or_inconsistent_rights_are_blocked() -> None:
     dataset = next(c for c in numeric_boolean["components"] if c["component_type"] == "dataset")
     dataset["rights"]["commercial_use"] = 1
     assert classify_rights(numeric_boolean).status == "BLOCKED"
+
+
+def test_malformed_pretrained_weight_rights_are_blocked() -> None:
+    manifest = _manifest()
+    weight = next(
+        c for c in manifest["components"] if c["component_type"] == "pretrained_weights"
+    )
+    weight["rights"] = None
+
+    decision = classify_rights(manifest)
+
+    assert decision.status == "BLOCKED"
+    assert "pretrained_weights: rights must be an object" in decision.blockers
 
 
 def test_stage3c_persists_candidate_decision_and_score(tmp_path: Path) -> None:
