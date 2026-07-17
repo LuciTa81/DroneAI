@@ -1,0 +1,92 @@
+{
+  "accounting_complete": true,
+  "band_coverage": {
+    "high": {
+      "coverage": 1.0,
+      "expected_samples": 12,
+      "explicit_failures": 0,
+      "recorded_samples": 12,
+      "successful_samples": 12
+    },
+    "low": {
+      "coverage": 1.0,
+      "expected_samples": 12,
+      "explicit_failures": 0,
+      "recorded_samples": 12,
+      "successful_samples": 12
+    },
+    "medium": {
+      "coverage": 1.0,
+      "expected_samples": 12,
+      "explicit_failures": 0,
+      "recorded_samples": 12,
+      "successful_samples": 12
+    }
+  },
+  "band_signed_bias": {
+    "high": 7.5,
+    "low": 5.0,
+    "medium": 34.5
+  },
+  "condition_coverage": {
+    "density_band": {
+      "high": {
+        "coverage": 1.0,
+        "expected_samples": 12,
+        "explicit_failures": 0,
+        "recorded_samples": 12,
+        "successful_samples": 12
+      },
+      "low": {
+        "coverage": 1.0,
+        "expected_samples": 12,
+        "explicit_failures": 0,
+        "recorded_samples": 12,
+        "successful_samples": 12
+      },
+      "medium": {
+        "coverage": 1.0,
+        "expected_samples": 12,
+        "explicit_failures": 0,
+        "recorded_samples": 12,
+        "successful_samples": 12
+      }
+    },
+    "source_partition": {
+      "official_validation": {
+        "coverage": 1.0,
+        "expected_samples": 36,
+        "explicit_failures": 0,
+        "recorded_samples": 36,
+        "successful_samples": 36
+      }
+    }
+  },
+  "condition_signed_bias": {
+    "density_band": {
+      "high": 7.5,
+      "low": 5.0,
+      "medium": 34.5
+    },
+    "source_partition": {
+      "official_validation": 15.666666666666666
+    }
+  },
+  "coverage": 1.0,
+  "expected_samples": 36,
+  "explicit_failures": 0,
+  "failures": 0,
+  "mae": 76.44444444444444,
+  "median_latency_ms": 57.99415199908253,
+  "peak_vram_mb": 4291.91455078125,
+  "recorded_samples": 36,
+  "rmse": 129.80177194476198,
+  "robustness_pass": true,
+  "signed_bias": 15.666666666666666,
+  "spatial_direction": "maximize",
+  "spatial_mean": 0.5121234229790129,
+  "spatial_metric_name": "localization_f1",
+  "spatial_target": 0.0,
+  "successful_samples": 36,
+  "throughput_fps_batch1": 17.243117892573377
+}

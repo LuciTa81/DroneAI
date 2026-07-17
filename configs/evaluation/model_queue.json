@@ -111,6 +111,18 @@
           "artifact_kind": "one_sample_result",
           "path": "pet/pet-one-sample-20b03be/result.json",
           "sha256": "46f0e79321f5ed4b39e1f865cdc850c17be88fd8ee4e564a91c611732baf85ce"
+        },
+        {
+          "gate": "benchmark",
+          "artifact_kind": "score",
+          "path": "pet/pet-ucf-qnrf-val-smoke-9b0fe87/score.json",
+          "sha256": "b992c5c03bd334511ecf410807251aadc4292bee9e1c8cbac991f6559fad41b9"
+        },
+        {
+          "gate": "benchmark",
+          "artifact_kind": "metrics",
+          "path": "pet/pet-ucf-qnrf-val-smoke-9b0fe87/metrics.json",
+          "sha256": "a1ddd1d2eaf69f5bc3c22fcf538c3a574bc53fdb991161a9cbea708deadf723f"
         }
       ]
     },

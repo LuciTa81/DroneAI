@@ -1,0 +1,157 @@
+{
+  "artifacts": [
+    {
+      "path": "split-source-manifest.json",
+      "sha256": "0c2ce85dc998a723c9534dae7ff9aea57987ac90dbd488bb85a64dac6bd41bf6"
+    },
+    {
+      "path": "sample-manifest.json",
+      "sha256": "589ac66d5c146854c94f2eeb5139b83ebb484ceb10c907b7b399b331e67bbb42"
+    },
+    {
+      "path": "rights-decision.json",
+      "sha256": "444eafb87ce08e34c5467a2eab4fb62be3b8e90d81933846e643686a9a0f1e1c"
+    },
+    {
+      "path": "predictions.csv",
+      "sha256": "b919eb07ad5d7947b7e1b84336bb928f2ba7ab09c20b444f7f961fc1717e57b1"
+    },
+    {
+      "path": "native-output-metadata.json",
+      "sha256": "018ec590f7a909779b7a39e8a659a999ce579d73b129e5275d5d6c61b0d3116f"
+    },
+    {
+      "path": "metrics.json",
+      "sha256": "a1ddd1d2eaf69f5bc3c22fcf538c3a574bc53fdb991161a9cbea708deadf723f"
+    },
+    {
+      "path": "selection_manifest.json",
+      "sha256": "55cad173b2a934d70eb8b7b30b1f6a1f7af4d4635f94ecd6c3d8b1c891d69b09"
+    },
+    {
+      "path": "model-brief.md",
+      "sha256": "60ebc99bf4e1fd0cba01ce5f555ffc13538efab5ba46ce48d2a8808e018eeb44"
+    },
+    {
+      "path": "summary.md",
+      "sha256": "b2f13fbddada581d477066ea45e712bdbee7c096f02d736eb92b94cb58ff07e8"
+    },
+    {
+      "path": "environment-summary.json",
+      "sha256": "d497bad00bbf44cf425bc8ea8d02d46a30daee8146f06b19c2ae6eecae189545"
+    },
+    {
+      "path": "figures/selected-01-8e0a4dbe072725a1.png",
+      "sha256": "383413a8f568aac2f89529541e447c7caa11f89e26d1a020b46b1c9d70e9f548"
+    },
+    {
+      "path": "figures/selected-02-826d4141eedcca6b.png",
+      "sha256": "80135947cb0c59b058c1ad4e4b49a7ec4f8c2f9a1c6228209c26dca7a65e3d2f"
+    },
+    {
+      "path": "figures/selected-03-fd9373c130ac1077.png",
+      "sha256": "c87edf22bf89c0c34c72bf1b4c64804f7637d84845729f7fee36e625f5923385"
+    },
+    {
+      "path": "figures/selected-04-ea1387c07af13e07.png",
+      "sha256": "cbff7375035eab82d86008430aba961c60014144bc8a19be57872f31c6e7a08b"
+    },
+    {
+      "path": "figures/selected-05-eb49d273e13423a7.png",
+      "sha256": "f3b3f3962e081ef5e178253c7947fafd3be3a444963323473f32f026e61d59d1"
+    },
+    {
+      "path": "figures/selected-06-419fec40ac00261f.png",
+      "sha256": "d5e27437acf8dae0c87e4f531f24016223db0ae4ce930b372f049b0e7d07dc62"
+    },
+    {
+      "path": "figures/selected-07-c145cb679c8a0d04.png",
+      "sha256": "68b31f8f1154be0ebcc87f472174913f96819944f31ec7792dfe975fc247945d"
+    },
+    {
+      "path": "figures/selected-08-cc4e59a84ce60dd5.png",
+      "sha256": "be2c2064788442de9c9fd4157a3c07761f61b18cb56f918cd80128aea3b6e74f"
+    },
+    {
+      "path": "figures/selected-09-897716f616762b84.png",
+      "sha256": "f227bc3420163f077d56c338084255f4629ca03abe842ca18392104a38424ada"
+    },
+    {
+      "path": "figures/selected-10-ca90cca47cd2592a.png",
+      "sha256": "aca7f9590575bbe8a4e2be48a8098fbab631b338dd7eb10716eaf71f1d5db129"
+    },
+    {
+      "path": "figures/selected-11-320ad007a4340168.png",
+      "sha256": "ed11f7458b539c090cea177baf1652d9af9cca0c13fdea5d8fa7a9ce2fbb4f9a"
+    },
+    {
+      "path": "figures/selected-12-d8fafefff7c52849.png",
+      "sha256": "a040b54ce06bbd171d04154d654361cefc43b0b888ecee9e69bb6a9b60c91209"
+    }
+  ],
+  "checkpoint": {
+    "path": "/workspace/data/checkpoints/pet/UCF_QNRF.pth",
+    "sha256": "58324f86782051591075a923522f33d245ce97f2b50cc43f618313d884b966ad",
+    "verified": true
+  },
+  "protocol": {
+    "band_bias_max": 400.0,
+    "bias_max": 250.0,
+    "condition_bias_max": 250.0,
+    "dataset_id": "ucf-qnrf-kaggle-apache",
+    "density_band_rules": [
+      "low: count < 500",
+      "medium: 500 <= count < 1500",
+      "high: count >= 1500"
+    ],
+    "expected_samples": 36,
+    "latency_max_ms": 2000.0,
+    "leakage_free": true,
+    "localization_radius": 16.0,
+    "mae_max": 250.0,
+    "protocol_id": "pet-official-qnrf-val-smoke-v1",
+    "require_clean_git": true,
+    "required_condition_keys": [
+      "source_partition"
+    ],
+    "required_density_bands": [
+      "low",
+      "medium",
+      "high"
+    ],
+    "rights_decision_path": "/workspace/data/results/pet/pet-rights-99bfc15/rights-decision.json",
+    "rights_decision_sha256": "40d5f7c9af3417567ae55d8f1e634c144a68a23b44314057313455cf27c438d7",
+    "rmse_max": 400.0,
+    "run_id": "pet-ucf-qnrf-validation-smoke",
+    "sealed_test_access_approved": false,
+    "spatial_direction": "maximize",
+    "spatial_metric_name": "localization_f1",
+    "spatial_target": 0.0,
+    "split_id": "dm-count-upstream-qnrf-val-smoke-36-v1",
+    "split_role": "validation",
+    "split_verified": true,
+    "vram_max_mb": 24000.0,
+    "zone_critical_count": 150.0,
+    "zone_warning_count": 50.0
+  },
+  "reviewed_paths": {
+    "paths": [
+      "/workspace/upstreams/PET/README.md",
+      "/workspace/upstreams/PET/LICENSE",
+      "/workspace/upstreams/PET/models/pet.py",
+      "/workspace/upstreams/PET/models/backbones/backbone_vgg.py",
+      "/workspace/upstreams/PET/models/backbones/vgg.py",
+      "/workspace/upstreams/PET/models/transformer/prog_win_transformer.py",
+      "/workspace/upstreams/PET/util/misc.py",
+      "/workspace/upstreams/PET/preprocess_dataset.py",
+      "/workspace/upstreams/PET/engine.py"
+    ],
+    "verified": true
+  },
+  "rights_decision": {
+    "source_path": "/workspace/data/results/pet/pet-rights-99bfc15/rights-decision.json",
+    "source_sha256": "40d5f7c9af3417567ae55d8f1e634c144a68a23b44314057313455cf27c438d7",
+    "verified": true
+  },
+  "schema_version": 1
+}

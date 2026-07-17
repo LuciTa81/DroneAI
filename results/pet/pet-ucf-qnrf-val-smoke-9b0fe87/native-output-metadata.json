@@ -1,0 +1,653 @@
+{
+  "samples": [
+    {
+      "metadata": {
+        "clipped_point_count": 0,
+        "compatibility_patch": "boolean masks remain on prediction tensors; only the CPU query-coordinate array uses the same mask copied to CPU; threshold and selection are unchanged",
+        "missing_checkpoint_key_count": 0,
+        "native_density_available": false,
+        "original_height": 2848,
+        "original_width": 4288,
+        "point_probability_threshold": 0.5,
+        "resize_ratio": 0.35820895522388063,
+        "resized_height": 1020,
+        "resized_width": 1536,
+        "split_map_height": 16,
+        "split_map_width": 12,
+        "unexpected_checkpoint_key_count": 0
+      },
+      "sample_id": "img_0062"
+    },
+    {
+      "metadata": {
+        "clipped_point_count": 0,
+        "compatibility_patch": "boolean masks remain on prediction tensors; only the CPU query-coordinate array uses the same mask copied to CPU; threshold and selection are unchanged",
+        "missing_checkpoint_key_count": 0,
+        "native_density_available": false,
+        "original_height": 2848,
+        "original_width": 4288,
+        "point_probability_threshold": 0.5,
+        "resize_ratio": 0.35820895522388063,
+        "resized_height": 1020,
+        "resized_width": 1536,
+        "split_map_height": 16,
+        "split_map_width": 12,
+        "unexpected_checkpoint_key_count": 0
+      },
+      "sample_id": "img_0067"
+    },
+    {
+      "metadata": {
+        "clipped_point_count": 0,
+        "compatibility_patch": "boolean masks remain on prediction tensors; only the CPU query-coordinate array uses the same mask copied to CPU; threshold and selection are unchanged",
+        "missing_checkpoint_key_count": 0,
+        "native_density_available": false,
+        "original_height": 533,
+        "original_width": 800,
+        "point_probability_threshold": 0.5,
+        "resize_ratio": 1.0,
+        "resized_height": 533,
+        "resized_width": 800,
+        "split_map_height": 12,
+        "split_map_width": 8,
+        "unexpected_checkpoint_key_count": 0
+      },
+      "sample_id": "img_0097"
+    },
+    {
+      "metadata": {
+        "clipped_point_count": 0,
+        "compatibility_patch": "boolean masks remain on prediction tensors; only the CPU query-coordinate array uses the same mask copied to CPU; threshold and selection are unchanged",
+        "missing_checkpoint_key_count": 0,
+        "native_density_available": false,
+        "original_height": 2804,
+        "original_width": 4206,
+        "point_probability_threshold": 0.5,
+        "resize_ratio": 0.3651925820256776,
+        "resized_height": 1024,
+        "resized_width": 1536,
+        "split_map_height": 16,
+        "split_map_width": 12,
+        "unexpected_checkpoint_key_count": 0
+      },
+      "sample_id": "img_0221"
+    },
+    {
+      "metadata": {
+        "clipped_point_count": 0,
+        "compatibility_patch": "boolean masks remain on prediction tensors; only the CPU query-coordinate array uses the same mask copied to CPU; threshold and selection are unchanged",
+        "missing_checkpoint_key_count": 0,
+        "native_density_available": false,
+        "original_height": 3162,
+        "original_width": 4743,
+        "point_probability_threshold": 0.5,
+        "resize_ratio": 0.32384566729917774,
+        "resized_height": 1024,
+        "resized_width": 1536,
+        "split_map_height": 16,
+        "split_map_width": 12,
+        "unexpected_checkpoint_key_count": 0
+      },
+      "sample_id": "img_0257"
+    },
+    {
+      "metadata": {
+        "clipped_point_count": 0,
+        "compatibility_patch": "boolean masks remain on prediction tensors; only the CPU query-coordinate array uses the same mask copied to CPU; threshold and selection are unchanged",
+        "missing_checkpoint_key_count": 0,
+        "native_density_available": false,
+        "original_height": 2736,
+        "original_width": 3648,
+        "point_probability_threshold": 0.5,
+        "resize_ratio": 0.42105263157894735,
+        "resized_height": 1152,
+        "resized_width": 1536,
+        "split_map_height": 20,
+        "split_map_width": 12,
+        "unexpected_checkpoint_key_count": 0
+      },
+      "sample_id": "img_0339"
+    },
+    {
+      "metadata": {
+        "clipped_point_count": 0,
+        "compatibility_patch": "boolean masks remain on prediction tensors; only the CPU query-coordinate array uses the same mask copied to CPU; threshold and selection are unchanged",
+        "missing_checkpoint_key_count": 0,
+        "native_density_available": false,
+        "original_height": 757,
+        "original_width": 1600,
+        "point_probability_threshold": 0.5,
+        "resize_ratio": 0.96,
+        "resized_height": 726,
+        "resized_width": 1536,
+        "split_map_height": 12,
+        "split_map_width": 12,
+        "unexpected_checkpoint_key_count": 0
+      },
+      "sample_id": "img_0347"
+    },
+    {
+      "metadata": {
+        "clipped_point_count": 0,
+        "compatibility_patch": "boolean masks remain on prediction tensors; only the CPU query-coordinate array uses the same mask copied to CPU; threshold and selection are unchanged",
+        "missing_checkpoint_key_count": 0,
+        "native_density_available": false,
+        "original_height": 2048,
+        "original_width": 3072,
+        "point_probability_threshold": 0.5,
+        "resize_ratio": 0.5,
+        "resized_height": 1024,
+        "resized_width": 1536,
+        "split_map_height": 16,
+        "split_map_width": 12,
+        "unexpected_checkpoint_key_count": 0
+      },
+      "sample_id": "img_0379"
+    },
+    {
+      "metadata": {
+        "clipped_point_count": 0,
+        "compatibility_patch": "boolean masks remain on prediction tensors; only the CPU query-coordinate array uses the same mask copied to CPU; threshold and selection are unchanged",
+        "missing_checkpoint_key_count": 0,
+        "native_density_available": false,
+        "original_height": 3072,
+        "original_width": 4052,
+        "point_probability_threshold": 0.5,
+        "resize_ratio": 0.3790720631786772,
+        "resized_height": 1164,
+        "resized_width": 1536,
+        "split_map_height": 20,
+        "split_map_width": 12,
+        "unexpected_checkpoint_key_count": 0
+      },
+      "sample_id": "img_0382"
+    },
+    {
+      "metadata": {
+        "clipped_point_count": 0,
+        "compatibility_patch": "boolean masks remain on prediction tensors; only the CPU query-coordinate array uses the same mask copied to CPU; threshold and selection are unchanged",
+        "missing_checkpoint_key_count": 0,
+        "native_density_available": false,
+        "original_height": 1704,
+        "original_width": 2272,
+        "point_probability_threshold": 0.5,
+        "resize_ratio": 0.676056338028169,
+        "resized_height": 1152,
+        "resized_width": 1536,
+        "split_map_height": 20,
+        "split_map_width": 12,
+        "unexpected_checkpoint_key_count": 0
+      },
+      "sample_id": "img_0385"
+    },
+    {
+      "metadata": {
+        "clipped_point_count": 0,
+        "compatibility_patch": "boolean masks remain on prediction tensors; only the CPU query-coordinate array uses the same mask copied to CPU; threshold and selection are unchanged",
+        "missing_checkpoint_key_count": 0,
+        "native_density_available": false,
+        "original_height": 886,
+        "original_width": 1181,
+        "point_probability_threshold": 0.5,
+        "resize_ratio": 1.0,
+        "resized_height": 886,
+        "resized_width": 1181,
+        "split_map_height": 16,
+        "split_map_width": 10,
+        "unexpected_checkpoint_key_count": 0
+      },
+      "sample_id": "img_0477"
+    },
+    {
+      "metadata": {
+        "clipped_point_count": 0,
+        "compatibility_patch": "boolean masks remain on prediction tensors; only the CPU query-coordinate array uses the same mask copied to CPU; threshold and selection are unchanged",
+        "missing_checkpoint_key_count": 0,
+        "native_density_available": false,
+        "original_height": 1944,
+        "original_width": 2592,
+        "point_probability_threshold": 0.5,
+        "resize_ratio": 0.5925925925925926,
+        "resized_height": 1152,
+        "resized_width": 1536,
+        "split_map_height": 20,
+        "split_map_width": 12,
+        "unexpected_checkpoint_key_count": 0
+      },
+      "sample_id": "img_0485"
+    },
+    {
+      "metadata": {
+        "clipped_point_count": 0,
+        "compatibility_patch": "boolean masks remain on prediction tensors; only the CPU query-coordinate array uses the same mask copied to CPU; threshold and selection are unchanged",
+        "missing_checkpoint_key_count": 0,
+        "native_density_available": false,
+        "original_height": 2040,
+        "original_width": 3072,
+        "point_probability_threshold": 0.5,
+        "resize_ratio": 0.5,
+        "resized_height": 1020,
+        "resized_width": 1536,
+        "split_map_height": 16,
+        "split_map_width": 12,
+        "unexpected_checkpoint_key_count": 0
+      },
+      "sample_id": "img_0536"
+    },
+    {
+      "metadata": {
+        "clipped_point_count": 0,
+        "compatibility_patch": "boolean masks remain on prediction tensors; only the CPU query-coordinate array uses the same mask copied to CPU; threshold and selection are unchanged",
+        "missing_checkpoint_key_count": 0,
+        "native_density_available": false,
+        "original_height": 900,
+        "original_width": 1200,
+        "point_probability_threshold": 0.5,
+        "resize_ratio": 1.0,
+        "resized_height": 900,
+        "resized_width": 1200,
+        "split_map_height": 16,
+        "split_map_width": 10,
+        "unexpected_checkpoint_key_count": 0
+      },
+      "sample_id": "img_0542"
+    },
+    {
+      "metadata": {
+        "clipped_point_count": 0,
+        "compatibility_patch": "boolean masks remain on prediction tensors; only the CPU query-coordinate array uses the same mask copied to CPU; threshold and selection are unchanged",
+        "missing_checkpoint_key_count": 0,
+        "native_density_available": false,
+        "original_height": 3456,
+        "original_width": 5184,
+        "point_probability_threshold": 0.5,
+        "resize_ratio": 0.2962962962962963,
+        "resized_height": 1024,
+        "resized_width": 1536,
+        "split_map_height": 16,
+        "split_map_width": 12,
+        "unexpected_checkpoint_key_count": 0
+      },
+      "sample_id": "img_0545"
+    },
+    {
+      "metadata": {
+        "clipped_point_count": 0,
+        "compatibility_patch": "boolean masks remain on prediction tensors; only the CPU query-coordinate array uses the same mask copied to CPU; threshold and selection are unchanged",
+        "missing_checkpoint_key_count": 0,
+        "native_density_available": false,
+        "original_height": 2588,
+        "original_width": 3888,
+        "point_probability_threshold": 0.5,
+        "resize_ratio": 0.3950617283950617,
+        "resized_height": 1022,
+        "resized_width": 1536,
+        "split_map_height": 16,
+        "split_map_width": 12,
+        "unexpected_checkpoint_key_count": 0
+      },
+      "sample_id": "img_0557"
+    },
+    {
+      "metadata": {
+        "clipped_point_count": 0,
+        "compatibility_patch": "boolean masks remain on prediction tensors; only the CPU query-coordinate array uses the same mask copied to CPU; threshold and selection are unchanged",
+        "missing_checkpoint_key_count": 0,
+        "native_density_available": false,
+        "original_height": 2848,
+        "original_width": 2136,
+        "point_probability_threshold": 0.5,
+        "resize_ratio": 0.5393258426966292,
+        "resized_height": 1536,
+        "resized_width": 1152,
+        "split_map_height": 24,
+        "split_map_width": 10,
+        "unexpected_checkpoint_key_count": 0
+      },
+      "sample_id": "img_0600"
+    },
+    {
+      "metadata": {
+        "clipped_point_count": 0,
+        "compatibility_patch": "boolean masks remain on prediction tensors; only the CPU query-coordinate array uses the same mask copied to CPU; threshold and selection are unchanged",
+        "missing_checkpoint_key_count": 0,
+        "native_density_available": false,
+        "original_height": 683,
+        "original_width": 1024,
+        "point_probability_threshold": 0.5,
+        "resize_ratio": 1.0,
+        "resized_height": 683,
+        "resized_width": 1024,
+        "split_map_height": 12,
+        "split_map_width": 8,
+        "unexpected_checkpoint_key_count": 0
+      },
+      "sample_id": "img_0631"
+    },
+    {
+      "metadata": {
+        "clipped_point_count": 0,
+        "compatibility_patch": "boolean masks remain on prediction tensors; only the CPU query-coordinate array uses the same mask copied to CPU; threshold and selection are unchanged",
+        "missing_checkpoint_key_count": 0,
+        "native_density_available": false,
+        "original_height": 626,
+        "original_width": 903,
+        "point_probability_threshold": 0.5,
+        "resize_ratio": 1.0,
+        "resized_height": 626,
+        "resized_width": 903,
+        "split_map_height": 12,
+        "split_map_width": 8,
+        "unexpected_checkpoint_key_count": 0
+      },
+      "sample_id": "img_0633"
+    },
+    {
+      "metadata": {
+        "clipped_point_count": 0,
+        "compatibility_patch": "boolean masks remain on prediction tensors; only the CPU query-coordinate array uses the same mask copied to CPU; threshold and selection are unchanged",
+        "missing_checkpoint_key_count": 0,
+        "native_density_available": false,
+        "original_height": 2736,
+        "original_width": 3648,
+        "point_probability_threshold": 0.5,
+        "resize_ratio": 0.42105263157894735,
+        "resized_height": 1152,
+        "resized_width": 1536,
+        "split_map_height": 20,
+        "split_map_width": 12,
+        "unexpected_checkpoint_key_count": 0
+      },
+      "sample_id": "img_0638"
+    },
+    {
+      "metadata": {
+        "clipped_point_count": 0,
+        "compatibility_patch": "boolean masks remain on prediction tensors; only the CPU query-coordinate array uses the same mask copied to CPU; threshold and selection are unchanged",
+        "missing_checkpoint_key_count": 0,
+        "native_density_available": false,
+        "original_height": 1826,
+        "original_width": 3648,
+        "point_probability_threshold": 0.5,
+        "resize_ratio": 0.42105263157894735,
+        "resized_height": 768,
+        "resized_width": 1536,
+        "split_map_height": 12,
+        "split_map_width": 12,
+        "unexpected_checkpoint_key_count": 0
+      },
+      "sample_id": "img_0775"
+    },
+    {
+      "metadata": {
+        "clipped_point_count": 0,
+        "compatibility_patch": "boolean masks remain on prediction tensors; only the CPU query-coordinate array uses the same mask copied to CPU; threshold and selection are unchanged",
+        "missing_checkpoint_key_count": 0,
+        "native_density_available": false,
+        "original_height": 2304,
+        "original_width": 3072,
+        "point_probability_threshold": 0.5,
+        "resize_ratio": 0.5,
+        "resized_height": 1152,
+        "resized_width": 1536,
+        "split_map_height": 20,
+        "split_map_width": 12,
+        "unexpected_checkpoint_key_count": 0
+      },
+      "sample_id": "img_0778"
+    },
+    {
+      "metadata": {
+        "clipped_point_count": 0,
+        "compatibility_patch": "boolean masks remain on prediction tensors; only the CPU query-coordinate array uses the same mask copied to CPU; threshold and selection are unchanged",
+        "missing_checkpoint_key_count": 0,
+        "native_density_available": false,
+        "original_height": 683,
+        "original_width": 1024,
+        "point_probability_threshold": 0.5,
+        "resize_ratio": 1.0,
+        "resized_height": 683,
+        "resized_width": 1024,
+        "split_map_height": 12,
+        "split_map_width": 8,
+        "unexpected_checkpoint_key_count": 0
+      },
+      "sample_id": "img_0790"
+    },
+    {
+      "metadata": {
+        "clipped_point_count": 0,
+        "compatibility_patch": "boolean masks remain on prediction tensors; only the CPU query-coordinate array uses the same mask copied to CPU; threshold and selection are unchanged",
+        "missing_checkpoint_key_count": 0,
+        "native_density_available": false,
+        "original_height": 2150,
+        "original_width": 3224,
+        "point_probability_threshold": 0.5,
+        "resize_ratio": 0.4764267990074441,
+        "resized_height": 1024,
+        "resized_width": 1536,
+        "split_map_height": 16,
+        "split_map_width": 12,
+        "unexpected_checkpoint_key_count": 0
+      },
+      "sample_id": "img_0856"
+    },
+    {
+      "metadata": {
+        "clipped_point_count": 0,
+        "compatibility_patch": "boolean masks remain on prediction tensors; only the CPU query-coordinate array uses the same mask copied to CPU; threshold and selection are unchanged",
+        "missing_checkpoint_key_count": 0,
+        "native_density_available": false,
+        "original_height": 1827,
+        "original_width": 4928,
+        "point_probability_threshold": 0.5,
+        "resize_ratio": 0.3116883116883117,
+        "resized_height": 569,
+        "resized_width": 1536,
+        "split_map_height": 12,
+        "split_map_width": 12,
+        "unexpected_checkpoint_key_count": 0
+      },
+      "sample_id": "img_0916"
+    },
+    {
+      "metadata": {
+        "clipped_point_count": 0,
+        "compatibility_patch": "boolean masks remain on prediction tensors; only the CPU query-coordinate array uses the same mask copied to CPU; threshold and selection are unchanged",
+        "missing_checkpoint_key_count": 0,
+        "native_density_available": false,
+        "original_height": 2592,
+        "original_width": 3872,
+        "point_probability_threshold": 0.5,
+        "resize_ratio": 0.396694214876033,
+        "resized_height": 1028,
+        "resized_width": 1536,
+        "split_map_height": 20,
+        "split_map_width": 12,
+        "unexpected_checkpoint_key_count": 0
+      },
+      "sample_id": "img_0919"
+    },
+    {
+      "metadata": {
+        "clipped_point_count": 0,
+        "compatibility_patch": "boolean masks remain on prediction tensors; only the CPU query-coordinate array uses the same mask copied to CPU; threshold and selection are unchanged",
+        "missing_checkpoint_key_count": 0,
+        "native_density_available": false,
+        "original_height": 3744,
+        "original_width": 5616,
+        "point_probability_threshold": 0.5,
+        "resize_ratio": 0.27350427350427353,
+        "resized_height": 1024,
+        "resized_width": 1536,
+        "split_map_height": 16,
+        "split_map_width": 12,
+        "unexpected_checkpoint_key_count": 0
+      },
+      "sample_id": "img_0975"
+    },
+    {
+      "metadata": {
+        "clipped_point_count": 0,
+        "compatibility_patch": "boolean masks remain on prediction tensors; only the CPU query-coordinate array uses the same mask copied to CPU; threshold and selection are unchanged",
+        "missing_checkpoint_key_count": 0,
+        "native_density_available": false,
+        "original_height": 4975,
+        "original_width": 3317,
+        "point_probability_threshold": 0.5,
+        "resize_ratio": 0.30874371859296484,
+        "resized_height": 1536,
+        "resized_width": 1024,
+        "split_map_height": 24,
+        "split_map_width": 8,
+        "unexpected_checkpoint_key_count": 0
+      },
+      "sample_id": "img_1019"
+    },
+    {
+      "metadata": {
+        "clipped_point_count": 0,
+        "compatibility_patch": "boolean masks remain on prediction tensors; only the CPU query-coordinate array uses the same mask copied to CPU; threshold and selection are unchanged",
+        "missing_checkpoint_key_count": 0,
+        "native_density_available": false,
+        "original_height": 666,
+        "original_width": 998,
+        "point_probability_threshold": 0.5,
+        "resize_ratio": 1.0,
+        "resized_height": 666,
+        "resized_width": 998,
+        "split_map_height": 12,
+        "split_map_width": 8,
+        "unexpected_checkpoint_key_count": 0
+      },
+      "sample_id": "img_1022"
+    },
+    {
+      "metadata": {
+        "clipped_point_count": 0,
+        "compatibility_patch": "boolean masks remain on prediction tensors; only the CPU query-coordinate array uses the same mask copied to CPU; threshold and selection are unchanged",
+        "missing_checkpoint_key_count": 0,
+        "native_density_available": false,
+        "original_height": 1080,
+        "original_width": 1920,
+        "point_probability_threshold": 0.5,
+        "resize_ratio": 0.8,
+        "resized_height": 864,
+        "resized_width": 1536,
+        "split_map_height": 16,
+        "split_map_width": 12,
+        "unexpected_checkpoint_key_count": 0
+      },
+      "sample_id": "img_1072"
+    },
+    {
+      "metadata": {
+        "clipped_point_count": 0,
+        "compatibility_patch": "boolean masks remain on prediction tensors; only the CPU query-coordinate array uses the same mask copied to CPU; threshold and selection are unchanged",
+        "missing_checkpoint_key_count": 0,
+        "native_density_available": false,
+        "original_height": 4912,
+        "original_width": 7360,
+        "point_probability_threshold": 0.5,
+        "resize_ratio": 0.20869565217391303,
+        "resized_height": 1025,
+        "resized_width": 1536,
+        "split_map_height": 20,
+        "split_map_width": 12,
+        "unexpected_checkpoint_key_count": 0
+      },
+      "sample_id": "img_1073"
+    },
+    {
+      "metadata": {
+        "clipped_point_count": 0,
+        "compatibility_patch": "boolean masks remain on prediction tensors; only the CPU query-coordinate array uses the same mask copied to CPU; threshold and selection are unchanged",
+        "missing_checkpoint_key_count": 0,
+        "native_density_available": false,
+        "original_height": 758,
+        "original_width": 1180,
+        "point_probability_threshold": 0.5,
+        "resize_ratio": 1.0,
+        "resized_height": 758,
+        "resized_width": 1180,
+        "split_map_height": 12,
+        "split_map_width": 10,
+        "unexpected_checkpoint_key_count": 0
+      },
+      "sample_id": "img_1080"
+    },
+    {
+      "metadata": {
+        "clipped_point_count": 0,
+        "compatibility_patch": "boolean masks remain on prediction tensors; only the CPU query-coordinate array uses the same mask copied to CPU; threshold and selection are unchanged",
+        "missing_checkpoint_key_count": 0,
+        "native_density_available": false,
+        "original_height": 1080,
+        "original_width": 1920,
+        "point_probability_threshold": 0.5,
+        "resize_ratio": 0.8,
+        "resized_height": 864,
+        "resized_width": 1536,
+        "split_map_height": 16,
+        "split_map_width": 12,
+        "unexpected_checkpoint_key_count": 0
+      },
+      "sample_id": "img_1092"
+    },
+    {
+      "metadata": {
+        "clipped_point_count": 0,
+        "compatibility_patch": "boolean masks remain on prediction tensors; only the CPU query-coordinate array uses the same mask copied to CPU; threshold and selection are unchanged",
+        "missing_checkpoint_key_count": 0,
+        "native_density_available": false,
+        "original_height": 1296,
+        "original_width": 1944,
+        "point_probability_threshold": 0.5,
+        "resize_ratio": 0.7901234567901234,
+        "resized_height": 1024,
+        "resized_width": 1536,
+        "split_map_height": 16,
+        "split_map_width": 12,
+        "unexpected_checkpoint_key_count": 0
+      },
+      "sample_id": "img_1155"
+    },
+    {
+      "metadata": {
+        "clipped_point_count": 0,
+        "compatibility_patch": "boolean masks remain on prediction tensors; only the CPU query-coordinate array uses the same mask copied to CPU; threshold and selection are unchanged",
+        "missing_checkpoint_key_count": 0,
+        "native_density_available": false,
+        "original_height": 399,
+        "original_width": 600,
+        "point_probability_threshold": 0.5,
+        "resize_ratio": 1.0,
+        "resized_height": 399,
+        "resized_width": 600,
+        "split_map_height": 8,
+        "split_map_width": 6,
+        "unexpected_checkpoint_key_count": 0
+      },
+      "sample_id": "img_1181"
+    },
+    {
+      "metadata": {
+        "clipped_point_count": 0,
+        "compatibility_patch": "boolean masks remain on prediction tensors; only the CPU query-coordinate array uses the same mask copied to CPU; threshold and selection are unchanged",
+        "missing_checkpoint_key_count": 0,
+        "native_density_available": false,
+        "original_height": 1802,
+        "original_width": 4264,
+        "point_probability_threshold": 0.5,
+        "resize_ratio": 0.3602251407129456,
+        "resized_height": 649,
+        "resized_width": 1536,
+        "split_map_height": 12,
+        "split_map_width": 12,
+        "unexpected_checkpoint_key_count": 0
+      },
+      "sample_id": "img_1199"
+    }
+  ],
+  "schema_version": 1
+}

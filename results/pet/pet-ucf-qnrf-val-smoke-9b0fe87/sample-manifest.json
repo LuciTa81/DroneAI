@@ -1,0 +1,190 @@
+{
+  "dataset_id": "ucf-qnrf-kaggle-apache",
+  "expected_samples": 36,
+  "protocol_id": "pet-official-qnrf-val-smoke-v1",
+  "samples": [
+    {
+      "annotation_sha256": "0b529c0d0f80a94d8488c3ea300d34974f18a50315d62d3b9fc99c42c322091b",
+      "sample_id": "img_0062",
+      "source_sha256": "6deece33896caeb0f1bfc28f79c4bc145a033d7df6949ec8b291ba86402d78ee"
+    },
+    {
+      "annotation_sha256": "12050f0ee82ae56e936d42000847b38b6b9e3dfaf240d92a9a50bb921d2ed3f2",
+      "sample_id": "img_0067",
+      "source_sha256": "0ae12709e570308bbdbfb860b7ac6f8a9df2df71ab844c57df63433bb9d3ec1c"
+    },
+    {
+      "annotation_sha256": "b4d6abf62f7a5b0b1aa0d86956bdc3e5f1d9236d45ffb4e21b241b1445c5651e",
+      "sample_id": "img_0097",
+      "source_sha256": "e7dd16a276e53816a747c5eeed1bdf78596e04870a72befb1dc3e08699a990ab"
+    },
+    {
+      "annotation_sha256": "4afd034c6571f3b967a14614e5c6fc43ef86fae41acfa898d1c482093dae0979",
+      "sample_id": "img_0221",
+      "source_sha256": "24b4d1540617a549fcfd47e0178efd6d08d56cdd5323295a5fcda289c8470582"
+    },
+    {
+      "annotation_sha256": "59b36bf28d8415f459879ce14e2045b94f6b5b5cf562e4b5d73a75e78d72ffbb",
+      "sample_id": "img_0257",
+      "source_sha256": "1fc60d3511decfe5eb525dc9adb79a8fb4adaa10150b265cf303a03381e0aa5c"
+    },
+    {
+      "annotation_sha256": "4520b86b9fac96e44e6a6c66ef0662072493b6fe2dd1e7b1f8fbb406a8979c33",
+      "sample_id": "img_0339",
+      "source_sha256": "27e32f15e88f4a3dc9e7814cb5aeeba07f6c8d398173b37f432150fc78980d17"
+    },
+    {
+      "annotation_sha256": "a197021831ff8bb1bb05de155921766e4dcc230d5d83b6f6477681f4c6869291",
+      "sample_id": "img_0347",
+      "source_sha256": "5f2d8a24ca125b474e00aa34c2bc8f12f65dbc83672fd297520373591e679a46"
+    },
+    {
+      "annotation_sha256": "ec9dde8158c257eb9e1dc927733a71d4290a9b7ecd515db643602510c3888d47",
+      "sample_id": "img_0379",
+      "source_sha256": "28577f96f96c9a18253325656068afa1fc37bee4370e3a5fb208b83f89de96e1"
+    },
+    {
+      "annotation_sha256": "1adb589e38d5dacf5d21657acd775250cef40056a1e20bef78580caedf30c272",
+      "sample_id": "img_0382",
+      "source_sha256": "acc00530000127c763c1bf53a4d5e3973d2cdf6ef9b7ad36885ebb9ed9140222"
+    },
+    {
+      "annotation_sha256": "13acdbc14ff619f5b22cf796e3a3ddfe305b7dc34c3af1da25a8199a491b70d4",
+      "sample_id": "img_0385",
+      "source_sha256": "9d8f388f43eb2d76081a11bf053802e985d6841dfaba64469cf928726cd608e9"
+    },
+    {
+      "annotation_sha256": "0973b25769b94ef4860424e8fc6f1654275f7b0918c647a118ed2475bf29f5e1",
+      "sample_id": "img_0477",
+      "source_sha256": "b2135579dd15776d706327e377783792f738a1c14c45657924699af31e44b2af"
+    },
+    {
+      "annotation_sha256": "4148126cfe428a11ed11a2096a4b31e317ea6c555344275b835aee018791ed90",
+      "sample_id": "img_0485",
+      "source_sha256": "7d78b16c1f59d4425d58a6b571eb1b35b1dbeee419e9788014f90743342eaadb"
+    },
+    {
+      "annotation_sha256": "5a414e648924a3de6eb702b4e498dd0fb3d20dc84c2b6c765d4511698d50f3f2",
+      "sample_id": "img_0536",
+      "source_sha256": "531936b2fb1c7bfffc983e6a53652caed425d389c8f96f1152e3772c291a0b72"
+    },
+    {
+      "annotation_sha256": "8559c558f0868cfba1fae33d339e95753dd35795fde2ced03e91f58e02758500",
+      "sample_id": "img_0542",
+      "source_sha256": "ed9296146459fad817373d97226097f65f02a7b19c9adabc9bb82de65aa3aebd"
+    },
+    {
+      "annotation_sha256": "adaef416c72b580a972228166074d1dfac8a60a48f2d6ba9c8261faf80974c06",
+      "sample_id": "img_0545",
+      "source_sha256": "8b3435edb05d6e09748c5959a03d7e3f61c23a3dc7aa874a41c88014f24ed280"
+    },
+    {
+      "annotation_sha256": "b6a521c5f7de8b1103c0d3027b0c938e4e7ab0ddff4da1352d2b1e39e1f6e458",
+      "sample_id": "img_0557",
+      "source_sha256": "d18726651b7adc92ebee607965cf96ebcae4288fc067b07d4ac952c74c7bdef7"
+    },
+    {
+      "annotation_sha256": "73b7eb2c6042d561687b271422cd1793f8b47e5e373c91a3ab2c063883aba419",
+      "sample_id": "img_0600",
+      "source_sha256": "aa7475988ffe684291ea9933ad9c799f1be6768c1053fc8c60aeb5fe2e03c188"
+    },
+    {
+      "annotation_sha256": "f71eeab7d44a174ead86ee4554ff1af989c4f828643c8dcad19e1c236eabfb26",
+      "sample_id": "img_0631",
+      "source_sha256": "21339ddf11c52ddae70dc77500009ec2058e0d5bd3e3a603b61a007dfe13786f"
+    },
+    {
+      "annotation_sha256": "9ccfe5a8fb32fffd1cd670b3dbbbf426d5992d48c1bc08e728ce43ffeec140a9",
+      "sample_id": "img_0633",
+      "source_sha256": "41e0527ff0369d0610b03e69bc9e30986277f75c7fd4ac2c59c17e19a3afe64f"
+    },
+    {
+      "annotation_sha256": "9cfb696ea1cd52137f09dc7c9ecd757f13a9b027a1665deafbcfc66329f99683",
+      "sample_id": "img_0638",
+      "source_sha256": "83a18e70e68dc0746aebcda68c193f1d90dcb5304c0ee5b52d8e0b352431ec55"
+    },
+    {
+      "annotation_sha256": "334553c479ace1cb961f81eed4bc151391604a389128728ab8dfcea97fa578a5",
+      "sample_id": "img_0775",
+      "source_sha256": "b83303d06d97cd81941a8ad63a347e41cfe0c2654c99b30ea2a3882ba653f197"
+    },
+    {
+      "annotation_sha256": "63cf641c2c7603fee4fd2fde24a691947097a4c4955317c39ddc168478ec715f",
+      "sample_id": "img_0778",
+      "source_sha256": "1f13674e997e1e21d7b44ed4a8cb6551b3fc466cc972dd4965eac30d2f7b2fe7"
+    },
+    {
+      "annotation_sha256": "e6e4eee9c37ebf077552da1cffca82ea19135c81314b534bd58f18c4ce688bf1",
+      "sample_id": "img_0790",
+      "source_sha256": "136014291cbb33d59606c3303c80d103e0d4cbd444b50ceccbb2b55d02df13c9"
+    },
+    {
+      "annotation_sha256": "01bff4ad59a7cbc073d8fd9b7f7e3e5dfbf611e8e29ff7d4e08466c7631613ff",
+      "sample_id": "img_0856",
+      "source_sha256": "a02d922e3e8e02197d17ee56a368a6a02dd270df4f60111de1c4ba76a957e975"
+    },
+    {
+      "annotation_sha256": "ab41423302321b9ed2c772e8c2ee315e33af487a19e60de29c13a57e7ee6eb47",
+      "sample_id": "img_0916",
+      "source_sha256": "ef4b1117c96ff50fa2b41a8da4521bb7c046e19856e54634eadbb7a616e2fc6c"
+    },
+    {
+      "annotation_sha256": "a8a78eab1b5f5f8312bb8831483a25bc51a693da66fd8593bd979afcecaf6e63",
+      "sample_id": "img_0919",
+      "source_sha256": "322a55437bd1aa108698874cc762edd2ae7d480fd537ec015dc18e4c36139201"
+    },
+    {
+      "annotation_sha256": "a254db83ac913a84b53cff9ed8a28b8d2e7ead604a6585b0238ebb5d4e42d6e8",
+      "sample_id": "img_0975",
+      "source_sha256": "cb628193642cb69c7aaa3b7e715199e53fc0d901bb8b3847606d4b8d123cdf86"
+    },
+    {
+      "annotation_sha256": "e5b233a5530ee661c901c69653091ef60e38e5ce184ab6a1c6a95c26fbf7d954",
+      "sample_id": "img_1019",
+      "source_sha256": "fd93a0f8530e4a4c5879a853f0f81a62067ed5b87743c90a509af5f959095c76"
+    },
+    {
+      "annotation_sha256": "bbba404b7b1538d0575dfc3d0b043308adbbc6268ced24294e4999b5d5c310d6",
+      "sample_id": "img_1022",
+      "source_sha256": "a443892e328cc9b95f151ce96092a0f9a406ac05392a070a1623a7bf3fa5e57b"
+    },
+    {
+      "annotation_sha256": "a8f37a2d755ec585b7445a09c7e7239c7551630c25895f6a80009549e9e3d3d3",
+      "sample_id": "img_1072",
+      "source_sha256": "49fdb242edef973e5bc092dcd7f31d8df4436199f41f8ef4f7ba21839a97bf2e"
+    },
+    {
+      "annotation_sha256": "395ea512da1d2d86593383a349f0a1fedf62b663c9b35fa785ba138610a2a520",
+      "sample_id": "img_1073",
+      "source_sha256": "d99ac820dd36abaca4c6d1d66bc20437a9e84c785e1434ea52e47b1da331637c"
+    },
+    {
+      "annotation_sha256": "34118a981c13fe47290fd2e5509b21111a80761c71c5c0a55c0ec3536b3007bb",
+      "sample_id": "img_1080",
+      "source_sha256": "f8a8fba2fc121983c5027f17897903c1f4a80d6911435df3658a138b424a3095"
+    },
+    {
+      "annotation_sha256": "d75444299af1a90f768d6c751ec9601d668698b80ef0011fde53cd0c4090f2e5",
+      "sample_id": "img_1092",
+      "source_sha256": "47b21558a49f98a48ee1574df743681b687ab57271c18071ea67a0d518f1b8c3"
+    },
+    {
+      "annotation_sha256": "51ee15c2be94624cbc6652f5e9e80fb5205a88f4881294fc4c295a56e9a9fc4b",
+      "sample_id": "img_1155",
+      "source_sha256": "9894d11113de33de412c4ee1866152b311c0e62313553205071f493d65de5244"
+    },
+    {
+      "annotation_sha256": "b8cab12c80d225fa30999ed617928c03b9b515ec14f44db462485e8374eed156",
+      "sample_id": "img_1181",
+      "source_sha256": "c8ababfe4dcb90ea090be15b14da1d73b9f0b7dd7d344a822e5427e11049a40a"
+    },
+    {
+      "annotation_sha256": "3ba15ebb67701e0d20e0947751692edf6b16ed059bffe9765a00e28be87128f8",
+      "sample_id": "img_1199",
+      "source_sha256": "6f40a3dc77bde8c286624cb6627db459f6b570e2b62805d3de43fbc5e3335116"
+    }
+  ],
+  "schema_version": 1,
+  "split_id": "dm-count-upstream-qnrf-val-smoke-36-v1",
+  "split_role": "validation"
+}
