@@ -94,3 +94,16 @@ def test_pet_runner_requires_frozen_inputs() -> None:
         "--device",
     ):
         assert option in result.stdout
+
+
+def test_pet_one_sample_runner_is_separate_from_benchmark() -> None:
+    result = subprocess.run(
+        [sys.executable, "scripts/run_pet_one_sample.py", "--help"],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert "--sample-id" in result.stdout
+    assert "--output-dir" in result.stdout
+    assert "--checkpoint-sha256" in result.stdout
