@@ -6,3 +6,7 @@ results/steerer/**/*.json text eol=lf
 results/steerer/**/*.csv text eol=lf
 results/steerer/**/*.md text eol=lf
 results/steerer/**/*.png binary
+results/pet/**/*.json text eol=lf
+results/pet/**/*.csv text eol=lf
+results/pet/**/*.md text eol=lf
+results/pet/**/*.png binary

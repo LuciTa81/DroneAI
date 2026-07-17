@@ -1,0 +1,30 @@
+{
+  "status": "PASS_RESEARCH_ONLY",
+  "allowed_actions": [
+    "catalog",
+    "research_reproduction",
+    "research_asset_download",
+    "research_checkpoint_evaluation"
+  ],
+  "ambiguous_components": [
+    "code",
+    "deployment",
+    "derived_weights",
+    "pretrained_weights"
+  ],
+  "restricted_components": [
+    "code",
+    "pretrained_weights"
+  ],
+  "blockers": [],
+  "rationale": "The frozen research input chain permits research, while one or more components explicitly exclude commercial use.",
+  "candidate_id": "pet-official-ucf-qnrf-academic-research-comparison",
+  "manifest_semantic_sha256": "824deb2fc8d73ce5d1317bcc8eb90704dbce8eb803b111c54593d9ce6ec5e53d",
+  "component_ids": {
+    "code": "pet-official-5b4dd7da",
+    "dataset": "ucf-qnrf-kaggle-apache",
+    "deployment": "droneai-festival-deployment-pending",
+    "derived_weights": "droneai-derived-weights-not-created",
+    "pretrained_weights": "pet-official-ucf-qnrf-checkpoint"
+  }
+}

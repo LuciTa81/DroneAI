@@ -1,0 +1,133 @@
+{
+  "schema_version": 2,
+  "stage_id": "stage-3c",
+  "stage_name": "Commercial rights and deployment suitability",
+  "threshold": 80,
+  "score": 84.0,
+  "status": "PASS_RESEARCH_ONLY",
+  "decision_scope": "research_only",
+  "generated_at": "2026-07-17T18:52:08.161251+00:00",
+  "failed_blockers": [],
+  "checks": [
+    {
+      "check_id": "manifest.identity",
+      "category": "manifest",
+      "description": "Candidate identity and intended commercial scope are explicit",
+      "weight": 10,
+      "passed": true,
+      "blocker": true,
+      "expected": "schema v1, candidate_id, commercial_product_rnd",
+      "observed": "{'schema_version': 1, 'candidate_id': 'pet-official-ucf-qnrf-academic-research-comparison', 'intended_use': 'commercial_product_rnd'}",
+      "evidence": "",
+      "earned": 10
+    },
+    {
+      "check_id": "components.complete",
+      "category": "rights inventory",
+      "description": "All five rights components are present exactly once",
+      "weight": 15,
+      "passed": true,
+      "blocker": true,
+      "expected": "code, dataset, deployment, derived_weights, pretrained_weights",
+      "observed": "code, dataset, deployment, derived_weights, pretrained_weights",
+      "evidence": "",
+      "earned": 15
+    },
+    {
+      "check_id": "rights.metadata",
+      "category": "rights inventory",
+      "description": "Rights values and bases are internally consistent",
+      "weight": 20,
+      "passed": true,
+      "blocker": true,
+      "expected": "valid status/basis and tri-state use flags",
+      "observed": "consistent",
+      "evidence": "",
+      "earned": 20
+    },
+    {
+      "check_id": "rights.provenance",
+      "category": "traceability",
+      "description": "Every component has stable identity and source provenance",
+      "weight": 15,
+      "passed": true,
+      "blocker": true,
+      "expected": "component_id and source_url per component",
+      "observed": "recorded",
+      "evidence": "",
+      "earned": 15
+    },
+    {
+      "check_id": "rights.scope_coherence",
+      "category": "decision",
+      "description": "The bundle has one safe, non-contradictory scope",
+      "weight": 20,
+      "passed": true,
+      "blocker": true,
+      "expected": "research-only, commercial candidate, or production approved",
+      "observed": "PASS_RESEARCH_ONLY: The frozen research input chain permits research, while one or more components explicitly exclude commercial use.",
+      "evidence": "",
+      "earned": 20
+    },
+    {
+      "check_id": "commercial.code",
+      "category": "production rights",
+      "description": "code has verified commercial evidence",
+      "weight": 4,
+      "passed": false,
+      "blocker": false,
+      "expected": "verified, commercial_use=true, license_id, evidence_url",
+      "observed": "False",
+      "evidence": "",
+      "earned": 0.0
+    },
+    {
+      "check_id": "commercial.dataset",
+      "category": "production rights",
+      "description": "dataset has verified commercial evidence",
+      "weight": 4,
+      "passed": true,
+      "blocker": false,
+      "expected": "verified, commercial_use=true, license_id, evidence_url",
+      "observed": "True",
+      "evidence": "",
+      "earned": 4
+    },
+    {
+      "check_id": "commercial.deployment",
+      "category": "production rights",
+      "description": "deployment has verified commercial evidence",
+      "weight": 4,
+      "passed": false,
+      "blocker": false,
+      "expected": "verified, commercial_use=true, license_id, evidence_url",
+      "observed": "False",
+      "evidence": "",
+      "earned": 0.0
+    },
+    {
+      "check_id": "commercial.derived_weights",
+      "category": "production rights",
+      "description": "derived_weights has verified commercial evidence",
+      "weight": 4,
+      "passed": false,
+      "blocker": false,
+      "expected": "verified, commercial_use=true, license_id, evidence_url",
+      "observed": "False",
+      "evidence": "",
+      "earned": 0.0
+    },
+    {
+      "check_id": "commercial.pretrained_weights",
+      "category": "production rights",
+      "description": "pretrained_weights has verified commercial evidence",
+      "weight": 4,
+      "passed": false,
+      "blocker": false,
+      "expected": "verified, commercial_use=true, license_id, evidence_url",
+      "observed": "False",
+      "evidence": "",
+      "earned": 0.0
+    }
+  ]
+}

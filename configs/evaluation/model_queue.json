@@ -82,7 +82,7 @@
       "model_id": "pet",
       "family": "points",
       "queue_state": "active",
-      "rights_scope": "PENDING",
+      "rights_scope": "PASS_RESEARCH_ONLY",
       "dataset_id": "ucf-qnrf-kaggle-apache",
       "split_id": "dm-count-upstream-qnrf-val-smoke-36-v1",
       "split_role": "validation",
@@ -93,7 +93,14 @@
         "one_sample",
         "benchmark"
       ],
-      "accepted_evidence": []
+      "accepted_evidence": [
+        {
+          "gate": "rights",
+          "artifact_kind": "rights_decision",
+          "path": "pet/pet-rights-99bfc15/rights-decision.json",
+          "sha256": "40d5f7c9af3417567ae55d8f1e634c144a68a23b44314057313455cf27c438d7"
+        }
+      ]
     },
     {
       "model_id": "csrnet",

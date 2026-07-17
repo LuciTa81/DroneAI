@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "candidate_id": "pet-official-ucf-qnrf-academic-research-comparison",
+  "intended_use": "commercial_product_rnd",
+  "components": [
+    {
+      "component_type": "code",
+      "component_id": "pet-official-5b4dd7da",
+      "source_url": "https://github.com/cxliu0/PET/tree/5b4dd7da8b11568a3305a88bb7c99a7fc831a998",
+      "rights": {
+        "status": "verified",
+        "license_id": "LicenseRef-PET-Academic-Only",
+        "evidence_url": "https://github.com/cxliu0/PET/blob/5b4dd7da8b11568a3305a88bb7c99a7fc831a998/README.md#permission",
+        "commercial_use": false,
+        "research_use": true,
+        "basis": "explicit_terms",
+        "notes": "The README explicitly limits the code to academic purposes. The repository also contains an unfilled MIT template with placeholder copyright text; the explicit README restriction is retained as the controlling conservative classification."
+      }
+    },
+    {
+      "component_type": "dataset",
+      "component_id": "ucf-qnrf-kaggle-apache",
+      "source_url": "https://www.kaggle.com/datasets/faihajalamtopu/ucf-qnrf",
+      "rights": {
+        "status": "verified",
+        "license_id": "Apache-2.0",
+        "evidence_url": "https://www.kaggle.com/datasets/faihajalamtopu/ucf-qnrf",
+        "commercial_use": true,
+        "research_use": true,
+        "basis": "internal_approval",
+        "notes": "The project owner accepts the Kaggle Apache-2.0 label as permission. The uploader states they are not the dataset owner; that provenance risk remains recorded."
+      }
+    },
+    {
+      "component_type": "pretrained_weights",
+      "component_id": "pet-official-ucf-qnrf-checkpoint",
+      "source_url": "https://drive.google.com/file/d/129l__gW51UtTQnPKM-90lTZo508-Eh7I/view?usp=sharing",
+      "rights": {
+        "status": "verified",
+        "license_id": "LicenseRef-PET-Academic-Only",
+        "evidence_url": "https://github.com/cxliu0/PET/blob/5b4dd7da8b11568a3305a88bb7c99a7fc831a998/README.md#permission",
+        "commercial_use": false,
+        "research_use": true,
+        "basis": "explicit_terms",
+        "notes": "The official README publishes this UCF-QNRF checkpoint and limits the repository materials to academic purposes. Research comparison is allowed; commercial weight reuse is not."
+      }
+    },
+    {
+      "component_type": "derived_weights",
+      "component_id": "droneai-derived-weights-not-created",
+      "source_url": "project://DroneAI/derived-weights-policy",
+      "rights": {
+        "status": "pending",
+        "license_id": null,
+        "evidence_url": null,
+        "commercial_use": null,
+        "research_use": null,
+        "basis": "pending_review",
+        "notes": "This lane performs no training or fine-tuning. PET cannot become the commercial fine-tuning winner without separate written permission."
+      }
+    },
+    {
+      "component_type": "deployment",
+      "component_id": "droneai-festival-deployment-pending",
+      "source_url": "project://DroneAI/deployment-approval",
+      "rights": {
+        "status": "pending",
+        "license_id": null,
+        "evidence_url": null,
+        "commercial_use": null,
+        "research_use": null,
+        "basis": "pending_review",
+        "notes": "The explicit academic-only notice blocks commercial deployment unless the authors grant separate permission."
+      }
+    }
+  ]
+}
