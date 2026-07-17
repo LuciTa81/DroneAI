@@ -13,7 +13,7 @@
   "train_list_sha256": "e8a926b35e55f9e7bf38498ec722d9a7f051169f03dd994024a9e5c757694cb0",
   "validation_list_sha256": "835f660ed3373118f4d76a36ebf013ef28d90fcbcc835ddb5c180a2b26524126",
   "seed": 20260715,
-  "upstream_commit": "cc5f2132e0d1328909f31b6d665b8e0b15c30467",
+  "upstream_commit": "5b1854dbc2d280f2326d67c65515d8baf9083810",
   "required_action": "research_checkpoint_evaluation",
   "candidate_id": "steerer-official-ucf-qnrf-research-comparison",
   "split_verified": true,

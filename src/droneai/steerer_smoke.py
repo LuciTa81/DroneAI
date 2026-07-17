@@ -19,6 +19,7 @@ from droneai.stage3c import REQUIRED_COMPONENTS, manifest_semantic_sha256
 
 
 STEERER_CANDIDATE_ID = "steerer-official-ucf-qnrf-research-comparison"
+STEERER_PINNED_COMMIT = "5b1854dbc2d280f2326d67c65515d8baf9083810"
 RESEARCH_CHECKPOINT_ACTION = "research_checkpoint_evaluation"
 EVALUATION_SCOPE = "research_comparison_only"
 _DM_COUNT_CONFIG = (
@@ -32,6 +33,7 @@ _STEERER_CONFIG_OVERRIDES: dict[str, object] = {
     "run_id": "steerer-ucf-qnrf-validation-smoke",
     "protocol_id": "steerer-official-qnrf-val-smoke-v1",
     "model_id": "steerer-official-ucf-qnrf",
+    "upstream_commit": STEERER_PINNED_COMMIT,
     "candidate_id": STEERER_CANDIDATE_ID,
     "required_action": RESEARCH_CHECKPOINT_ACTION,
     "localization_radius": 16.0,

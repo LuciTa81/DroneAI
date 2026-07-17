@@ -34,6 +34,7 @@ FORBIDDEN_DESTINATIONS = {
     "finetune",
     "resume",
 }
+STEERER_PINNED_COMMIT = "5b1854dbc2d280f2326d67c65515d8baf9083810"
 
 
 def valid_args(*, output_dir: Path) -> list[str]:
@@ -106,7 +107,7 @@ def test_fake_end_to_end_returns_common_report_status(
     output = tmp_path / "run"
     calls: dict[str, object] = {}
     config = {
-        "upstream_commit": "b" * 40,
+        "upstream_commit": STEERER_PINNED_COMMIT,
         "candidate_id": "steerer-official-ucf-qnrf-research-comparison",
     }
     prepared = SimpleNamespace(samples=("fake-sample",), split_verified=True)
@@ -166,7 +167,7 @@ def test_fake_end_to_end_returns_common_report_status(
     assert output.is_dir()
     assert calls["adapter_kwargs"] == {
         "upstream_dir": (tmp_path / "upstream").resolve(),
-        "expected_upstream_commit": "b" * 40,
+        "expected_upstream_commit": STEERER_PINNED_COMMIT,
         "checkpoint_path": (tmp_path / "checkpoint.pth").resolve(),
         "checkpoint_sha256": "a" * 64,
         "device": "cpu",

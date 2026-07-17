@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 
 from droneai import dm_count_smoke
+from droneai import steerer_smoke
 from droneai.dm_count_smoke import PreparedSmoke, load_smoke_config
 from droneai.stage3c import REQUIRED_COMPONENTS, manifest_semantic_sha256
 from droneai.steerer_smoke import (
@@ -22,6 +23,8 @@ REPO_ROOT = Path(__file__).parents[1]
 DM_CONFIG = REPO_ROOT / "configs" / "evaluation" / "dm_count_ucf_qnrf_smoke.json"
 STEERER_CONFIG = REPO_ROOT / "configs" / "evaluation" / "steerer_ucf_qnrf_smoke.json"
 CANDIDATE_ID = "steerer-official-ucf-qnrf-research-comparison"
+STEERER_PINNED_COMMIT = "5b1854dbc2d280f2326d67c65515d8baf9083810"
+DM_COUNT_PINNED_COMMIT = "cc5f2132e0d1328909f31b6d665b8e0b15c30467"
 
 
 def _rights(
@@ -88,6 +91,53 @@ def test_steerer_uses_the_exact_dm_count_validation_sample_identity() -> None:
     assert steerer["required_action"] == "research_checkpoint_evaluation"
     assert steerer["localization_radius"] == 16.0
     assert steerer["require_clean_git"] is True
+
+
+def test_checked_in_steerer_config_uses_the_official_steerer_commit() -> None:
+    config = json.loads(STEERER_CONFIG.read_text(encoding="utf-8"))
+
+    assert steerer_smoke.STEERER_PINNED_COMMIT == STEERER_PINNED_COMMIT
+    assert config["upstream_commit"] == STEERER_PINNED_COMMIT
+
+
+@pytest.mark.parametrize(
+    "wrong_commit",
+    [DM_COUNT_PINNED_COMMIT, "a" * 40],
+)
+def test_steerer_config_rejects_any_non_steerer_commit(
+    tmp_path: Path,
+    wrong_commit: str,
+) -> None:
+    config = json.loads(STEERER_CONFIG.read_text(encoding="utf-8"))
+    config["upstream_commit"] = wrong_commit
+    copied_config = tmp_path / "steerer-smoke.json"
+    copied_config.write_text(json.dumps(config), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="preserve the frozen DM-Count validation"):
+        load_steerer_smoke_config(copied_config)
+
+
+def test_steerer_config_commit_matches_candidate_code_source() -> None:
+    config = json.loads(STEERER_CONFIG.read_text(encoding="utf-8"))
+    candidate = json.loads(
+        (
+            REPO_ROOT
+            / "configs"
+            / "candidates"
+            / "steerer_ucf_qnrf.candidate.json"
+        ).read_text(encoding="utf-8")
+    )
+    code_components = [
+        component
+        for component in candidate["components"]
+        if component["component_type"] == "code"
+    ]
+
+    assert len(code_components) == 1
+    assert code_components[0]["source_url"] == (
+        "https://github.com/taohan10200/STEERER/tree/"
+        + config["upstream_commit"]
+    )
 
 
 def test_steerer_reuses_dm_count_sample_and_split_path_helpers() -> None:
