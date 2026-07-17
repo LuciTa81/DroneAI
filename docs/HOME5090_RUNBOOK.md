@@ -238,6 +238,34 @@ Stop after reviewing `score.md`, `summary.md`, `predictions.csv`,
 `split-source-manifest.json`, `model-brief.md`, and the 12 panels. Do not open
 the official test split or start training in this checkpoint.
 
+## STEERER UCF-QNRF frozen-checkpoint smoke
+
+STEERER reuses the exact DM-Count validation-list provenance, but the model and
+split-list upstreams are different repositories. Pass both explicitly:
+
+```bash
+cd /workspace
+. /workspace/.venvs/steerer/bin/activate
+python scripts/run_steerer_ucf_qnrf_smoke.py \
+  --config configs/evaluation/steerer_ucf_qnrf_smoke.json \
+  --train-root /workspace/data/datasets/ucf-qnrf-kaggle-apache/raw/UCF-QNRF_ECCV18/Train \
+  --upstream-dir /workspace/upstreams/STEERER \
+  --split-upstream-dir /workspace/upstreams/DM-Count \
+  --train-list /workspace/upstreams/DM-Count/preprocess/qnrf_train.txt \
+  --validation-list /workspace/upstreams/DM-Count/preprocess/qnrf_val.txt \
+  --checkpoint /workspace/data/checkpoints/steerer/<verified-checkpoint>.pth \
+  --checkpoint-sha256 <verified-checkpoint-sha256> \
+  --rights-decision /workspace/data/results/steerer/<rights-run>/rights-decision.json \
+  --rights-manifest configs/candidates/steerer_ucf_qnrf.candidate.json \
+  --output-dir /workspace/data/results/steerer/<new-run-id> \
+  --device cuda
+```
+
+The runner requires STEERER at `5b1854dbc2d280f2326d67c65515d8baf9083810`
+and the split-list checkout at
+`cc5f2132e0d1328909f31b6d665b8e0b15c30467`; both must be clean. The generated
+split-source manifest records both commits independently.
+
 ## Dataset transfer gate
 
 Do not execute this section until Stage 3C records dataset rights, intended

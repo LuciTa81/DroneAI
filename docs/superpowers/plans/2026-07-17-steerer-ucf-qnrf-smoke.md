@@ -475,6 +475,12 @@ Run `torch.load(path, map_location="cpu", weights_only=False)` in the isolated v
 
 Use the first ID from the frozen 36-sample manifest. Verify finite density, nonnegative mass, points within original image bounds, count-density agreement, CUDA synchronization, peak VRAM, and one composite panel.
 
+The runtime must receive the two pinned upstreams separately: use
+`--upstream-dir /workspace/upstreams/STEERER` for model code and
+`--split-upstream-dir /workspace/upstreams/DM-Count` for the frozen
+`qnrf_train.txt` / `qnrf_val.txt` provenance. Never point both arguments at one
+checkout.
+
 - [ ] **Step 7: Stop on compatibility failure**
 
 If Python 3.12/MMCV/PyTorch 2.9 compatibility fails, preserve logs and implement a separate Blackwell-compatible image or a tested adapter shim in a new plan. Do not patch the upstream tree or silently downgrade CUDA/Torch.

@@ -13,6 +13,7 @@ from droneai.dm_count_smoke import (
     validate_official_split_paths,
     write_split_source_manifest as _write_dm_count_split_source_manifest,
 )
+from droneai.dm_count_adapter import _git_head, _git_status
 from droneai.evaluation_runner import EvaluationProtocol
 from droneai.integrity import sha256_file
 from droneai.stage3c import REQUIRED_COMPONENTS, manifest_semantic_sha256
@@ -20,6 +21,7 @@ from droneai.stage3c import REQUIRED_COMPONENTS, manifest_semantic_sha256
 
 STEERER_CANDIDATE_ID = "steerer-official-ucf-qnrf-research-comparison"
 STEERER_PINNED_COMMIT = "5b1854dbc2d280f2326d67c65515d8baf9083810"
+SPLIT_UPSTREAM_PINNED_COMMIT = "cc5f2132e0d1328909f31b6d665b8e0b15c30467"
 RESEARCH_CHECKPOINT_ACTION = "research_checkpoint_evaluation"
 EVALUATION_SCOPE = "research_comparison_only"
 _DM_COUNT_CONFIG = (
@@ -34,6 +36,7 @@ _STEERER_CONFIG_OVERRIDES: dict[str, object] = {
     "protocol_id": "steerer-official-qnrf-val-smoke-v1",
     "model_id": "steerer-official-ucf-qnrf",
     "upstream_commit": STEERER_PINNED_COMMIT,
+    "split_upstream_commit": SPLIT_UPSTREAM_PINNED_COMMIT,
     "candidate_id": STEERER_CANDIDATE_ID,
     "required_action": RESEARCH_CHECKPOINT_ACTION,
     "localization_radius": 16.0,
@@ -75,6 +78,35 @@ def load_steerer_smoke_config(path: str | Path) -> dict[str, object]:
         raise ValueError("STEERER smoke config must be an object")
     _validate_steerer_smoke_config(payload)
     return payload
+
+
+def validate_steerer_split_upstream(
+    *,
+    split_upstream_dir: str | Path,
+    train_list_path: str | Path,
+    validation_list_path: str | Path,
+    expected_commit: str,
+) -> None:
+    """Validate the clean DM-Count checkout used only as frozen split provenance."""
+
+    root = Path(split_upstream_dir).resolve()
+    if expected_commit != SPLIT_UPSTREAM_PINNED_COMMIT:
+        raise ValueError("STEERER split upstream must use the pinned DM-Count commit")
+    if not root.is_dir():
+        raise FileNotFoundError(f"split upstream directory is missing: {root}")
+    validate_official_split_paths(
+        upstream_dir=root,
+        train_list_path=train_list_path,
+        validation_list_path=validation_list_path,
+    )
+    observed_commit = _git_head(root)
+    if observed_commit != expected_commit:
+        raise ValueError(
+            "split upstream commit mismatch: "
+            f"expected={expected_commit} observed={observed_commit}"
+        )
+    if _git_status(root):
+        raise ValueError("split upstream Git checkout must be clean")
 
 
 def _load_object(path: str | Path, *, label: str) -> dict[str, object]:
@@ -167,9 +199,15 @@ def write_split_source_manifest(
     prepared: PreparedSmoke,
     train_list_path: str | Path,
     validation_list_path: str | Path,
+    model_upstream_commit: str,
+    split_upstream_commit: str,
 ) -> Path:
     """Write the shared split provenance plus the STEERER research-only scope."""
 
+    if model_upstream_commit != STEERER_PINNED_COMMIT:
+        raise ValueError("split manifest model upstream commit is not pinned STEERER")
+    if split_upstream_commit != SPLIT_UPSTREAM_PINNED_COMMIT:
+        raise ValueError("split manifest split upstream commit is not pinned DM-Count")
     target = _write_dm_count_split_source_manifest(
         path,
         prepared=prepared,
@@ -178,6 +216,8 @@ def write_split_source_manifest(
     )
     payload = _load_object(target, label="split source manifest")
     payload["evaluation_scope"] = EVALUATION_SCOPE
+    payload["model_upstream_commit"] = model_upstream_commit
+    payload["split_upstream_commit"] = split_upstream_commit
     target.write_text(
         json.dumps(payload, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",

@@ -19,7 +19,7 @@ from droneai.steerer_smoke import (
     build_steerer_protocol,
     load_steerer_smoke_config,
     prepare_smoke_samples,
-    validate_official_split_paths,
+    validate_steerer_split_upstream,
     validate_steerer_rights_decision,
     write_split_source_manifest,
 )
@@ -35,6 +35,7 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--config", required=True, type=Path)
     parser.add_argument("--train-root", required=True, type=Path)
     parser.add_argument("--upstream-dir", required=True, type=Path)
+    parser.add_argument("--split-upstream-dir", required=True, type=Path)
     parser.add_argument("--train-list", required=True, type=Path)
     parser.add_argument("--validation-list", required=True, type=Path)
     parser.add_argument("--checkpoint", required=True, type=Path)
@@ -59,6 +60,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         "config": args.config.resolve(),
         "train_root": args.train_root.resolve(),
         "upstream_dir": args.upstream_dir.resolve(),
+        "split_upstream_dir": args.split_upstream_dir.resolve(),
         "train_list": args.train_list.resolve(),
         "validation_list": args.validation_list.resolve(),
         "checkpoint": args.checkpoint.resolve(),
@@ -71,10 +73,18 @@ def main(argv: Sequence[str] | None = None) -> int:
         manifest_path=paths["rights_manifest"],
         expected_candidate_id=str(config["candidate_id"]),
     )
-    validate_official_split_paths(
-        upstream_dir=paths["upstream_dir"],
+    validate_steerer_split_upstream(
+        split_upstream_dir=paths["split_upstream_dir"],
         train_list_path=paths["train_list"],
         validation_list_path=paths["validation_list"],
+        expected_commit=str(config["split_upstream_commit"]),
+    )
+    adapter = STEERERAdapter(
+        upstream_dir=paths["upstream_dir"],
+        expected_upstream_commit=str(config["upstream_commit"]),
+        checkpoint_path=paths["checkpoint"],
+        checkpoint_sha256=args.checkpoint_sha256,
+        device=args.device,
     )
     prepared = prepare_smoke_samples(
         config=config,
@@ -87,15 +97,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         prepared=prepared,
         train_list_path=paths["train_list"],
         validation_list_path=paths["validation_list"],
+        model_upstream_commit=str(config["upstream_commit"]),
+        split_upstream_commit=str(config["split_upstream_commit"]),
     )
 
-    adapter = STEERERAdapter(
-        upstream_dir=paths["upstream_dir"],
-        expected_upstream_commit=str(config["upstream_commit"]),
-        checkpoint_path=paths["checkpoint"],
-        checkpoint_sha256=args.checkpoint_sha256,
-        device=args.device,
-    )
     protocol = build_steerer_protocol(
         config,
         rights_decision_path=paths["rights_decision"],

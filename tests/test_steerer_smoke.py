@@ -10,10 +10,11 @@ from droneai import steerer_smoke
 from droneai.dm_count_smoke import PreparedSmoke, load_smoke_config
 from droneai.stage3c import REQUIRED_COMPONENTS, manifest_semantic_sha256
 from droneai.steerer_smoke import (
+    SPLIT_UPSTREAM_PINNED_COMMIT,
     build_steerer_protocol,
     load_steerer_smoke_config,
     prepare_smoke_samples,
-    validate_official_split_paths,
+    validate_steerer_split_upstream,
     validate_steerer_rights_decision,
     write_split_source_manifest,
 )
@@ -98,6 +99,8 @@ def test_checked_in_steerer_config_uses_the_official_steerer_commit() -> None:
 
     assert steerer_smoke.STEERER_PINNED_COMMIT == STEERER_PINNED_COMMIT
     assert config["upstream_commit"] == STEERER_PINNED_COMMIT
+    assert config["split_upstream_commit"] == DM_COUNT_PINNED_COMMIT
+    assert SPLIT_UPSTREAM_PINNED_COMMIT == DM_COUNT_PINNED_COMMIT
 
 
 @pytest.mark.parametrize(
@@ -110,6 +113,22 @@ def test_steerer_config_rejects_any_non_steerer_commit(
 ) -> None:
     config = json.loads(STEERER_CONFIG.read_text(encoding="utf-8"))
     config["upstream_commit"] = wrong_commit
+    copied_config = tmp_path / "steerer-smoke.json"
+    copied_config.write_text(json.dumps(config), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="preserve the frozen DM-Count validation"):
+        load_steerer_smoke_config(copied_config)
+
+
+@pytest.mark.parametrize("wrong_commit", [None, "a" * 40])
+def test_steerer_config_rejects_missing_or_wrong_split_upstream_commit(
+    tmp_path: Path, wrong_commit: str | None
+) -> None:
+    config = json.loads(STEERER_CONFIG.read_text(encoding="utf-8"))
+    if wrong_commit is None:
+        del config["split_upstream_commit"]
+    else:
+        config["split_upstream_commit"] = wrong_commit
     copied_config = tmp_path / "steerer-smoke.json"
     copied_config.write_text(json.dumps(config), encoding="utf-8")
 
@@ -142,7 +161,58 @@ def test_steerer_config_commit_matches_candidate_code_source() -> None:
 
 def test_steerer_reuses_dm_count_sample_and_split_path_helpers() -> None:
     assert prepare_smoke_samples is dm_count_smoke.prepare_smoke_samples
-    assert validate_official_split_paths is dm_count_smoke.validate_official_split_paths
+
+
+@pytest.mark.parametrize(
+    ("observed_head", "observed_status", "message"),
+    [
+        ("a" * 40, "", "commit mismatch"),
+        (DM_COUNT_PINNED_COMMIT, "?? untracked.txt", "must be clean"),
+    ],
+)
+def test_split_upstream_rejects_mismatched_or_dirty_checkout_before_data_work(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    observed_head: str,
+    observed_status: str,
+    message: str,
+) -> None:
+    split_upstream = tmp_path / "DM-Count"
+    preprocess = split_upstream / "preprocess"
+    preprocess.mkdir(parents=True)
+    train_list = preprocess / "qnrf_train.txt"
+    validation_list = preprocess / "qnrf_val.txt"
+    monkeypatch.setattr(steerer_smoke, "_git_head", lambda _path: observed_head)
+    monkeypatch.setattr(steerer_smoke, "_git_status", lambda _path: observed_status)
+
+    with pytest.raises(ValueError, match=message):
+        validate_steerer_split_upstream(
+            split_upstream_dir=split_upstream,
+            train_list_path=train_list,
+            validation_list_path=validation_list,
+            expected_commit=DM_COUNT_PINNED_COMMIT,
+        )
+
+
+def test_split_upstream_accepts_exact_clean_dm_count_checkout(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    split_upstream = tmp_path / "DM-Count"
+    preprocess = split_upstream / "preprocess"
+    preprocess.mkdir(parents=True)
+    train_list = preprocess / "qnrf_train.txt"
+    validation_list = preprocess / "qnrf_val.txt"
+    monkeypatch.setattr(
+        steerer_smoke, "_git_head", lambda _path: DM_COUNT_PINNED_COMMIT
+    )
+    monkeypatch.setattr(steerer_smoke, "_git_status", lambda _path: "")
+
+    validate_steerer_split_upstream(
+        split_upstream_dir=split_upstream,
+        train_list_path=train_list,
+        validation_list_path=validation_list,
+        expected_commit=DM_COUNT_PINNED_COMMIT,
+    )
 
 
 def test_steerer_config_copy_cannot_change_the_frozen_sample_identity(
@@ -295,12 +365,44 @@ def test_split_manifest_records_research_comparison_scope(tmp_path: Path) -> Non
         prepared=prepared,
         train_list_path=tmp_path / "qnrf_train.txt",
         validation_list_path=tmp_path / "qnrf_val.txt",
+        model_upstream_commit=STEERER_PINNED_COMMIT,
+        split_upstream_commit=DM_COUNT_PINNED_COMMIT,
     )
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
 
     assert manifest["evaluation_scope"] == "research_comparison_only"
+    assert manifest["model_upstream_commit"] == STEERER_PINNED_COMMIT
+    assert manifest["split_upstream_commit"] == DM_COUNT_PINNED_COMMIT
     assert manifest["test_root_argument_exposed"] is False
     assert manifest["test_data_access"] == "not_possible_through_adapter_api"
+
+
+def test_split_manifest_rejects_wrong_identity_without_partial_output(
+    tmp_path: Path,
+) -> None:
+    target = tmp_path / "split-source-manifest.json"
+    prepared = PreparedSmoke(
+        samples=(),
+        selected_records=(),
+        source_train_count=1201,
+        train_count=1081,
+        validation_count=120,
+        split_verified=True,
+        train_list_sha256="a" * 64,
+        validation_list_sha256="b" * 64,
+    )
+
+    with pytest.raises(ValueError, match="model upstream commit"):
+        write_split_source_manifest(
+            target,
+            prepared=prepared,
+            train_list_path=tmp_path / "qnrf_train.txt",
+            validation_list_path=tmp_path / "qnrf_val.txt",
+            model_upstream_commit="a" * 40,
+            split_upstream_commit=DM_COUNT_PINNED_COMMIT,
+        )
+
+    assert not target.exists()
 
 
 def test_protocol_references_research_decision_without_test_approval(

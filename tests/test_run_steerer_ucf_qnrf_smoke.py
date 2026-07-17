@@ -12,6 +12,7 @@ REQUIRED_DESTINATIONS = {
     "config",
     "train_root",
     "upstream_dir",
+    "split_upstream_dir",
     "train_list",
     "validation_list",
     "checkpoint",
@@ -35,6 +36,7 @@ FORBIDDEN_DESTINATIONS = {
     "resume",
 }
 STEERER_PINNED_COMMIT = "5b1854dbc2d280f2326d67c65515d8baf9083810"
+SPLIT_UPSTREAM_PINNED_COMMIT = "cc5f2132e0d1328909f31b6d665b8e0b15c30467"
 
 
 def valid_args(*, output_dir: Path) -> list[str]:
@@ -46,6 +48,8 @@ def valid_args(*, output_dir: Path) -> list[str]:
         str(root / "train"),
         "--upstream-dir",
         str(root / "upstream"),
+        "--split-upstream-dir",
+        str(root / "split-upstream"),
         "--train-list",
         str(root / "train.txt"),
         "--validation-list",
@@ -108,6 +112,7 @@ def test_fake_end_to_end_returns_common_report_status(
     calls: dict[str, object] = {}
     config = {
         "upstream_commit": STEERER_PINNED_COMMIT,
+        "split_upstream_commit": SPLIT_UPSTREAM_PINNED_COMMIT,
         "candidate_id": "steerer-official-ucf-qnrf-research-comparison",
     }
     prepared = SimpleNamespace(samples=("fake-sample",), split_verified=True)
@@ -124,8 +129,8 @@ def test_fake_end_to_end_returns_common_report_status(
     )
     monkeypatch.setattr(
         runner,
-        "validate_official_split_paths",
-        lambda **kwargs: calls.setdefault("split_paths", kwargs),
+        "validate_steerer_split_upstream",
+        lambda **kwargs: calls.setdefault("split_upstream", kwargs),
     )
     monkeypatch.setattr(
         runner,
@@ -172,6 +177,19 @@ def test_fake_end_to_end_returns_common_report_status(
         "checkpoint_sha256": "a" * 64,
         "device": "cpu",
     }
+    assert calls["split_upstream"] == {
+        "split_upstream_dir": (tmp_path / "split-upstream").resolve(),
+        "train_list_path": (tmp_path / "train.txt").resolve(),
+        "validation_list_path": (tmp_path / "validation.txt").resolve(),
+        "expected_commit": SPLIT_UPSTREAM_PINNED_COMMIT,
+    }
+    assert calls["manifest_kwargs"] == {
+        "prepared": prepared,
+        "train_list_path": (tmp_path / "train.txt").resolve(),
+        "validation_list_path": (tmp_path / "validation.txt").resolve(),
+        "model_upstream_commit": STEERER_PINNED_COMMIT,
+        "split_upstream_commit": SPLIT_UPSTREAM_PINNED_COMMIT,
+    }
     assert calls["rights_kwargs"] == (
         ((tmp_path / "rights-decision.json").resolve(),),
         {
@@ -209,6 +227,42 @@ def test_rights_exceptions_are_not_converted_to_gate_failures(
     )
 
     with pytest.raises(PermissionError, match="rights denied"):
+        runner.main(valid_args(output_dir=output))
+
+
+def test_split_upstream_failure_stops_before_sample_or_adapter_work(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    output = tmp_path / "run"
+    monkeypatch.setattr(
+        runner,
+        "load_steerer_smoke_config",
+        lambda _path: {
+            "upstream_commit": STEERER_PINNED_COMMIT,
+            "split_upstream_commit": SPLIT_UPSTREAM_PINNED_COMMIT,
+            "candidate_id": "steerer-official-ucf-qnrf-research-comparison",
+        },
+    )
+    monkeypatch.setattr(
+        runner, "validate_steerer_rights_decision", lambda *args, **kwargs: None
+    )
+    monkeypatch.setattr(
+        runner,
+        "validate_steerer_split_upstream",
+        lambda **kwargs: (_ for _ in ()).throw(ValueError("split checkout dirty")),
+    )
+    monkeypatch.setattr(
+        runner,
+        "prepare_smoke_samples",
+        lambda **kwargs: pytest.fail("sample indexing ran after split failure"),
+    )
+    monkeypatch.setattr(
+        runner,
+        "STEERERAdapter",
+        lambda **kwargs: pytest.fail("adapter constructed after split failure"),
+    )
+
+    with pytest.raises(ValueError, match="split checkout dirty"):
         runner.main(valid_args(output_dir=output))
 
 
