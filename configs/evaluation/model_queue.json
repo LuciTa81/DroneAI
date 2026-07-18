@@ -285,6 +285,12 @@
           "artifact_kind": "preflight_record",
           "path": "csrnet/csrnet-preflight-3ee5a07/preflight.json",
           "sha256": "d4417db607340f21efebb5faffe32c841136a7e6e6ef4a5462b5413f560f90f5"
+        },
+        {
+          "gate": "one_sample",
+          "artifact_kind": "one_sample_result",
+          "path": "csrnet/csrnet-one-sample-3db05c2/result.json",
+          "sha256": "febfda43b5f784e7c9987b0554b43bc9e2b938ce7e6b4325b1266e2b6547d2ab"
         }
       ]
     }

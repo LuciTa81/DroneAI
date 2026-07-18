@@ -232,7 +232,7 @@ def test_benchmark_requires_explicit_user_approval(tmp_path: Path) -> None:
     assert_action_allowed(status, "benchmark", user_approved=True)
 
 
-def test_repository_queue_completes_apgcc_and_activates_csrnet_rights() -> None:
+def test_repository_queue_completes_apgcc_and_accepts_csrnet_one_sample() -> None:
     queue = load_model_queue(Path("configs/evaluation/model_queue.json"))
     models = {model["model_id"]: model for model in queue["models"]}
 
@@ -289,8 +289,11 @@ def test_repository_queue_completes_apgcc_and_activates_csrnet_rights() -> None:
         ("rights", "rights_decision"),
         ("rights", "manifest_snapshot"),
         ("preflight", "preflight_record"),
+        ("one_sample", "one_sample_result"),
     ]
-    decision, snapshot, preflight = models["csrnet"]["accepted_evidence"]
+    decision, snapshot, preflight, one_sample = models["csrnet"][
+        "accepted_evidence"
+    ]
     assert decision["path"] == (
         "csrnet/csrnet-rights-e0cebe3/rights-decision.json"
     )
@@ -308,4 +311,10 @@ def test_repository_queue_completes_apgcc_and_activates_csrnet_rights() -> None:
     )
     assert preflight["sha256"] == (
         "d4417db607340f21efebb5faffe32c841136a7e6e6ef4a5462b5413f560f90f5"
+    )
+    assert one_sample["path"] == (
+        "csrnet/csrnet-one-sample-3db05c2/result.json"
+    )
+    assert one_sample["sha256"] == (
+        "febfda43b5f784e7c9987b0554b43bc9e2b938ce7e6b4325b1266e2b6547d2ab"
     )

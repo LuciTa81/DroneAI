@@ -1,0 +1,111 @@
+{
+  "annotation_sha256": "12050f0ee82ae56e936d42000847b38b6b9e3dfaf240d92a9a50bb921d2ed3f2",
+  "checkpoint_sha256": "7093f29f1469fb4e3a80781fda03665848689ada59c5a13d1b49940b230755e6",
+  "comparison_scope": "compatibility_smoke",
+  "compatibility_checks": {
+    "checkpoint_loaded_strictly": true,
+    "density_finite_nonnegative": true,
+    "density_sum_matches_count": true,
+    "native_density_present": true,
+    "runtime_metrics_finite": true,
+    "successful_forward": true
+  },
+  "dataset_id": "ucf-qnrf-kaggle-apache",
+  "environment_sha256": "fdf30ed4b8d479f16aeab56d6d2e9f20c274605344a46005a35e6ba575cf9eb5",
+  "evaluation_scope": "research_comparison_only",
+  "failure_state": null,
+  "gate": "one_sample",
+  "ground_truth_count": 1453.0,
+  "native_density_shape": [
+    356,
+    536
+  ],
+  "native_density_sum": 1242.8494335834403,
+  "negative_density_policy": "clip_zero_preserve_raw_audit",
+  "panel": {
+    "path": "one-sample-panel.png",
+    "sha256": "bdab63af1373c34671879a8d5ac695386ae65773264348a22cfd7c570bd708ec"
+  },
+  "parameter_count": 16263489,
+  "predicted_count": 1242.8494335834403,
+  "prediction_metadata": {
+    "backend_latency_ms": 222.95553800358903,
+    "backend_peak_vram_mb": 12131.7919921875,
+    "checkpoint_missing_key_count": 0,
+    "checkpoint_unexpected_key_count": 0,
+    "evaluation_density_height": 356,
+    "evaluation_density_width": 536,
+    "expected_native_density_height": 356,
+    "expected_native_density_width": 536,
+    "forward_completed": true,
+    "native_density_height": 356,
+    "native_density_max": 0.7171254754066467,
+    "native_density_min": -0.0026459870859980583,
+    "native_density_width": 536,
+    "native_negative_fraction": 0.16407953211470735,
+    "native_negative_mass": 13.103471918031573,
+    "native_negative_values": 31309,
+    "native_positive_mass": 1242.8494335834403,
+    "native_raw_sum": 1229.7459616654087,
+    "negative_density_policy": "clip_zero_preserve_raw_audit",
+    "normalization": "ImageNet RGB mean/std",
+    "operational_clipped_values": 31309,
+    "operational_count_method": "sum(max(raw_density, 0))",
+    "operational_density_sum": 1242.8494335834403,
+    "output_stride": 8,
+    "raw_density_audit_retained": true,
+    "retain_native_requested": true,
+    "spatial_output_label": "operational clipped density"
+  },
+  "ranking_eligible": false,
+  "raw_density_audit": {
+    "dtype": "float32",
+    "path": "raw-density-audit.npz",
+    "sha256": "8cf048520d62f38bd1930e3e911dfb97ad84334c73c32136987d3dc842297dde",
+    "shape": [
+      356,
+      536
+    ],
+    "storage_policy": "ssd_only_not_git"
+  },
+  "record": {
+    "absolute_error": 210.15056641655974,
+    "condition_values": {
+      "density_band": "medium",
+      "source_partition": "official_validation"
+    },
+    "density_band": "medium",
+    "extra_metrics": {
+      "density_psnr": 27.38360789037101,
+      "density_ssim": 0.8116713803792562,
+      "density_zone_mae": 79.34677738975734,
+      "game_l1": 317.38710955902934,
+      "predicted_mass": 1242.8494335834403,
+      "zone_mae": 79.34677738975734
+    },
+    "failure_state": null,
+    "ground_truth_count": 1453.0,
+    "latency_ms": 222.95553800358903,
+    "normalized_error": 0.14463218610912576,
+    "output_type": "density",
+    "peak_vram_mb": 12131.7919921875,
+    "predicted_count": 1242.8494335834403,
+    "sample_id": "img_0067",
+    "signed_error": -210.15056641655974,
+    "spatial_metric_name": "game_l1",
+    "spatial_metric_value": 317.38710955902934
+  },
+  "rights_decision_sha256": "314f25024519978f73b6adfab21d51ca2296bdc3ff8d2e8fffbaa762f06cb509",
+  "rights_manifest_sha256": "cd846afbc3556d4876ab6c670ada6d3870b76fb056f5f78184a73982d6b73295",
+  "rights_scope": "PASS_COMMERCIAL_CANDIDATE",
+  "sample_id": "img_0067",
+  "schema_version": 1,
+  "seed": 20260715,
+  "source_sha256": "0ae12709e570308bbdbfb860b7ac6f8a9df2df71ab844c57df63433bb9d3ec1c",
+  "split_id": "dm-count-upstream-qnrf-val-smoke-36-v1",
+  "split_manifest_sha256": "3f2ebdf2af46b1f77d094b070cdb48fdeced474d7898e6094657881f8bcab7f0",
+  "split_role": "validation",
+  "status": "PASS",
+  "technical_score": 100.0,
+  "upstream_commit": "ed29d895989c188cb913a9503721271c6cf1ab1f"
+}
