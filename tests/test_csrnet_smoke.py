@@ -71,3 +71,23 @@ def test_csrnet_rights_reject_research_only_decision(tmp_path: Path) -> None:
             manifest_path=MANIFEST,
             expected_candidate_id=smoke.CSRNET_CANDIDATE_ID,
         )
+
+
+def test_csrnet_protocol_is_frozen_validation_density_compatibility(
+    tmp_path: Path,
+) -> None:
+    smoke = _smoke()
+    protocol = smoke.build_csrnet_protocol(
+        smoke.load_csrnet_smoke_config(CONFIG),
+        rights_decision_path=_rights(tmp_path),
+        rights_manifest_path=MANIFEST,
+        split_verified=True,
+    )
+
+    assert protocol.expected_samples == 36
+    assert protocol.split_role == "validation"
+    assert protocol.checkpoint_training_split_status == "VERIFIED_DISJOINT"
+    assert protocol.comparison_scope == "compatibility_smoke"
+    assert protocol.spatial_metric_name == "game_l1"
+    assert protocol.spatial_direction == "minimize"
+    assert protocol.sealed_test_access_approved is False

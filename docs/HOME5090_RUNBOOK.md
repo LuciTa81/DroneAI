@@ -417,6 +417,35 @@ and zone outputs use `max(raw_density, 0)`. Any non-finite raw density still
 fails closed. Stop after this gate; the 36-image benchmark requires separate
 approval.
 
+### CSRNet frozen 36-image validation benchmark
+
+Run only after compact workflow status reports `next_action=benchmark` and the
+user explicitly approves the benchmark in the current request. The runner has
+no test, training, fine-tuning, or single-sample arguments.
+
+```bash
+cd /workspace
+/workspace/.venvs/harness/bin/python scripts/run_csrnet_ucf_qnrf_smoke.py \
+  --config configs/evaluation/csrnet_ucf_qnrf_smoke.json \
+  --train-root /workspace/data/datasets/ucf-qnrf-kaggle-apache/raw/UCF-QNRF_ECCV18/Train \
+  --upstream-dir /workspace/upstreams/CSRNet-pytorch \
+  --split-upstream-dir /workspace/upstreams/DM-Count \
+  --train-list /workspace/upstreams/DM-Count/preprocess/qnrf_train.txt \
+  --validation-list /workspace/upstreams/DM-Count/preprocess/qnrf_val.txt \
+  --checkpoint /workspace/data/checkpoints/csrnet/safe/csrnet-official-shha-mae66.4-state-dict.pth \
+  --checkpoint-sha256 7093f29f1469fb4e3a80781fda03665848689ada59c5a13d1b49940b230755e6 \
+  --rights-decision /workspace/data/results/csrnet/csrnet-rights-e0cebe3/rights-decision.json \
+  --rights-manifest configs/candidates/csrnet_shha_to_ucf_qnrf.candidate.json \
+  --output-dir /workspace/data/results/csrnet/csrnet-ucf-qnrf-val-smoke-<commit> \
+  --device cuda
+```
+
+The common harness must record exactly 36 validation predictions, all raw signed
+density summary metadata, metrics and score files, a 12-panel selection manifest,
+and an evidence manifest. Full raw arrays are not duplicated for all 36 samples;
+the accepted one-sample raw audit remains on SSD. Stop for review before changing
+the active model.
+
 ## Dataset transfer gate
 
 Do not execute this section until Stage 3C records dataset rights, intended
