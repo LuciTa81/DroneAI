@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import math
 import sys
 from dataclasses import asdict
 from pathlib import Path
@@ -21,11 +22,75 @@ from droneai.apgcc_smoke import (
     write_split_source_manifest,
 )
 from droneai.evaluation_artifacts import write_json
+from droneai.evaluation_contract import NativePrediction
 from droneai.evaluation_metrics import evaluate_sample
 from droneai.evaluation_panels import render_review_panel
 from droneai.integrity import sha256_file
 from droneai.model_brief import write_model_brief
 from droneai.runtime_probe import collect_environment
+
+
+def compatibility_checks(
+    prediction: NativePrediction,
+) -> tuple[dict[str, bool], float]:
+    success = prediction.failure_state is None and prediction.predicted_count is not None
+    width = prediction.metadata.get("original_width")
+    height = prediction.metadata.get("original_height")
+    point_output = bool(success and prediction.output_type == "points")
+    points_valid = bool(
+        point_output
+        and isinstance(width, int)
+        and isinstance(height, int)
+        and width > 0
+        and height > 0
+        and all(
+            math.isfinite(x)
+            and math.isfinite(y)
+            and 0 <= x < width
+            and 0 <= y < height
+            for x, y in prediction.points
+        )
+    )
+    confidences_valid = bool(
+        point_output
+        and len(prediction.point_confidences) == len(prediction.points)
+        and all(
+            math.isfinite(value) and 0.0 <= value <= 1.0
+            for value in prediction.point_confidences
+        )
+    )
+    count_matches = bool(
+        point_output
+        and math.isclose(
+            float(prediction.predicted_count),
+            float(len(prediction.points)),
+            rel_tol=0.0,
+            abs_tol=1e-9,
+        )
+    )
+    checkpoint_strict = bool(
+        success
+        and prediction.metadata.get("missing_checkpoint_key_count") == 0
+        and prediction.metadata.get("unexpected_checkpoint_key_count") == 0
+    )
+    runtime_valid = bool(
+        success
+        and math.isfinite(prediction.latency_ms)
+        and prediction.latency_ms > 0
+        and math.isfinite(prediction.peak_vram_mb)
+        and prediction.peak_vram_mb >= 0
+    )
+    checks = {
+        "successful_forward": bool(success),
+        "native_point_output": point_output,
+        "points_finite_in_bounds": points_valid,
+        "point_confidences_aligned": confidences_valid,
+        "point_count_matches_output": count_matches,
+        "checkpoint_loaded_strictly": checkpoint_strict,
+        "runtime_metrics_finite": runtime_valid,
+    }
+    score = 100.0 * sum(checks.values()) / len(checks)
+    return checks, score
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -118,6 +183,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     brief = adapter.brief()
     brief.require_full_run_approval()
     prediction = adapter.predict(sample, retain_native=True)
+    checks, technical_score = compatibility_checks(prediction)
     record = evaluate_sample(
         sample,
         prediction,
@@ -141,10 +207,11 @@ def main(argv: Sequence[str] | None = None) -> int:
             zone_critical_count=float(targets["zone_critical_count"]),
             category="one_sample_compatibility",
         )
+    passed = prediction.failure_state is None and technical_score == 100.0
     result = {
         "schema_version": 1,
-        "status": "PASS" if prediction.failure_state is None else "FAIL",
-        "technical_score": 100.0 if prediction.failure_state is None else 0.0,
+        "status": "PASS" if passed else "FAIL",
+        "technical_score": technical_score,
         "gate": "one_sample",
         "evaluation_scope": "research_comparison_only",
         "comparison_scope": str(config["comparison_scope"]),
@@ -162,10 +229,13 @@ def main(argv: Sequence[str] | None = None) -> int:
         "record": asdict(record),
         "prediction_metadata": prediction.metadata,
         "point_confidence_count": len(prediction.point_confidences),
+        "compatibility_checks": checks,
         "parameter_count": brief.parameter_count,
         "upstream_commit": brief.upstream_commit,
         "checkpoint_sha256": brief.checkpoint_sha256,
+        "rights_scope": brief.rights_status,
         "rights_decision_sha256": sha256_file(paths["rights"]),
+        "rights_manifest_sha256": sha256_file(paths["manifest"]),
         "split_manifest_sha256": sha256_file(split_manifest),
         "environment_sha256": sha256_file(environment_path),
         "panel": None
@@ -177,7 +247,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         f"APGCC one-sample {result['status']}: sample={sample.sample_id} "
         f"gt={sample.ground_truth_count} pred={prediction.predicted_count}"
     )
-    return 0 if prediction.failure_state is None else 2
+    return 0 if passed else 2
 
 
 if __name__ == "__main__":
