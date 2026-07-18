@@ -56,7 +56,7 @@ def _identity(path: str | Path) -> dict[str, object]:
 def capture_preflight(
     *,
     environment: dict[str, object],
-    git_commit: str,
+    repo_path: str | Path,
     upstream_path: str | Path,
     expected_upstream_commit: str,
     checkpoint_path: str | Path,
@@ -70,10 +70,17 @@ def capture_preflight(
     cuda = environment.get("cuda")
     if not isinstance(cuda, dict) or cuda.get("cuda_available") is not True:
         raise ValueError("environment verification must prove CUDA availability")
-    if len(git_commit) != 40 or any(character not in "0123456789abcdef" for character in git_commit):
-        raise ValueError("git_commit must be a lowercase 40-character SHA-1")
-
     command_runner = runner or _run
+    repo = Path(repo_path)
+    repo_dirty = _git_output(command_runner, repo, "status", "--porcelain")
+    if repo_dirty:
+        raise ValueError(f"DroneAI repository is dirty: {repo_dirty}")
+    git_commit = _git_output(command_runner, repo, "rev-parse", "HEAD")
+    if len(git_commit) != 40 or any(
+        character not in "0123456789abcdef" for character in git_commit
+    ):
+        raise ValueError("DroneAI HEAD must be a lowercase 40-character SHA-1")
+
     upstream = Path(upstream_path)
     dirty = _git_output(command_runner, upstream, "status", "--porcelain")
     if dirty:
@@ -92,7 +99,7 @@ def capture_preflight(
         "model_id": "mpcount",
         "created_at_utc": datetime.now(timezone.utc).isoformat(),
         "inference_executed": False,
-        "git_commit": git_commit,
+        "git": {"path": str(repo), "commit": git_commit, "clean": True},
         "upstream": {"path": str(upstream), "commit": actual_commit, "clean": True},
         "checkpoint": _identity(checkpoint_path),
         "dataset_config": _identity(dataset_config_path),
@@ -107,7 +114,7 @@ def _parser() -> argparse.ArgumentParser:
         description="Capture MPCount preflight identities without inference."
     )
     parser.add_argument("--environment-json", required=True, type=Path)
-    parser.add_argument("--git-commit", required=True)
+    parser.add_argument("--repo", required=True, type=Path)
     parser.add_argument("--upstream", required=True, type=Path)
     parser.add_argument("--expected-upstream-commit", required=True)
     parser.add_argument("--checkpoint", required=True, type=Path)
@@ -124,7 +131,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         environment = json.loads(args.environment_json.read_text(encoding="utf-8"))
         payload = capture_preflight(
             environment=environment,
-            git_commit=args.git_commit,
+            repo_path=args.repo,
             upstream_path=args.upstream,
             expected_upstream_commit=args.expected_upstream_commit,
             checkpoint_path=args.checkpoint,

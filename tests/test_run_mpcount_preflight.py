@@ -16,16 +16,28 @@ def _preflight():
 
 
 class GitRunner:
-    def __init__(self, *, commit: str = UPSTREAM_COMMIT, dirty: str = "") -> None:
-        self.commit = commit
-        self.dirty = dirty
+    def __init__(
+        self,
+        *,
+        upstream_commit: str = UPSTREAM_COMMIT,
+        upstream_dirty: str = "",
+        repo_commit: str = "d" * 40,
+        repo_dirty: str = "",
+    ) -> None:
+        self.upstream_commit = upstream_commit
+        self.upstream_dirty = upstream_dirty
+        self.repo_commit = repo_commit
+        self.repo_dirty = repo_dirty
 
     def __call__(self, command: Sequence[str]) -> subprocess.CompletedProcess[str]:
         call = tuple(str(part) for part in command)
+        is_repo = Path(call[2]).name == "DroneAI"
         if call[-2:] == ("rev-parse", "HEAD"):
-            return subprocess.CompletedProcess(call, 0, self.commit + "\n", "")
+            commit = self.repo_commit if is_repo else self.upstream_commit
+            return subprocess.CompletedProcess(call, 0, commit + "\n", "")
         if call[-2:] == ("status", "--porcelain"):
-            return subprocess.CompletedProcess(call, 0, self.dirty, "")
+            dirty = self.repo_dirty if is_repo else self.upstream_dirty
+            return subprocess.CompletedProcess(call, 0, dirty, "")
         raise AssertionError(f"unexpected command: {call}")
 
 
@@ -39,7 +51,7 @@ def test_capture_preflight_hashes_all_frozen_identities(tmp_path: Path) -> None:
     preflight = _preflight()
     result = preflight.capture_preflight(
         environment={"status": "PASS", "cuda": {"cuda_available": True}},
-        git_commit="d" * 40,
+        repo_path=tmp_path / "DroneAI",
         upstream_path=tmp_path / "MPCount",
         expected_upstream_commit=UPSTREAM_COMMIT,
         checkpoint_path=_artifact(tmp_path / "checkpoint.pth", b"checkpoint"),
@@ -50,6 +62,8 @@ def test_capture_preflight_hashes_all_frozen_identities(tmp_path: Path) -> None:
     )
 
     assert result["status"] == "PASS"
+    assert result["git"]["commit"] == "d" * 40
+    assert result["git"]["clean"] is True
     assert result["upstream"]["commit"] == UPSTREAM_COMMIT
     assert result["checkpoint"]["sha256"] == preflight.sha256_file(
         tmp_path / "checkpoint.pth"
@@ -68,8 +82,9 @@ def test_capture_preflight_hashes_all_frozen_identities(tmp_path: Path) -> None:
 @pytest.mark.parametrize(
     ("runner", "message"),
     [
-        (GitRunner(dirty=" M models/models.py\n"), "dirty"),
-        (GitRunner(commit="f" * 40), "commit mismatch"),
+        (GitRunner(upstream_dirty=" M models/models.py\n"), "upstream repository is dirty"),
+        (GitRunner(upstream_commit="f" * 40), "upstream commit mismatch"),
+        (GitRunner(repo_dirty=" M scripts/run_mpcount_preflight.py\n"), "DroneAI repository is dirty"),
     ],
 )
 def test_capture_preflight_rejects_dirty_or_wrong_upstream(
@@ -79,7 +94,7 @@ def test_capture_preflight_rejects_dirty_or_wrong_upstream(
     with pytest.raises(ValueError, match=message):
         preflight.capture_preflight(
             environment={"status": "PASS", "cuda": {"cuda_available": True}},
-            git_commit="d" * 40,
+            repo_path=tmp_path / "DroneAI",
             upstream_path=tmp_path / "MPCount",
             expected_upstream_commit=UPSTREAM_COMMIT,
             checkpoint_path=_artifact(tmp_path / "checkpoint.pth", b"checkpoint"),
