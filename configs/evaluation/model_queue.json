@@ -165,6 +165,12 @@
           "artifact_kind": "manifest_snapshot",
           "path": "mpcount/mpcount-rights-3911238/manifest.snapshot.json",
           "sha256": "f64ed7cd54e6643a9d082345c34e4a5534c4090a88ef92f13add4fd22b09badb"
+        },
+        {
+          "gate": "preflight",
+          "artifact_kind": "preflight_record",
+          "path": "mpcount/mpcount-preflight-d6d8f93/preflight.json",
+          "sha256": "695a5c51e02ada281c4cd1b9820738ebc889a310625d57affcaadc7ca86cbf4b"
         }
       ]
     },
