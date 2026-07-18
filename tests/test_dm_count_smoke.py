@@ -105,6 +105,8 @@ def test_smoke_config_freezes_official_non_test_protocol() -> None:
 
     assert config["expected_samples"] == 36
     assert config["split_role"] == "validation"
+    assert config["checkpoint_training_split_status"] == "VERIFIED_DISJOINT"
+    assert config["comparison_scope"] == "compatibility_smoke"
     assert config["sealed_test_access_approved"] is False
     assert config["upstream_commit"] == "cc5f2132e0d1328909f31b6d665b8e0b15c30467"
     assert config["required_action"] == "frozen_checkpoint_evaluation"
@@ -191,6 +193,8 @@ def test_protocol_references_the_exact_rights_decision(tmp_path: Path) -> None:
     )
 
     assert protocol.split_role == "validation"
+    assert protocol.checkpoint_training_split_status == "VERIFIED_DISJOINT"
+    assert protocol.comparison_scope == "compatibility_smoke"
     assert protocol.expected_samples == 36
     assert protocol.sealed_test_access_approved is False
     assert len(protocol.rights_decision_sha256) == 64

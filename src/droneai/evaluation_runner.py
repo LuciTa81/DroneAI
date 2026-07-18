@@ -9,6 +9,7 @@ from typing import Literal, Sequence
 
 import numpy as np
 
+from droneai.comparison_claim import is_ranking_eligible, validate_comparison_claim
 from droneai.evaluation_artifacts import (
     REVIEW_BUDGET_BYTES,
     artifact_reference,
@@ -46,6 +47,9 @@ class EvaluationProtocol:
     expected_samples: int
     split_verified: bool
     leakage_free: bool
+    checkpoint_training_split_status: str
+    comparison_scope: str
+    checkpoint_split_evidence: str
     sealed_test_access_approved: bool
     require_clean_git: bool
     rights_decision_path: str
@@ -143,6 +147,11 @@ class EvaluationProtocol:
             raise ValueError(
                 "critical zone threshold must be at least the warning threshold"
             )
+        validate_comparison_claim(
+            self.checkpoint_training_split_status,
+            self.comparison_scope,
+            self.checkpoint_split_evidence,
+        )
 
 
 def _spatial_pass(
@@ -400,6 +409,15 @@ def run_evaluation(
             "split_id": protocol.split_id,
             "split_role": protocol.split_role,
             "expected_samples": protocol.expected_samples,
+            "checkpoint_training_split_status": (
+                protocol.checkpoint_training_split_status
+            ),
+            "comparison_scope": protocol.comparison_scope,
+            "checkpoint_split_evidence": protocol.checkpoint_split_evidence,
+            "ranking_eligible": is_ranking_eligible(
+                protocol.checkpoint_training_split_status,
+                protocol.comparison_scope,
+            ),
             "samples": [
                 {
                     "sample_id": sample.sample_id,
@@ -520,6 +538,10 @@ def run_evaluation(
                 f"- Model: `{brief.model_id}`",
                 f"- Protocol: `{protocol.protocol_id}`",
                 f"- Dataset/split: `{protocol.dataset_id}` / `{protocol.split_id}` ({protocol.split_role})",
+                f"- Comparison scope: `{protocol.comparison_scope}`",
+                f"- Checkpoint training split: `{protocol.checkpoint_training_split_status}`",
+                f"- Ranking eligible: `{is_ranking_eligible(protocol.checkpoint_training_split_status, protocol.comparison_scope)}`",
+                f"- Checkpoint split evidence: {protocol.checkpoint_split_evidence}",
                 f"- Samples: {summary['successful_samples']} successful, {summary['failures']} explicit failures",
                 f"- MAE/RMSE/bias: {float(summary['mae']):.4f} / {float(summary['rmse']):.4f} / {float(summary['signed_bias']):.4f}",
                 f"- Spatial: `{protocol.spatial_metric_name}` mean={summary['spatial_mean']} direction={protocol.spatial_direction}",
@@ -566,6 +588,17 @@ def run_evaluation(
         {
             "schema_version": 1,
             "protocol": asdict(protocol),
+            "comparison_claim": {
+                "checkpoint_training_split_status": (
+                    protocol.checkpoint_training_split_status
+                ),
+                "comparison_scope": protocol.comparison_scope,
+                "checkpoint_split_evidence": protocol.checkpoint_split_evidence,
+                "ranking_eligible": is_ranking_eligible(
+                    protocol.checkpoint_training_split_status,
+                    protocol.comparison_scope,
+                ),
+            },
             "checkpoint": {
                 "path": brief.checkpoint_path,
                 "sha256": brief.checkpoint_sha256,

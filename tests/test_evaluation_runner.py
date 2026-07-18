@@ -159,6 +159,9 @@ def _fixture(tmp_path: Path) -> tuple[FixtureAdapter, list[EvaluationSample], Ev
         expected_samples=36,
         split_verified=True,
         leakage_free=True,
+        checkpoint_training_split_status="UNKNOWN",
+        comparison_scope="compatibility_smoke",
+        checkpoint_split_evidence="synthetic fixture checkpoint membership is unknown",
         sealed_test_access_approved=False,
         require_clean_git=False,
         rights_decision_path=str(rights),
@@ -224,6 +227,19 @@ def test_end_to_end_runner_writes_small_review_bundle(tmp_path: Path) -> None:
     )
     assert len(metadata["samples"]) == 36
     assert metadata["samples"][0]["metadata"]["coordinate_transform"] == "identity"
+    sample_manifest = json.loads(
+        (output / "sample-manifest.json").read_text(encoding="utf-8")
+    )
+    assert sample_manifest["checkpoint_training_split_status"] == "UNKNOWN"
+    assert sample_manifest["comparison_scope"] == "compatibility_smoke"
+    assert sample_manifest["ranking_eligible"] is False
+
+
+def test_protocol_rejects_unproven_held_out_checkpoint(tmp_path: Path) -> None:
+    _, _, protocol = _fixture(tmp_path)
+
+    with pytest.raises(ValueError, match="held-out"):
+        replace(protocol, comparison_scope="held_out_performance")
 
 
 def test_runner_hashes_additional_provenance_inside_output(tmp_path: Path) -> None:

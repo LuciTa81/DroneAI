@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal, Sequence, cast
 
+from droneai.comparison_claim import validate_comparison_claim
 from droneai.evaluation_contract import EvaluationSample
 from droneai.evaluation_runner import EvaluationProtocol
 from droneai.integrity import is_sha256, sha256_file
@@ -96,6 +97,11 @@ def load_smoke_config(path: str | Path) -> dict[str, object]:
     for key in ("split_verified", "leakage_free", "require_clean_git"):
         if type(payload.get(key)) is not bool:
             raise ValueError(f"smoke {key} must be boolean")
+    validate_comparison_claim(
+        str(payload.get("checkpoint_training_split_status", "")),
+        str(payload.get("comparison_scope", "")),
+        payload.get("checkpoint_split_evidence"),
+    )
     _nonnegative_number(payload, "localization_radius")
     targets = payload.get("targets")
     if not isinstance(targets, dict):
@@ -317,6 +323,11 @@ def build_protocol(
         expected_samples=int(config["expected_samples"]),
         split_verified=split_verified,
         leakage_free=split_verified,
+        checkpoint_training_split_status=str(
+            config["checkpoint_training_split_status"]
+        ),
+        comparison_scope=str(config["comparison_scope"]),
+        checkpoint_split_evidence=str(config["checkpoint_split_evidence"]),
         sealed_test_access_approved=False,
         require_clean_git=bool(config["require_clean_git"]),
         rights_decision_path=str(rights_path),

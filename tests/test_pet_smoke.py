@@ -27,6 +27,8 @@ def test_pet_config_changes_only_point_spatial_contract() -> None:
     assert config["candidate_id"] == PET_CANDIDATE_ID
     assert config["expected_samples"] == 36
     assert config["split_role"] == "validation"
+    assert config["checkpoint_training_split_status"] == "UNKNOWN"
+    assert config["comparison_scope"] == "compatibility_smoke"
     assert config["sealed_test_access_approved"] is False
     assert config["required_action"] == "research_checkpoint_evaluation"
     assert config["targets"]["spatial_metric_name"] == "localization_f1"
@@ -66,6 +68,8 @@ def test_pet_protocol_uses_localization_f1_and_hashes_rights() -> None:
     )
     assert protocol.expected_samples == 36
     assert protocol.split_role == "validation"
+    assert protocol.checkpoint_training_split_status == "UNKNOWN"
+    assert protocol.comparison_scope == "compatibility_smoke"
     assert protocol.spatial_metric_name == "localization_f1"
     assert protocol.spatial_direction == "maximize"
     assert protocol.spatial_target == 0.0

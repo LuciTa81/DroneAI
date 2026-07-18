@@ -17,6 +17,7 @@ if str(SRC_ROOT) not in sys.path:
 import numpy as np
 from PIL import Image
 
+from droneai.comparison_claim import validate_comparison_claim
 from droneai.evaluation_contract import EvaluationSample, NativePrediction, ZoneBox
 from droneai.evaluation_runner import EvaluationProtocol, run_evaluation
 from droneai.integrity import sha256_file
@@ -183,6 +184,11 @@ def _validate_config(payload: dict[str, object]) -> None:
         "require_clean_git",
     ):
         _boolean(payload, key)
+    validate_comparison_claim(
+        _nonempty_string(payload, "checkpoint_training_split_status"),
+        _nonempty_string(payload, "comparison_scope"),
+        _nonempty_string(payload, "checkpoint_split_evidence"),
+    )
     _nonnegative_number(payload, "localization_radius")
 
     targets = payload.get("targets")
@@ -239,6 +245,12 @@ def build_protocol(
         expected_samples=cast(int, config["expected_samples"]),
         split_verified=cast(bool, config["split_verified"]),
         leakage_free=cast(bool, config["leakage_free"]),
+        checkpoint_training_split_status=cast(
+            str,
+            config["checkpoint_training_split_status"],
+        ),
+        comparison_scope=cast(str, config["comparison_scope"]),
+        checkpoint_split_evidence=cast(str, config["checkpoint_split_evidence"]),
         sealed_test_access_approved=cast(
             bool,
             config["sealed_test_access_approved"],

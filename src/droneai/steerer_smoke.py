@@ -40,6 +40,11 @@ _STEERER_CONFIG_OVERRIDES: dict[str, object] = {
     "candidate_id": STEERER_CANDIDATE_ID,
     "required_action": RESEARCH_CHECKPOINT_ACTION,
     "localization_radius": 16.0,
+    "checkpoint_training_split_status": "UNKNOWN",
+    "checkpoint_split_evidence": (
+        "Official checkpoint training membership is not published; pinned "
+        "upstream preparation uses a separate random validation policy."
+    ),
 }
 _FORBIDDEN_RESEARCH_ACTIONS = frozenset(
     {
@@ -260,6 +265,11 @@ def build_steerer_protocol(
         expected_samples=int(config["expected_samples"]),
         split_verified=split_verified,
         leakage_free=split_verified,
+        checkpoint_training_split_status=str(
+            config["checkpoint_training_split_status"]
+        ),
+        comparison_scope=str(config["comparison_scope"]),
+        checkpoint_split_evidence=str(config["checkpoint_split_evidence"]),
         sealed_test_access_approved=False,
         require_clean_git=bool(config["require_clean_git"]),
         rights_decision_path=str(rights_path),

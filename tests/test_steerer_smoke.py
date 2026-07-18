@@ -88,6 +88,8 @@ def test_steerer_uses_the_exact_dm_count_validation_sample_identity() -> None:
         assert steerer[key] == dm[key]
     assert steerer["expected_samples"] == 36
     assert steerer["split_role"] == "validation"
+    assert steerer["checkpoint_training_split_status"] == "UNKNOWN"
+    assert steerer["comparison_scope"] == "compatibility_smoke"
     assert steerer["sealed_test_access_approved"] is False
     assert steerer["required_action"] == "research_checkpoint_evaluation"
     assert steerer["localization_radius"] == 16.0
@@ -420,6 +422,8 @@ def test_protocol_references_research_decision_without_test_approval(
 
     assert protocol.dataset_id == load_smoke_config(DM_CONFIG)["dataset_id"]
     assert protocol.split_role == "validation"
+    assert protocol.checkpoint_training_split_status == "UNKNOWN"
+    assert protocol.comparison_scope == "compatibility_smoke"
     assert protocol.expected_samples == 36
     assert protocol.sealed_test_access_approved is False
     assert protocol.localization_radius == 16.0

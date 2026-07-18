@@ -53,6 +53,11 @@ def test_fixture_cli_writes_complete_small_review_bundle(tmp_path: Path) -> None
     assert {row["latency_ms"] for row in rows} == {"1.0"}
     assert {row["peak_vram_mb"] for row in rows} == {"0.0"}
     assert len(list((output / "figures").glob("*.png"))) == 12
+    sample_manifest = json.loads(
+        (output / "sample-manifest.json").read_text(encoding="utf-8")
+    )
+    assert sample_manifest["comparison_scope"] == "compatibility_smoke"
+    assert sample_manifest["ranking_eligible"] is False
     assert (output / "fixture-input").is_dir()
     assert not (output / "native-outputs").exists()
     assert sum(path.stat().st_size for path in output.rglob("*") if path.is_file()) <= 25 * 1024 * 1024
@@ -143,6 +148,14 @@ def test_fixture_cli_rejects_invalid_config_before_creating_output(
             {"split_verified": "false"},
             {},
             "split_verified must be a boolean",
+        ),
+        (
+            {
+                "checkpoint_training_split_status": "UNKNOWN",
+                "comparison_scope": "held_out_performance",
+            },
+            {},
+            "held-out performance requires VERIFIED_DISJOINT",
         ),
         (
             {},
