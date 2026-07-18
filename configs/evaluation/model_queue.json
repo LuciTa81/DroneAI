@@ -177,6 +177,18 @@
           "artifact_kind": "one_sample_result",
           "path": "mpcount/mpcount-one-sample-4a7a803/result.json",
           "sha256": "56a18af65d7d32753a5a4b7d0669f045517984573b1997a9e06d78b09d4a0c49"
+        },
+        {
+          "gate": "benchmark",
+          "artifact_kind": "score",
+          "path": "mpcount/mpcount-ucf-qnrf-val-smoke-5cc5d72/score.json",
+          "sha256": "5c2cd18fe4eca2c203642f0ec5f17c13f18868f38e5fa486f177dfa18be2f2e6"
+        },
+        {
+          "gate": "benchmark",
+          "artifact_kind": "metrics",
+          "path": "mpcount/mpcount-ucf-qnrf-val-smoke-5cc5d72/metrics.json",
+          "sha256": "39ebe9bd241e5a205e9763b0a12ad93e8a9e8a47975a9dd15a7afc4b75e9e43d"
         }
       ]
     },

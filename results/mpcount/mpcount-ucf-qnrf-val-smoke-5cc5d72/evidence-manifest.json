@@ -1,0 +1,162 @@
+{
+  "artifacts": [
+    {
+      "path": "split-source-manifest.json",
+      "sha256": "fff6d271429671f554047848329c0ee5602cec0b90f1114806776c31b740670f"
+    },
+    {
+      "path": "sample-manifest.json",
+      "sha256": "cd6efe34c7e6a00346fc1e0d14470cdd95431a7da430dfca788b7d346b9fab44"
+    },
+    {
+      "path": "rights-decision.json",
+      "sha256": "9ed237c31e88cdbfc3dd5bbde45d5e75509181cc75c343bbc5d4d2ba1270dd3d"
+    },
+    {
+      "path": "predictions.csv",
+      "sha256": "545f0b9b359458b95a36cccdec43fe5e3008dc0c9ede3daed8d9985b56aee569"
+    },
+    {
+      "path": "native-output-metadata.json",
+      "sha256": "159cf1ec0fb484e31eb260ac131124f861c89ab6c9bdc1c3b11d59f668d8a86a"
+    },
+    {
+      "path": "metrics.json",
+      "sha256": "39ebe9bd241e5a205e9763b0a12ad93e8a9e8a47975a9dd15a7afc4b75e9e43d"
+    },
+    {
+      "path": "selection_manifest.json",
+      "sha256": "4abe1201ab1ae38a6258e3ca96d51e1f30625a3c67a7c6a1c7cbca2165e4fcd6"
+    },
+    {
+      "path": "model-brief.md",
+      "sha256": "86142c761553b1d421de231c64cbfdcae91ce6f53a26c046280db29adcc45ea7"
+    },
+    {
+      "path": "summary.md",
+      "sha256": "f22ac1ea7f95c662fa8fb00366567f6577e4033c46edaa0aa91bb7d4e948bd84"
+    },
+    {
+      "path": "environment-summary.json",
+      "sha256": "cdbcaec9cb75ca3595eb565ff2cfeb610260711abe446771a9a7dbdd2159166f"
+    },
+    {
+      "path": "figures/selected-01-fd9373c130ac1077.png",
+      "sha256": "67b007e636b0eaa3cb8000e452d1559d7da5b1ef02d2208f573eb7a08e9f016d"
+    },
+    {
+      "path": "figures/selected-02-c5e3d9aa6077e652.png",
+      "sha256": "b82d1a85b266c3049a71b0ab4941f97e92ef34d99c5d73766242b8dcaf743a9f"
+    },
+    {
+      "path": "figures/selected-03-8e0a4dbe072725a1.png",
+      "sha256": "7f3f0b2f07f63ba7ad3ee478ef34a6b715b663f8df71aa57775d61cc19459842"
+    },
+    {
+      "path": "figures/selected-04-c21f6cc286a93bc0.png",
+      "sha256": "93cff9cb0850a6e79a775e1fff3b1d1ad1352ef83e134db9dd76c70dc9582edc"
+    },
+    {
+      "path": "figures/selected-05-4203bc526bce1d84.png",
+      "sha256": "3149e8209d4fe1b9a727b11ce81527e3032f967ae1e0868ceb298ca29ade17e6"
+    },
+    {
+      "path": "figures/selected-06-9e3a7ee5803445cf.png",
+      "sha256": "a8d2674b49a998e19ca3dc1780ca759ed7d9b35f78ce58ba3a883713a8d07cf3"
+    },
+    {
+      "path": "figures/selected-07-e234c4048be37fca.png",
+      "sha256": "b435a470dfdc629fc237249840e1bd3bb62128fb2fb258476f85a7b469688262"
+    },
+    {
+      "path": "figures/selected-08-b136b5ac7f290f06.png",
+      "sha256": "5f9b14466d006a0e1d386796cecdc660eed1ea60c9f17ef782191af7bcbdd287"
+    },
+    {
+      "path": "figures/selected-09-eb87a5b258d7e8d8.png",
+      "sha256": "1362904f0370f5d0be422b8fd1d533e13fd55baaa5da0769d013bb68f0cac6e6"
+    },
+    {
+      "path": "figures/selected-10-0a828eb9e6e71267.png",
+      "sha256": "691cf50d3c82867fbb966d28e1162f257fb702657b27d3be6979c16e1efc5315"
+    },
+    {
+      "path": "figures/selected-11-320ad007a4340168.png",
+      "sha256": "b971fecafc9b44a77e7b374218db7ad507ea5b5e82fe48612734582d871c30c5"
+    },
+    {
+      "path": "figures/selected-12-897716f616762b84.png",
+      "sha256": "7f3d87a0343a5b15c89f7b535cb034beb0e771cd6278a8006cac9ef1f9d05700"
+    }
+  ],
+  "checkpoint": {
+    "path": "/workspace/data/checkpoints/mpcount/mpcount_sta_deterministic_6eb06772.pth",
+    "sha256": "4a0ba849ace0ef2bc87364ec8551de4a3e9dca74fad27764c9b948ebf7928eb0",
+    "verified": true
+  },
+  "comparison_claim": {
+    "checkpoint_split_evidence": "The deterministic checkpoint is trained on ShanghaiTech-A and evaluated on UCF-QNRF, so no UCF-QNRF validation sample belongs to checkpoint training.",
+    "checkpoint_training_split_status": "VERIFIED_DISJOINT",
+    "comparison_scope": "compatibility_smoke",
+    "ranking_eligible": false
+  },
+  "protocol": {
+    "band_bias_max": 400.0,
+    "bias_max": 250.0,
+    "checkpoint_split_evidence": "The deterministic checkpoint is trained on ShanghaiTech-A and evaluated on UCF-QNRF, so no UCF-QNRF validation sample belongs to checkpoint training.",
+    "checkpoint_training_split_status": "VERIFIED_DISJOINT",
+    "comparison_scope": "compatibility_smoke",
+    "condition_bias_max": 250.0,
+    "dataset_id": "ucf-qnrf-kaggle-apache",
+    "density_band_rules": [
+      "low: count < 500",
+      "medium: 500 <= count < 1500",
+      "high: count >= 1500"
+    ],
+    "expected_samples": 36,
+    "latency_max_ms": 2000.0,
+    "leakage_free": true,
+    "localization_radius": 8.0,
+    "mae_max": 250.0,
+    "protocol_id": "mpcount-official-sta-to-qnrf-val-smoke-v1",
+    "require_clean_git": true,
+    "required_condition_keys": [
+      "source_partition"
+    ],
+    "required_density_bands": [
+      "low",
+      "medium",
+      "high"
+    ],
+    "rights_decision_path": "/workspace/data/results/mpcount/mpcount-rights-3911238/rights-decision.json",
+    "rights_decision_sha256": "dd96f15b3dbf679e9615bd1a95e7e802a4c15a4b98e441deabd69dc3f74992a8",
+    "rmse_max": 400.0,
+    "run_id": "mpcount-ucf-qnrf-validation-smoke",
+    "sealed_test_access_approved": false,
+    "spatial_direction": "minimize",
+    "spatial_metric_name": "game_l1",
+    "spatial_target": 500.0,
+    "split_id": "dm-count-upstream-qnrf-val-smoke-36-v1",
+    "split_role": "validation",
+    "split_verified": true,
+    "vram_max_mb": 24000.0,
+    "zone_critical_count": 150.0,
+    "zone_warning_count": 50.0
+  },
+  "reviewed_paths": {
+    "paths": [
+      "/workspace/upstreams/MPCount/README.md",
+      "/workspace/upstreams/MPCount/LICENSE",
+      "/workspace/upstreams/MPCount/inference.py",
+      "/workspace/upstreams/MPCount/models/models.py",
+      "/workspace/upstreams/MPCount/utils/misc.py"
+    ],
+    "verified": true
+  },
+  "rights_decision": {
+    "source_path": "/workspace/data/results/mpcount/mpcount-rights-3911238/rights-decision.json",
+    "source_sha256": "dd96f15b3dbf679e9615bd1a95e7e802a4c15a4b98e441deabd69dc3f74992a8",
+    "verified": true
+  },
+  "schema_version": 1
+}
