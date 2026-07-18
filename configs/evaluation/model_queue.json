@@ -291,6 +291,18 @@
           "artifact_kind": "one_sample_result",
           "path": "csrnet/csrnet-one-sample-3db05c2/result.json",
           "sha256": "febfda43b5f784e7c9987b0554b43bc9e2b938ce7e6b4325b1266e2b6547d2ab"
+        },
+        {
+          "gate": "benchmark",
+          "artifact_kind": "score",
+          "path": "csrnet/csrnet-ucf-qnrf-val-smoke-745d5b6/score.json",
+          "sha256": "1538747089273f8952bba46107dae1ce3cb7d4a5678cb262a437daaef6963f2b"
+        },
+        {
+          "gate": "benchmark",
+          "artifact_kind": "metrics",
+          "path": "csrnet/csrnet-ucf-qnrf-val-smoke-745d5b6/metrics.json",
+          "sha256": "7753b63d1ee9519d04eb12f7774f67ca8a18bd5169e3c5c2fcfaca33959135a1"
         }
       ]
     }

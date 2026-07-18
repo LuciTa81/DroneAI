@@ -1,0 +1,110 @@
+{
+  "accounting_complete": true,
+  "band_coverage": {
+    "high": {
+      "coverage": 1.0,
+      "expected_samples": 12,
+      "explicit_failures": 0,
+      "recorded_samples": 12,
+      "successful_samples": 12
+    },
+    "low": {
+      "coverage": 1.0,
+      "expected_samples": 12,
+      "explicit_failures": 0,
+      "recorded_samples": 12,
+      "successful_samples": 12
+    },
+    "medium": {
+      "coverage": 1.0,
+      "expected_samples": 12,
+      "explicit_failures": 0,
+      "recorded_samples": 12,
+      "successful_samples": 12
+    }
+  },
+  "band_signed_bias": {
+    "high": -268.8269533459323,
+    "low": 40.622840500334554,
+    "medium": -32.20751167778312
+  },
+  "condition_coverage": {
+    "density_band": {
+      "high": {
+        "coverage": 1.0,
+        "expected_samples": 12,
+        "explicit_failures": 0,
+        "recorded_samples": 12,
+        "successful_samples": 12
+      },
+      "low": {
+        "coverage": 1.0,
+        "expected_samples": 12,
+        "explicit_failures": 0,
+        "recorded_samples": 12,
+        "successful_samples": 12
+      },
+      "medium": {
+        "coverage": 1.0,
+        "expected_samples": 12,
+        "explicit_failures": 0,
+        "recorded_samples": 12,
+        "successful_samples": 12
+      }
+    },
+    "source_partition": {
+      "official_validation": {
+        "coverage": 1.0,
+        "expected_samples": 36,
+        "explicit_failures": 0,
+        "recorded_samples": 36,
+        "successful_samples": 36
+      }
+    }
+  },
+  "condition_signed_bias": {
+    "density_band": {
+      "high": -268.8269533459323,
+      "low": 40.622840500334554,
+      "medium": -32.20751167778312
+    },
+    "source_partition": {
+      "official_validation": -86.80387484112694
+    }
+  },
+  "coverage": 1.0,
+  "expected_samples": 36,
+  "explicit_failures": 0,
+  "extra_metric_finite_samples": {
+    "density_psnr": 36,
+    "density_ssim": 36,
+    "density_zone_mae": 36,
+    "game_l1": 36,
+    "predicted_mass": 36,
+    "zone_mae": 36
+  },
+  "extra_metric_means": {
+    "density_psnr": 23.311366712504114,
+    "density_ssim": 0.6788557280754935,
+    "density_zone_mae": 91.05494394155932,
+    "game_l1": 364.1291174650485,
+    "predicted_mass": 1019.3905696033174,
+    "zone_mae": 91.05494394155932
+  },
+  "failures": 0,
+  "mae": 332.32906150891324,
+  "mape_reference": 32.8203328703028,
+  "mape_reference_unit": "percent",
+  "median_latency_ms": 80.33628200064413,
+  "peak_vram_mb": 20838.06005859375,
+  "recorded_samples": 36,
+  "rmse": 522.0312611108126,
+  "robustness_pass": true,
+  "signed_bias": -86.80387484112694,
+  "spatial_direction": "minimize",
+  "spatial_mean": 364.1291174650485,
+  "spatial_metric_name": "game_l1",
+  "spatial_target": 500.0,
+  "successful_samples": 36,
+  "throughput_fps_batch1": 12.447675883133128
+}

@@ -1,0 +1,27 @@
+{
+  "allowed_actions": [
+    "catalog",
+    "license_due_diligence",
+    "synthetic_compatibility_smoke",
+    "research_asset_download",
+    "research_checkpoint_evaluation"
+  ],
+  "ambiguous_components": [
+    "deployment",
+    "derived_weights",
+    "pretrained_weights"
+  ],
+  "blockers": [],
+  "candidate_id": "csrnet-independent-shha-to-ucf-qnrf-research-comparison",
+  "component_ids": {
+    "code": "csrnet-droneai-independent-5c9dd5ca",
+    "dataset": "ucf-qnrf-kaggle-apache",
+    "deployment": "droneai-festival-deployment-pending",
+    "derived_weights": "droneai-derived-weights-not-created",
+    "pretrained_weights": "csrnet-official-shha-mae66.4"
+  },
+  "manifest_semantic_sha256": "398ebc6d15e7812ebd080f95d3f98beeccddf11081fd5dfdfb86ae972402ae1d",
+  "rationale": "No explicit commercial prohibition is recorded, but at least one required permission is absent, silent, pending, or unverified.",
+  "restricted_components": [],
+  "status": "PASS_COMMERCIAL_CANDIDATE"
+}

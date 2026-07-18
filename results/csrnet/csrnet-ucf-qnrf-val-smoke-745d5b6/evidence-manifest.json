@@ -1,0 +1,160 @@
+{
+  "artifacts": [
+    {
+      "path": "split-source-manifest.json",
+      "sha256": "3f2ebdf2af46b1f77d094b070cdb48fdeced474d7898e6094657881f8bcab7f0"
+    },
+    {
+      "path": "sample-manifest.json",
+      "sha256": "2a47839008b2a8347d528cbfd00d244a3a083b26fa8b84c9ea8dfa2e39aaaff3"
+    },
+    {
+      "path": "rights-decision.json",
+      "sha256": "b0268a358445c8b9aaa597e2c05ff91489d826747f1c74f7d2936b743fbaed8b"
+    },
+    {
+      "path": "predictions.csv",
+      "sha256": "1299c3bdd2be35d9e5c92ce47b9f6b62d798038a1df0c99ca21250f40f827734"
+    },
+    {
+      "path": "native-output-metadata.json",
+      "sha256": "223ca63f1640e99e5793c0d0755a7e2fcbc00410908452061a0319bf806ac772"
+    },
+    {
+      "path": "metrics.json",
+      "sha256": "7753b63d1ee9519d04eb12f7774f67ca8a18bd5169e3c5c2fcfaca33959135a1"
+    },
+    {
+      "path": "selection_manifest.json",
+      "sha256": "256d11dabc383ec52e48518a175e31d40553cb09a15948dfa74c0d03576cda53"
+    },
+    {
+      "path": "model-brief.md",
+      "sha256": "5e5b84bdc23aa7e5e4a5bea028acd04d5f006d4d7c9bed8d737c49ce2758c119"
+    },
+    {
+      "path": "summary.md",
+      "sha256": "df480040747cfb6c74c52945c29a2a6b85bb74557b0679e2d252d52085e80830"
+    },
+    {
+      "path": "environment-summary.json",
+      "sha256": "41994530662ab03139da4712b1cb993d01c3002e8e636ffe266920bcb687aba9"
+    },
+    {
+      "path": "figures/selected-01-fd9373c130ac1077.png",
+      "sha256": "a54c19df8a2cb307b615ab0ff317a6d74f256896878be1bc93517a79e8e66144"
+    },
+    {
+      "path": "figures/selected-02-c5e3d9aa6077e652.png",
+      "sha256": "32638d4bfb573a72b4d7485c50c3bc90443f1cbfa037761608693d0cc2aad68b"
+    },
+    {
+      "path": "figures/selected-03-0a3e30df85e751e6.png",
+      "sha256": "24ad9f3db6095834a91e8d8a21d28bfac8865643a5e9d34f3cc66c91554aec31"
+    },
+    {
+      "path": "figures/selected-04-419fec40ac00261f.png",
+      "sha256": "7f3e86c70f4e15d9d6bbe2b96acf861a778a212f5e0b492566b31e4e9beb0a86"
+    },
+    {
+      "path": "figures/selected-05-c21f6cc286a93bc0.png",
+      "sha256": "f51d63f72a69b098e564723f025f6acea95f712a7ccdaba2dcd999c7ed185cf3"
+    },
+    {
+      "path": "figures/selected-06-5f883365dbf8fabe.png",
+      "sha256": "18506d2b1a6b91bd92c56954b7b04bf9b2748daad1c9837452b55827ce4c2dd0"
+    },
+    {
+      "path": "figures/selected-07-ca90cca47cd2592a.png",
+      "sha256": "2f784a3e23f5e31780c74de7d6a9503a0c8025ce18867b0cc72477e830ef0685"
+    },
+    {
+      "path": "figures/selected-08-c145cb679c8a0d04.png",
+      "sha256": "fa136d70454c41709b104f8cbd6bc6d62147043316aff92ff3fb02bcbc15d5ac"
+    },
+    {
+      "path": "figures/selected-09-897716f616762b84.png",
+      "sha256": "84a7ea5c7296a29bfb7bf5f7e9fd4b7a2fb60d2b968d7411b93922e1ebfc1058"
+    },
+    {
+      "path": "figures/selected-10-0a828eb9e6e71267.png",
+      "sha256": "adc00a67b3d070d0ffce73a8819b7a1d51100f558812d95fbc5dbd022da6520c"
+    },
+    {
+      "path": "figures/selected-11-320ad007a4340168.png",
+      "sha256": "0ca01677a7e5626ddaaaef75b8e5faec73094023f054d9e67f2f746b02f3ef7c"
+    },
+    {
+      "path": "figures/selected-12-cc4e59a84ce60dd5.png",
+      "sha256": "1d0245b7cdb34213e820743c28c5a2579f21a0218d053a2e05180a8fdc5e139d"
+    }
+  ],
+  "checkpoint": {
+    "path": "/workspace/data/checkpoints/csrnet/safe/csrnet-official-shha-mae66.4-state-dict.pth",
+    "sha256": "7093f29f1469fb4e3a80781fda03665848689ada59c5a13d1b49940b230755e6",
+    "verified": true
+  },
+  "comparison_claim": {
+    "checkpoint_split_evidence": "The rights-gated official checkpoint is trained on ShanghaiTech Part A and the frozen evaluation split is UCF-QNRF validation, so their samples are disjoint; the result remains a cross-domain compatibility smoke.",
+    "checkpoint_training_split_status": "VERIFIED_DISJOINT",
+    "comparison_scope": "compatibility_smoke",
+    "ranking_eligible": false
+  },
+  "protocol": {
+    "band_bias_max": 400.0,
+    "bias_max": 250.0,
+    "checkpoint_split_evidence": "The rights-gated official checkpoint is trained on ShanghaiTech Part A and the frozen evaluation split is UCF-QNRF validation, so their samples are disjoint; the result remains a cross-domain compatibility smoke.",
+    "checkpoint_training_split_status": "VERIFIED_DISJOINT",
+    "comparison_scope": "compatibility_smoke",
+    "condition_bias_max": 250.0,
+    "dataset_id": "ucf-qnrf-kaggle-apache",
+    "density_band_rules": [
+      "low: count < 500",
+      "medium: 500 <= count < 1500",
+      "high: count >= 1500"
+    ],
+    "expected_samples": 36,
+    "latency_max_ms": 2000.0,
+    "leakage_free": true,
+    "localization_radius": 8.0,
+    "mae_max": 250.0,
+    "protocol_id": "csrnet-official-shha-to-qnrf-val-smoke-v1",
+    "require_clean_git": true,
+    "required_condition_keys": [
+      "source_partition"
+    ],
+    "required_density_bands": [
+      "low",
+      "medium",
+      "high"
+    ],
+    "rights_decision_path": "/workspace/data/results/csrnet/csrnet-rights-e0cebe3/rights-decision.json",
+    "rights_decision_sha256": "314f25024519978f73b6adfab21d51ca2296bdc3ff8d2e8fffbaa762f06cb509",
+    "rmse_max": 400.0,
+    "run_id": "csrnet-ucf-qnrf-validation-smoke",
+    "sealed_test_access_approved": false,
+    "spatial_direction": "minimize",
+    "spatial_metric_name": "game_l1",
+    "spatial_target": 500.0,
+    "split_id": "dm-count-upstream-qnrf-val-smoke-36-v1",
+    "split_role": "validation",
+    "split_verified": true,
+    "vram_max_mb": 24000.0,
+    "zone_critical_count": 150.0,
+    "zone_warning_count": 50.0
+  },
+  "reviewed_paths": {
+    "paths": [
+      "/workspace/src/droneai/csrnet.py",
+      "/workspace/upstreams/CSRNet-pytorch/README.md",
+      "/workspace/upstreams/CSRNet-pytorch/model.py"
+    ],
+    "verified": true
+  },
+  "rights_decision": {
+    "source_path": "/workspace/data/results/csrnet/csrnet-rights-e0cebe3/rights-decision.json",
+    "source_sha256": "314f25024519978f73b6adfab21d51ca2296bdc3ff8d2e8fffbaa762f06cb509",
+    "verified": true
+  },
+  "schema_version": 1
+}

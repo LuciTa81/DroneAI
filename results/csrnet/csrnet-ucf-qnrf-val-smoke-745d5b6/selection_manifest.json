@@ -1,0 +1,104 @@
+{
+  "density_band_rules": [
+    "low: count < 500",
+    "medium: 500 <= count < 1500",
+    "high: count >= 1500"
+  ],
+  "expected_panels": 12,
+  "panel_paths": [
+    "figures/selected-01-fd9373c130ac1077.png",
+    "figures/selected-02-c5e3d9aa6077e652.png",
+    "figures/selected-03-0a3e30df85e751e6.png",
+    "figures/selected-04-419fec40ac00261f.png",
+    "figures/selected-05-c21f6cc286a93bc0.png",
+    "figures/selected-06-5f883365dbf8fabe.png",
+    "figures/selected-07-ca90cca47cd2592a.png",
+    "figures/selected-08-c145cb679c8a0d04.png",
+    "figures/selected-09-897716f616762b84.png",
+    "figures/selected-10-0a828eb9e6e71267.png",
+    "figures/selected-11-320ad007a4340168.png",
+    "figures/selected-12-cc4e59a84ce60dd5.png"
+  ],
+  "predictions_sha256": "1299c3bdd2be35d9e5c92ce47b9f6b62d798038a1df0c99ca21250f40f827734",
+  "schema_version": 1,
+  "selected_count": 12,
+  "selections": [
+    {
+      "category": "best",
+      "density_band": "low",
+      "reason": "nearest error quantile 0.00",
+      "sample_id": "img_0097"
+    },
+    {
+      "category": "strong",
+      "density_band": "low",
+      "reason": "nearest error quantile 0.25",
+      "sample_id": "img_0536"
+    },
+    {
+      "category": "typical",
+      "density_band": "low",
+      "reason": "nearest error quantile 0.50",
+      "sample_id": "img_0477"
+    },
+    {
+      "category": "best",
+      "density_band": "medium",
+      "reason": "nearest error quantile 0.00",
+      "sample_id": "img_0545"
+    },
+    {
+      "category": "strong",
+      "density_band": "medium",
+      "reason": "nearest error quantile 0.25",
+      "sample_id": "img_1022"
+    },
+    {
+      "category": "typical",
+      "density_band": "medium",
+      "reason": "nearest error quantile 0.50",
+      "sample_id": "img_0638"
+    },
+    {
+      "category": "best",
+      "density_band": "high",
+      "reason": "nearest error quantile 0.00",
+      "sample_id": "img_0916"
+    },
+    {
+      "category": "strong",
+      "density_band": "high",
+      "reason": "nearest error quantile 0.25",
+      "sample_id": "img_0379"
+    },
+    {
+      "category": "typical",
+      "density_band": "high",
+      "reason": "nearest error quantile 0.50",
+      "sample_id": "img_0221"
+    },
+    {
+      "category": "failure",
+      "density_band": "high",
+      "reason": "severe undercount",
+      "sample_id": "img_1072"
+    },
+    {
+      "category": "failure",
+      "density_band": "high",
+      "reason": "severe overcount",
+      "sample_id": "img_1199"
+    },
+    {
+      "category": "failure",
+      "density_band": "high",
+      "reason": "worst spatial quality",
+      "sample_id": "img_1073"
+    }
+  ],
+  "selector": "density-stratified-error-quantiles-v1",
+  "shortfall": 0,
+  "shortfall_reason": "",
+  "spatial_direction": "minimize",
+  "tie_breaker": "lexical sample_id"
+}
