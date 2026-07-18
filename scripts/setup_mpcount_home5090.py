@@ -20,7 +20,6 @@ FROZEN_REQUIREMENTS = (
     "gdown==5.2.0",
     "opencv-python-headless==4.12.0.88",
     "PySocks==1.7.1",
-    "pandas==2.2.2",
 )
 FROZEN_VERSIONS = {
     requirement.partition("==")[0]: requirement.partition("==")[2]
@@ -152,7 +151,7 @@ def _verify(python: Path, *, upstream: Path, runner: Runner) -> dict[str, object
     runtime_code = (
         "import json, sys\n"
         f"sys.path.insert(0, {str(upstream.resolve())!r})\n"
-        "import cv2, gdown, pandas, socks, torch, torchvision, numpy, scipy, matplotlib, einops\n"
+        "import cv2, gdown, socks, torch, torchvision, numpy, scipy, matplotlib, einops\n"
         "from PIL import Image\n"
         "from models.models import DGModel_final\n"
         "from utils.misc import divide_img_into_patches, get_padding\n"

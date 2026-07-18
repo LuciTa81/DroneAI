@@ -13,7 +13,6 @@ FROZEN = (
     "gdown==5.2.0",
     "opencv-python-headless==4.12.0.88",
     "PySocks==1.7.1",
-    "pandas==2.2.2",
 )
 
 
@@ -53,7 +52,6 @@ class FakeRunner:
                 "gdown": "5.2.0",
                 "opencv-python-headless": "4.12.0.88",
                 "PySocks": "1.7.1",
-                "pandas": "2.2.2",
                 "opencv-python": None,
             }
             return subprocess.CompletedProcess(call, 0, json.dumps(payload), "")
@@ -78,6 +76,11 @@ def test_requirements_are_exact_and_forbid_torch(tmp_path: Path) -> None:
         setup.parse_requirements(
             _overlay(tmp_path / "bad.txt", (*FROZEN, "torch==2.0.1"))
         )
+
+
+def test_ucf_overlay_does_not_install_jhu_only_pandas(tmp_path: Path) -> None:
+    setup = _setup()
+    assert all(not item.lower().startswith("pandas==") for item in setup.FROZEN_REQUIREMENTS)
 
 
 def test_setup_installs_overlay_without_dependencies_or_torch(tmp_path: Path) -> None:
