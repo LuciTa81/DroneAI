@@ -295,6 +295,15 @@ def summarize_records(
     valid = [row for row in rows if row.predicted_count is not None]
     explicit_failures = [row for row in rows if row.failure_state is not None]
     errors = np.asarray([row.signed_error for row in valid], dtype=np.float64)
+    normalized_errors = np.asarray(
+        [row.normalized_error for row in valid], dtype=np.float64
+    )
+    extra_values: dict[str, list[float]] = defaultdict(list)
+    for row in valid:
+        for key, value in row.extra_metrics.items():
+            numeric = float(value)
+            if math.isfinite(numeric):
+                extra_values[key].append(numeric)
     by_band: dict[str, list[float]] = defaultdict(list)
     by_condition: dict[str, dict[str, list[float]]] = defaultdict(
         lambda: defaultdict(list)
@@ -343,6 +352,19 @@ def summarize_records(
             else float("inf")
         ),
         "signed_bias": float(np.mean(errors)) if len(errors) else float("inf"),
+        "mape_reference": (
+            100.0 * float(np.mean(normalized_errors))
+            if len(normalized_errors)
+            else float("inf")
+        ),
+        "mape_reference_unit": "percent",
+        "extra_metric_means": {
+            key: float(np.mean(values))
+            for key, values in sorted(extra_values.items())
+        },
+        "extra_metric_finite_samples": {
+            key: len(values) for key, values in sorted(extra_values.items())
+        },
         "median_latency_ms": median_latency,
         "throughput_fps_batch1": (
             1000.0 / median_latency

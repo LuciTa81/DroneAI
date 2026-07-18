@@ -5,7 +5,12 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from droneai.evaluation_contract import EvaluationSample, NativePrediction, ZoneBox
+from droneai.evaluation_contract import (
+    EvaluationSample,
+    NativePrediction,
+    ScalarEvaluation,
+    ZoneBox,
+)
 from droneai.evaluation_metrics import evaluate_sample, summarize_records
 
 
@@ -263,6 +268,70 @@ def test_summary_preserves_signed_bias_groups_and_success_runtime(
     assert summary["condition_signed_bias"] == {
         "density_band": {"high": -1.0, "low": 2.0},
         "lighting": {"night": 2.0},
+    }
+
+
+def test_summary_aggregates_mape_reference_and_native_metric_means() -> None:
+    records = [
+        ScalarEvaluation(
+            "one",
+            100.0,
+            110.0,
+            10.0,
+            10.0,
+            0.10,
+            "low",
+            2.0,
+            10.0,
+            "density",
+            None,
+            "game_l1",
+            12.0,
+            {
+                "density_psnr": 20.0,
+                "density_ssim": 0.8,
+                "density_zone_mae": 5.0,
+                "game_l1": 12.0,
+            },
+        ),
+        ScalarEvaluation(
+            "two",
+            200.0,
+            240.0,
+            40.0,
+            40.0,
+            0.20,
+            "medium",
+            4.0,
+            20.0,
+            "density",
+            None,
+            "game_l1",
+            18.0,
+            {
+                "density_psnr": 30.0,
+                "density_ssim": 0.6,
+                "density_zone_mae": 9.0,
+                "game_l1": 18.0,
+            },
+        ),
+    ]
+
+    summary = summarize_records(records, expected_samples=2)
+
+    assert summary["mape_reference"] == pytest.approx(15.0)
+    assert summary["mape_reference_unit"] == "percent"
+    assert summary["extra_metric_means"] == {
+        "density_psnr": 25.0,
+        "density_ssim": 0.7,
+        "density_zone_mae": 7.0,
+        "game_l1": 15.0,
+    }
+    assert summary["extra_metric_finite_samples"] == {
+        "density_psnr": 2,
+        "density_ssim": 2,
+        "density_zone_mae": 2,
+        "game_l1": 2,
     }
 
 
