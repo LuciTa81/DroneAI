@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "model_id": "mpcount-official-sta-to-ucf-qnrf",
+  "paper": {
+    "title": "Single Domain Generalization for Crowd Counting",
+    "venue": "CVPR 2024",
+    "url": "https://arxiv.org/pdf/2403.09124.pdf"
+  },
+  "repository": {
+    "url": "https://github.com/Shimmer93/MPCount",
+    "commit": "6eb06772bcf7dfb771c43a14d67146fce767f103",
+    "license": "Apache-2.0"
+  },
+  "architecture": {
+    "backbone": "VGG16",
+    "output_type": "density_map",
+    "blocks": [
+      "VGG16 convolutional feature extractor",
+      "memory bank for diverse density values",
+      "content error mask",
+      "attention consistency branch",
+      "patch-wise density classification"
+    ]
+  },
+  "outputs": {
+    "native": ["nonnegative density map"],
+    "count_derivation": "sum of the predicted density map",
+    "density_map_available": true,
+    "localization_available": false,
+    "zone_derivation": "sum density values inside each calibrated CCTV zone"
+  },
+  "official_environment": {
+    "python": "3.10.12",
+    "pytorch": "2.0.1",
+    "torchvision": "0.15.2"
+  },
+  "home5090_compatibility_policy": {
+    "base_runtime": "nvcr.io/nvidia/pytorch:25.10-py3",
+    "strategy": "inherit NGC Torch/CUDA and install an isolated no-deps overlay",
+    "official_version_deviation_requires_preflight": true
+  },
+  "checkpoint": {
+    "training_dataset": "ShanghaiTech Part A",
+    "url": "https://drive.google.com/file/d/1EBQzAcwZOhsrd00XDDnUTQ-wYH36y6oV/view",
+    "sha256": "record-at-download-before-use",
+    "deterministic_version": true
+  },
+  "reported_results": {
+    "sta_to_ucf_qnrf": {
+      "mae": 112.8,
+      "rmse": 193.8
+    }
+  },
+  "failure_modes": [
+    "domain shift outside the source-to-target training assumptions",
+    "tiny or heavily occluded heads",
+    "extreme perspective changes",
+    "zone-boundary uncertainty after density-map resizing",
+    "latency or VRAM pressure on very large CCTV frames"
+  ]
+}
