@@ -24,6 +24,8 @@ from droneai.model_brief import ModelBrief
 IMAGENET_MEAN = np.asarray((0.485, 0.456, 0.406), dtype=np.float32)
 IMAGENET_STD = np.asarray((0.229, 0.224, 0.225), dtype=np.float32)
 POINT_THRESHOLD = 0.5
+MAX_EVAL_SIDE = 2560
+PAD_BLOCK = 128
 _UPSTREAM_ROOTS = ("config", "models", "util", "datasets", "engine")
 _REVIEWED_PATHS = (
     "README.md",
@@ -49,8 +51,20 @@ class APGCCBackend(Protocol):
         tuple[float, ...],
         float,
         float,
+        dict[str, int | float],
     ]:
-        """Return (x,y) points, confidences, latency ms, and peak VRAM MB."""
+        """Return points, confidence, runtime, VRAM, and preprocessing metadata."""
+
+
+def official_eval_dimensions(*, width: int, height: int) -> tuple[int, int, int, int]:
+    if width <= 0 or height <= 0:
+        raise ValueError("APGCC image dimensions must be positive")
+    scale = min(1.0, MAX_EVAL_SIDE / max(width, height))
+    resized_width = max(1, int(width * scale))
+    resized_height = max(1, int(height * scale))
+    padded_width = ((resized_width - 1) // PAD_BLOCK + 1) * PAD_BLOCK
+    padded_height = ((resized_height - 1) // PAD_BLOCK + 1) * PAD_BLOCK
+    return resized_width, resized_height, padded_width, padded_height
 
 
 def _is_upstream_name(name: str) -> bool:
@@ -143,6 +157,26 @@ class TorchAPGCCBackend:
         with _official_namespace_scope(self._source_root):
             tensor = torch.from_numpy(np.ascontiguousarray(normalized_chw)).unsqueeze(0)
             tensor = tensor.to(self._device)
+            original_height, original_width = normalized_chw.shape[1:]
+            (
+                resized_width,
+                resized_height,
+                padded_width,
+                padded_height,
+            ) = official_eval_dimensions(width=original_width, height=original_height)
+            if (resized_width, resized_height) != (original_width, original_height):
+                tensor = torch.nn.functional.interpolate(
+                    tensor,
+                    size=(resized_height, resized_width),
+                    mode="bilinear",
+                    align_corners=True,
+                )
+            if (padded_width, padded_height) != (resized_width, resized_height):
+                padded = tensor.new_zeros(
+                    (tensor.shape[0], tensor.shape[1], padded_height, padded_width)
+                )
+                padded[:, :, :resized_height, :resized_width].copy_(tensor)
+                tensor = padded
             torch.cuda.reset_peak_memory_stats(self._device)
             torch.cuda.synchronize(self._device)
             started = time.perf_counter()
@@ -161,6 +195,14 @@ class TorchAPGCCBackend:
                 tuple(float(value) for value in confidences),
                 max(float(latency_ms), 1e-9),
                 float(peak_vram_mb),
+                {
+                    "resized_width": resized_width,
+                    "resized_height": resized_height,
+                    "padded_width": padded_width,
+                    "padded_height": padded_height,
+                    "scale_x": resized_width / original_width,
+                    "scale_y": resized_height / original_height,
+                },
             )
 
 
@@ -227,9 +269,15 @@ class APGCCAdapter(ModelAdapter):
                 "confidence and point-offset heads",
             ),
             feature_scales=("stride-8 anchor grid", "stride-16 VGG features"),
-            input_contract="one native-resolution RGB validation image",
-            preprocessing_policy="native resolution with ImageNet normalization",
-            coordinate_transform="native APGCC (x,y) pixels; discard out-of-bounds points",
+            input_contract="one RGB validation image",
+            preprocessing_policy=(
+                "official evaluation resize to maximum side 2560, ImageNet "
+                "normalization, then pad right/bottom to a multiple of 128"
+            ),
+            coordinate_transform=(
+                "discard padded predictions and map APGCC (x,y) pixels back to "
+                "the original image"
+            ),
             native_output="pred_logits, pred_points, and offsets",
             count_derivation="number of confidence-thresholded in-bounds point predictions",
             zone_derivation="count accepted points inside each calibrated image zone",
@@ -276,22 +324,60 @@ class APGCCAdapter(ModelAdapter):
         metadata: dict[str, str | int | float | bool | None] = {}
         try:
             normalized = self._normalized_image(sample)
-            candidates, confidences, latency, vram = self._backend.infer(normalized)
+            candidates, confidences, latency, vram, transform = self._backend.infer(
+                normalized
+            )
             if len(candidates) != len(confidences):
                 raise ValueError("APGCC point confidences must align with points")
+            required_transform = {
+                "resized_width",
+                "resized_height",
+                "padded_width",
+                "padded_height",
+                "scale_x",
+                "scale_y",
+            }
+            if set(transform) != required_transform:
+                raise ValueError("APGCC preprocessing metadata is incomplete")
+            resized_width = int(transform["resized_width"])
+            resized_height = int(transform["resized_height"])
+            padded_width = int(transform["padded_width"])
+            padded_height = int(transform["padded_height"])
+            scale_x = float(transform["scale_x"])
+            scale_y = float(transform["scale_y"])
+            if not (
+                0 < resized_width <= padded_width
+                and 0 < resized_height <= padded_height
+                and math.isfinite(scale_x)
+                and math.isfinite(scale_y)
+                and scale_x > 0
+                and scale_y > 0
+            ):
+                raise ValueError("APGCC preprocessing metadata is invalid")
             points: list[Point] = []
             accepted_confidences: list[float] = []
             discarded = 0
+            discarded_padding = 0
             for (x, y), confidence in zip(candidates, confidences):
                 if not all(math.isfinite(value) for value in (x, y, confidence)):
                     raise ValueError("APGCC points and confidences must be finite")
                 if not 0.0 <= confidence <= 1.0:
                     raise ValueError("APGCC point confidences must be probabilities")
-                if 0 <= x < sample.width and 0 <= y < sample.height:
-                    points.append((float(x), float(y)))
+                if 0 <= x < resized_width and 0 <= y < resized_height:
+                    original_x = x / scale_x
+                    original_y = y / scale_y
+                    if not (
+                        0 <= original_x < sample.width
+                        and 0 <= original_y < sample.height
+                    ):
+                        discarded += 1
+                        continue
+                    points.append((float(original_x), float(original_y)))
                     accepted_confidences.append(float(confidence))
                 else:
                     discarded += 1
+                    if 0 <= x < padded_width and 0 <= y < padded_height:
+                        discarded_padding += 1
             metadata.update(
                 {
                     "original_width": sample.width,
@@ -300,6 +386,15 @@ class APGCCAdapter(ModelAdapter):
                     "native_density_available": False,
                     "raw_thresholded_point_count": len(candidates),
                     "discarded_out_of_bounds_point_count": discarded,
+                    "discarded_padding_point_count": discarded_padding,
+                    "resized_width": resized_width,
+                    "resized_height": resized_height,
+                    "padded_width": padded_width,
+                    "padded_height": padded_height,
+                    "padding_right": padded_width - resized_width,
+                    "padding_bottom": padded_height - resized_height,
+                    "scale_x": scale_x,
+                    "scale_y": scale_y,
                     "missing_checkpoint_key_count": len(self._backend.missing_keys),
                     "unexpected_checkpoint_key_count": len(self._backend.unexpected_keys),
                 }

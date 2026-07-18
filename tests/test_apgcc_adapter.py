@@ -9,7 +9,7 @@ from PIL import Image
 
 from droneai.evaluation_contract import EvaluationSample
 from droneai.integrity import sha256_file
-from droneai.apgcc_adapter import APGCCAdapter
+from droneai.apgcc_adapter import APGCCAdapter, official_eval_dimensions
 
 
 class _Backend:
@@ -26,10 +26,37 @@ class _Backend:
         if self.error:
             raise self.error
         return (
-            ((20.0, 10.0), (-5.0, 1000.0)),
+            ((20.0, 10.0), (110.0, 90.0)),
             (0.9, 0.8),
             12.5,
             2048.0,
+            {
+                "resized_width": 100,
+                "resized_height": 80,
+                "padded_width": 128,
+                "padded_height": 128,
+                "scale_x": 1.0,
+                "scale_y": 1.0,
+            },
+        )
+
+
+class _ScaledBackend(_Backend):
+    def infer(self, normalized_chw: np.ndarray):
+        self.observed = normalized_chw
+        return (
+            ((10.0, 5.0), (55.0, 10.0)),
+            (0.9, 0.8),
+            12.5,
+            2048.0,
+            {
+                "resized_width": 50,
+                "resized_height": 40,
+                "padded_width": 128,
+                "padded_height": 128,
+                "scale_x": 0.5,
+                "scale_y": 0.5,
+            },
         )
 
 
@@ -110,11 +137,37 @@ def test_adapter_normalizes_native_image_and_filters_out_of_bounds_points(
     assert prediction.points == ((20.0, 10.0),)
     assert prediction.point_confidences == pytest.approx((0.9,))
     assert prediction.metadata["discarded_out_of_bounds_point_count"] == 1
+    assert prediction.metadata["resized_width"] == 100
+    assert prediction.metadata["padded_width"] == 128
+    assert prediction.metadata["padding_right"] == 28
+    assert prediction.metadata["padding_bottom"] == 48
     assert prediction.metadata["point_probability_threshold"] == 0.5
     assert prediction.metadata["native_density_available"] is False
     assert backend.observed is not None
     assert backend.observed.shape == (3, 80, 100)
     assert backend.observed[0, 0, 0] == pytest.approx((1.0 - 0.485) / 0.229)
+
+
+def test_official_eval_dimensions_resize_and_pad_to_128() -> None:
+    assert official_eval_dimensions(width=800, height=533) == (800, 533, 896, 640)
+    assert official_eval_dimensions(width=4288, height=2848) == (
+        2560,
+        1700,
+        2560,
+        1792,
+    )
+
+
+def test_adapter_maps_resized_points_back_and_discards_padding(tmp_path: Path) -> None:
+    prediction = _adapter(tmp_path, _ScaledBackend()).predict(
+        _sample(tmp_path), retain_native=True
+    )
+
+    assert prediction.failure_state is None
+    assert prediction.predicted_count == 1.0
+    assert prediction.points == ((20.0, 10.0),)
+    assert prediction.metadata["discarded_padding_point_count"] == 1
+    assert prediction.metadata["scale_x"] == 0.5
 
 
 def test_brief_marks_cross_domain_research_candidate(tmp_path: Path) -> None:
@@ -127,6 +180,8 @@ def test_brief_marks_cross_domain_research_candidate(tmp_path: Path) -> None:
     assert "commercial checkpoint reuse remains unverified" in (
         brief.checkpoint_rights_status
     )
+    assert "maximum side 2560" in brief.preprocessing_policy
+    assert "pad right/bottom to a multiple of 128" in brief.preprocessing_policy
     assert brief.parameter_count == 18_000_000
     assert brief.require_full_run_approval() is None
 
