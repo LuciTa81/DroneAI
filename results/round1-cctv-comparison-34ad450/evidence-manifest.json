@@ -1,0 +1,603 @@
+{
+  "inputs": [
+    {
+      "path": "/workspace/configs/evaluation/model_queue.json",
+      "sha256": "97b8ae303902428d0c608e07621a4b60877a43c521f792eef425663be899751e"
+    },
+    {
+      "path": "/workspace/configs/evaluation/round1_cctv_scorecard.json",
+      "sha256": "920624f5bb24113b015215e0db2093e8ed12b2ae1d6abcffe4028f164808e213"
+    },
+    {
+      "path": "/workspace/data/results/apgcc/apgcc-ucf-qnrf-val-smoke-82d9285/environment-summary.json",
+      "sha256": "dd080037f50feaae27d4cbbcfbfdf2dc20b169d973c452f3de8bf273dda69886"
+    },
+    {
+      "path": "/workspace/data/results/apgcc/apgcc-ucf-qnrf-val-smoke-82d9285/evidence-manifest.json",
+      "sha256": "9e13220bf0b63b26a8c1c12d89d551905ad1305c823a37d7635730956ad7b3c2"
+    },
+    {
+      "path": "/workspace/data/results/apgcc/apgcc-ucf-qnrf-val-smoke-82d9285/figures/selected-01-1963ff1aa6492929.png",
+      "sha256": "5ad8f6af07e294d57ee6c77d64a70b270e6797808bda35d5fe15610ba5632bcc"
+    },
+    {
+      "path": "/workspace/data/results/apgcc/apgcc-ucf-qnrf-val-smoke-82d9285/figures/selected-02-8e0a4dbe072725a1.png",
+      "sha256": "7e1c3b23339af237034b1cb22f93d7576437157d1edf6a42e04caa2cc8c5d67c"
+    },
+    {
+      "path": "/workspace/data/results/apgcc/apgcc-ucf-qnrf-val-smoke-82d9285/figures/selected-03-ad26bfc3e5c98b18.png",
+      "sha256": "96af2ac3dfd54d22b50005fd3c0d1727cba20f44010b8f598929f2c8acb4ad6a"
+    },
+    {
+      "path": "/workspace/data/results/apgcc/apgcc-ucf-qnrf-val-smoke-82d9285/figures/selected-04-419fec40ac00261f.png",
+      "sha256": "8b19302bcf263f9e5f1c9d70f1cc26e36bb9443dad37db4a16430f0770cd4c3b"
+    },
+    {
+      "path": "/workspace/data/results/apgcc/apgcc-ucf-qnrf-val-smoke-82d9285/figures/selected-05-90e81f32d2d93e17.png",
+      "sha256": "cf4face77e0fb5317df6fb5a9270e746e3b70281ae997457e20a14da99da8db9"
+    },
+    {
+      "path": "/workspace/data/results/apgcc/apgcc-ucf-qnrf-val-smoke-82d9285/figures/selected-06-9e3a7ee5803445cf.png",
+      "sha256": "1bb86de5cbdfa9fee58614d4b481b5ef2edf7bcbab9e0ebe1ec47b893662e227"
+    },
+    {
+      "path": "/workspace/data/results/apgcc/apgcc-ucf-qnrf-val-smoke-82d9285/figures/selected-07-ca90cca47cd2592a.png",
+      "sha256": "9f7ee08645a24c21a2a0ab03d3d1435aa1cac6dd5e7964644795a1442ac39129"
+    },
+    {
+      "path": "/workspace/data/results/apgcc/apgcc-ucf-qnrf-val-smoke-82d9285/figures/selected-08-c70e58b5e6bae0d3.png",
+      "sha256": "5d11df261a0f0164edd68c813dade0fb975df29ee5c3581eb6b8ac9c9a7c4904"
+    },
+    {
+      "path": "/workspace/data/results/apgcc/apgcc-ucf-qnrf-val-smoke-82d9285/figures/selected-09-897716f616762b84.png",
+      "sha256": "6325ed7429b077a920d25fbdbb5cb9e6e480dd98fe4ebf79fd87b3b3f2da6e15"
+    },
+    {
+      "path": "/workspace/data/results/apgcc/apgcc-ucf-qnrf-val-smoke-82d9285/figures/selected-10-0a828eb9e6e71267.png",
+      "sha256": "61c80fbd11e7fe5cd2983318d2181237d1ec496810f0158bf50a3e79baaf1f7b"
+    },
+    {
+      "path": "/workspace/data/results/apgcc/apgcc-ucf-qnrf-val-smoke-82d9285/figures/selected-11-320ad007a4340168.png",
+      "sha256": "1ff374147a679a59a21034b41668c655dc73e8c2a36c93f74e844334c78d7af6"
+    },
+    {
+      "path": "/workspace/data/results/apgcc/apgcc-ucf-qnrf-val-smoke-82d9285/figures/selected-12-551885f3fe5f750a.png",
+      "sha256": "93c9b42f107ae77d18baedc2332047c46c0323e3878215c40d24962454b488cb"
+    },
+    {
+      "path": "/workspace/data/results/apgcc/apgcc-ucf-qnrf-val-smoke-82d9285/metrics.json",
+      "sha256": "919e2068a9df0ade3a6fc3d87855f67fccd2f7df5568304466fd6d0d24dc6b72"
+    },
+    {
+      "path": "/workspace/data/results/apgcc/apgcc-ucf-qnrf-val-smoke-82d9285/model-brief.md",
+      "sha256": "9c6bf6befcce0fa38f36ae16fa7a8ff617d596ce1b330a70033c868620395ab6"
+    },
+    {
+      "path": "/workspace/data/results/apgcc/apgcc-ucf-qnrf-val-smoke-82d9285/native-output-metadata.json",
+      "sha256": "fa9d18d71fb3ce4bebca865c2cd8e741edfc31510bfa6c1fe7b4490ccf655e39"
+    },
+    {
+      "path": "/workspace/data/results/apgcc/apgcc-ucf-qnrf-val-smoke-82d9285/predictions.csv",
+      "sha256": "ea48a50aa88a737a071e68fa685ed54cff3fd06d647f1f70eb228be977ab89bc"
+    },
+    {
+      "path": "/workspace/data/results/apgcc/apgcc-ucf-qnrf-val-smoke-82d9285/rights-decision.json",
+      "sha256": "dc2e613b469cfdeeec60e00fd7840893fa4024857d272b7486e85a05c46d1dc2"
+    },
+    {
+      "path": "/workspace/data/results/apgcc/apgcc-ucf-qnrf-val-smoke-82d9285/sample-manifest.json",
+      "sha256": "71413a14225543b0f419e78dd6e4ba91ad535929c82f362381f4af675decc385"
+    },
+    {
+      "path": "/workspace/data/results/apgcc/apgcc-ucf-qnrf-val-smoke-82d9285/score.json",
+      "sha256": "ca90b88cf7681709748c51663a6b78db68a49f2044eef8fd74833bc6adb50666"
+    },
+    {
+      "path": "/workspace/data/results/apgcc/apgcc-ucf-qnrf-val-smoke-82d9285/selection_manifest.json",
+      "sha256": "c76ac3f1dad38d22012f09973d705f9adafa1e1568eec94466b7495d1014bacf"
+    },
+    {
+      "path": "/workspace/data/results/apgcc/apgcc-ucf-qnrf-val-smoke-82d9285/split-source-manifest.json",
+      "sha256": "70e3d0101778e3247d9589cfc6a234451b293feb7d5007472188984ae0594f02"
+    },
+    {
+      "path": "/workspace/data/results/apgcc/apgcc-ucf-qnrf-val-smoke-82d9285/summary.md",
+      "sha256": "93cc05a20ce5871830a8253906aacb45a666d78d1c4d1c6a6583c9ecffbd26bf"
+    },
+    {
+      "path": "/workspace/data/results/csrnet/csrnet-ucf-qnrf-val-smoke-745d5b6/environment-summary.json",
+      "sha256": "41994530662ab03139da4712b1cb993d01c3002e8e636ffe266920bcb687aba9"
+    },
+    {
+      "path": "/workspace/data/results/csrnet/csrnet-ucf-qnrf-val-smoke-745d5b6/evidence-manifest.json",
+      "sha256": "bda441c841324a9a2609d3826e9f969b60512296fb037c407a1d1e76b887e212"
+    },
+    {
+      "path": "/workspace/data/results/csrnet/csrnet-ucf-qnrf-val-smoke-745d5b6/figures/selected-01-fd9373c130ac1077.png",
+      "sha256": "a54c19df8a2cb307b615ab0ff317a6d74f256896878be1bc93517a79e8e66144"
+    },
+    {
+      "path": "/workspace/data/results/csrnet/csrnet-ucf-qnrf-val-smoke-745d5b6/figures/selected-02-c5e3d9aa6077e652.png",
+      "sha256": "32638d4bfb573a72b4d7485c50c3bc90443f1cbfa037761608693d0cc2aad68b"
+    },
+    {
+      "path": "/workspace/data/results/csrnet/csrnet-ucf-qnrf-val-smoke-745d5b6/figures/selected-03-0a3e30df85e751e6.png",
+      "sha256": "24ad9f3db6095834a91e8d8a21d28bfac8865643a5e9d34f3cc66c91554aec31"
+    },
+    {
+      "path": "/workspace/data/results/csrnet/csrnet-ucf-qnrf-val-smoke-745d5b6/figures/selected-04-419fec40ac00261f.png",
+      "sha256": "7f3e86c70f4e15d9d6bbe2b96acf861a778a212f5e0b492566b31e4e9beb0a86"
+    },
+    {
+      "path": "/workspace/data/results/csrnet/csrnet-ucf-qnrf-val-smoke-745d5b6/figures/selected-05-c21f6cc286a93bc0.png",
+      "sha256": "f51d63f72a69b098e564723f025f6acea95f712a7ccdaba2dcd999c7ed185cf3"
+    },
+    {
+      "path": "/workspace/data/results/csrnet/csrnet-ucf-qnrf-val-smoke-745d5b6/figures/selected-06-5f883365dbf8fabe.png",
+      "sha256": "18506d2b1a6b91bd92c56954b7b04bf9b2748daad1c9837452b55827ce4c2dd0"
+    },
+    {
+      "path": "/workspace/data/results/csrnet/csrnet-ucf-qnrf-val-smoke-745d5b6/figures/selected-07-ca90cca47cd2592a.png",
+      "sha256": "2f784a3e23f5e31780c74de7d6a9503a0c8025ce18867b0cc72477e830ef0685"
+    },
+    {
+      "path": "/workspace/data/results/csrnet/csrnet-ucf-qnrf-val-smoke-745d5b6/figures/selected-08-c145cb679c8a0d04.png",
+      "sha256": "fa136d70454c41709b104f8cbd6bc6d62147043316aff92ff3fb02bcbc15d5ac"
+    },
+    {
+      "path": "/workspace/data/results/csrnet/csrnet-ucf-qnrf-val-smoke-745d5b6/figures/selected-09-897716f616762b84.png",
+      "sha256": "84a7ea5c7296a29bfb7bf5f7e9fd4b7a2fb60d2b968d7411b93922e1ebfc1058"
+    },
+    {
+      "path": "/workspace/data/results/csrnet/csrnet-ucf-qnrf-val-smoke-745d5b6/figures/selected-10-0a828eb9e6e71267.png",
+      "sha256": "adc00a67b3d070d0ffce73a8819b7a1d51100f558812d95fbc5dbd022da6520c"
+    },
+    {
+      "path": "/workspace/data/results/csrnet/csrnet-ucf-qnrf-val-smoke-745d5b6/figures/selected-11-320ad007a4340168.png",
+      "sha256": "0ca01677a7e5626ddaaaef75b8e5faec73094023f054d9e67f2f746b02f3ef7c"
+    },
+    {
+      "path": "/workspace/data/results/csrnet/csrnet-ucf-qnrf-val-smoke-745d5b6/figures/selected-12-cc4e59a84ce60dd5.png",
+      "sha256": "1d0245b7cdb34213e820743c28c5a2579f21a0218d053a2e05180a8fdc5e139d"
+    },
+    {
+      "path": "/workspace/data/results/csrnet/csrnet-ucf-qnrf-val-smoke-745d5b6/metrics.json",
+      "sha256": "7753b63d1ee9519d04eb12f7774f67ca8a18bd5169e3c5c2fcfaca33959135a1"
+    },
+    {
+      "path": "/workspace/data/results/csrnet/csrnet-ucf-qnrf-val-smoke-745d5b6/model-brief.md",
+      "sha256": "5e5b84bdc23aa7e5e4a5bea028acd04d5f006d4d7c9bed8d737c49ce2758c119"
+    },
+    {
+      "path": "/workspace/data/results/csrnet/csrnet-ucf-qnrf-val-smoke-745d5b6/native-output-metadata.json",
+      "sha256": "223ca63f1640e99e5793c0d0755a7e2fcbc00410908452061a0319bf806ac772"
+    },
+    {
+      "path": "/workspace/data/results/csrnet/csrnet-ucf-qnrf-val-smoke-745d5b6/predictions.csv",
+      "sha256": "1299c3bdd2be35d9e5c92ce47b9f6b62d798038a1df0c99ca21250f40f827734"
+    },
+    {
+      "path": "/workspace/data/results/csrnet/csrnet-ucf-qnrf-val-smoke-745d5b6/rights-decision.json",
+      "sha256": "b0268a358445c8b9aaa597e2c05ff91489d826747f1c74f7d2936b743fbaed8b"
+    },
+    {
+      "path": "/workspace/data/results/csrnet/csrnet-ucf-qnrf-val-smoke-745d5b6/sample-manifest.json",
+      "sha256": "2a47839008b2a8347d528cbfd00d244a3a083b26fa8b84c9ea8dfa2e39aaaff3"
+    },
+    {
+      "path": "/workspace/data/results/csrnet/csrnet-ucf-qnrf-val-smoke-745d5b6/score.json",
+      "sha256": "1538747089273f8952bba46107dae1ce3cb7d4a5678cb262a437daaef6963f2b"
+    },
+    {
+      "path": "/workspace/data/results/csrnet/csrnet-ucf-qnrf-val-smoke-745d5b6/selection_manifest.json",
+      "sha256": "256d11dabc383ec52e48518a175e31d40553cb09a15948dfa74c0d03576cda53"
+    },
+    {
+      "path": "/workspace/data/results/csrnet/csrnet-ucf-qnrf-val-smoke-745d5b6/split-source-manifest.json",
+      "sha256": "3f2ebdf2af46b1f77d094b070cdb48fdeced474d7898e6094657881f8bcab7f0"
+    },
+    {
+      "path": "/workspace/data/results/csrnet/csrnet-ucf-qnrf-val-smoke-745d5b6/summary.md",
+      "sha256": "df480040747cfb6c74c52945c29a2a6b85bb74557b0679e2d252d52085e80830"
+    },
+    {
+      "path": "/workspace/data/results/dm-count/ucf-qnrf-val-smoke-aeb92da/environment-summary.json",
+      "sha256": "a0cc3c5d60e53d43657fe880068beca517fa9347fda27c69daf4ad33cdae5f84"
+    },
+    {
+      "path": "/workspace/data/results/dm-count/ucf-qnrf-val-smoke-aeb92da/evidence-manifest.json",
+      "sha256": "7e118f8729325faa5bb4c0a106692e9acc0bdfc64bf496aded9992b443428586"
+    },
+    {
+      "path": "/workspace/data/results/dm-count/ucf-qnrf-val-smoke-aeb92da/figures/selected-01-fd9373c130ac1077.png",
+      "sha256": "6000fefe864a96c9d0388f0c048ba12666eb41cead36cbf17dcb4a53f0c335ee"
+    },
+    {
+      "path": "/workspace/data/results/dm-count/ucf-qnrf-val-smoke-aeb92da/figures/selected-02-ccb64a426e7cd837.png",
+      "sha256": "6d8a3be3da254a39bc449d453fca95c84f7035a1630afecf56092adc15c31f96"
+    },
+    {
+      "path": "/workspace/data/results/dm-count/ucf-qnrf-val-smoke-aeb92da/figures/selected-03-8e0a4dbe072725a1.png",
+      "sha256": "e33bd98f082362bfadb27d0702961165efddde55475669b36e4ba95df09f0ba8"
+    },
+    {
+      "path": "/workspace/data/results/dm-count/ucf-qnrf-val-smoke-aeb92da/figures/selected-04-8fba49295a243a3d.png",
+      "sha256": "4c6c3195c8050b2a221966f9d49d9c1c3b8e68410dd94198c031448bbf3ef741"
+    },
+    {
+      "path": "/workspace/data/results/dm-count/ucf-qnrf-val-smoke-aeb92da/figures/selected-05-c21f6cc286a93bc0.png",
+      "sha256": "e14943c289ee840aefadc05afe08800705e3c3a0ae4df676c4709d529b011bbe"
+    },
+    {
+      "path": "/workspace/data/results/dm-count/ucf-qnrf-val-smoke-aeb92da/figures/selected-06-4203bc526bce1d84.png",
+      "sha256": "fb8913d36f77ad9b992e7ce2ebb699158a046a3ed414065c8b1463af5d98b92d"
+    },
+    {
+      "path": "/workspace/data/results/dm-count/ucf-qnrf-val-smoke-aeb92da/figures/selected-07-b136b5ac7f290f06.png",
+      "sha256": "fd1bad9c21cc21e3bad869481230d92312cdb58205c2fc80e0041497568677f8"
+    },
+    {
+      "path": "/workspace/data/results/dm-count/ucf-qnrf-val-smoke-aeb92da/figures/selected-08-c145cb679c8a0d04.png",
+      "sha256": "0e089da1a5e8bd3b007b913d2a4fca8072885ebb3f5045da88195af3fb7e0f6d"
+    },
+    {
+      "path": "/workspace/data/results/dm-count/ucf-qnrf-val-smoke-aeb92da/figures/selected-09-f30a3d3953dce3da.png",
+      "sha256": "7f1505c99dd7b6ae0ad6d25e16a9478514356edd434e15509e4bb60a592736b6"
+    },
+    {
+      "path": "/workspace/data/results/dm-count/ucf-qnrf-val-smoke-aeb92da/figures/selected-10-3124be1f1fb9e789.png",
+      "sha256": "bf943755a8af1c0865a754cdbea78c3cef585787fac3b179e564edab527377e2"
+    },
+    {
+      "path": "/workspace/data/results/dm-count/ucf-qnrf-val-smoke-aeb92da/figures/selected-11-320ad007a4340168.png",
+      "sha256": "1b33fcd4ad02624bb7129cc3694f20cd15d95965aad84da8e6babc42d6e8e995"
+    },
+    {
+      "path": "/workspace/data/results/dm-count/ucf-qnrf-val-smoke-aeb92da/figures/selected-12-897716f616762b84.png",
+      "sha256": "a3559a03f0f4e71df37e56ee82191704b3de9255d5ee8fd5746ddd9b6cd1730c"
+    },
+    {
+      "path": "/workspace/data/results/dm-count/ucf-qnrf-val-smoke-aeb92da/metrics.json",
+      "sha256": "1d032535924527ed0e3aab8ca6e444b815bfd994da13a53d0c429554e3293849"
+    },
+    {
+      "path": "/workspace/data/results/dm-count/ucf-qnrf-val-smoke-aeb92da/model-brief.md",
+      "sha256": "7746c794b4f7f7d796e1c76241422cb8c5ebc54f6aec4d5ce8f8f64ab9f670fa"
+    },
+    {
+      "path": "/workspace/data/results/dm-count/ucf-qnrf-val-smoke-aeb92da/native-output-metadata.json",
+      "sha256": "89320a14ac48512f45bb38977680b6031b470c4c1d6c13ee504ee314d9901ee5"
+    },
+    {
+      "path": "/workspace/data/results/dm-count/ucf-qnrf-val-smoke-aeb92da/predictions.csv",
+      "sha256": "bf8381c808a23b6b750a339ac9b6b2995ab066a0f8c3a51b831bb14e8d75e950"
+    },
+    {
+      "path": "/workspace/data/results/dm-count/ucf-qnrf-val-smoke-aeb92da/rights-decision.json",
+      "sha256": "78962519eba75c7445597988e8a4625a0a53a6464dd2f0bc070bc5016445b284"
+    },
+    {
+      "path": "/workspace/data/results/dm-count/ucf-qnrf-val-smoke-aeb92da/sample-manifest.json",
+      "sha256": "5d57476c921c75906fa4ac1f9233be01caada2f4dc04fdc21c1eecc7f9830301"
+    },
+    {
+      "path": "/workspace/data/results/dm-count/ucf-qnrf-val-smoke-aeb92da/score.json",
+      "sha256": "7f2928edde727f9657dac77c72e96822e4c5da3c8574469e2cc680c0dab9643e"
+    },
+    {
+      "path": "/workspace/data/results/dm-count/ucf-qnrf-val-smoke-aeb92da/selection_manifest.json",
+      "sha256": "0cd3696f6e36314d746203a49d58524b8df269bd65d0d354cef94a3d07d0610b"
+    },
+    {
+      "path": "/workspace/data/results/dm-count/ucf-qnrf-val-smoke-aeb92da/summary.md",
+      "sha256": "df202938d77db055c86c6d2accab7c3aca803f8b92f3c06483a5b3bd30e80af9"
+    },
+    {
+      "path": "/workspace/data/results/mpcount/mpcount-ucf-qnrf-val-smoke-5cc5d72/environment-summary.json",
+      "sha256": "cdbcaec9cb75ca3595eb565ff2cfeb610260711abe446771a9a7dbdd2159166f"
+    },
+    {
+      "path": "/workspace/data/results/mpcount/mpcount-ucf-qnrf-val-smoke-5cc5d72/evidence-manifest.json",
+      "sha256": "158e1253d401c0aa97891eb29fa7aed7872b53bf1b5b88679d03d42d27e8c3c3"
+    },
+    {
+      "path": "/workspace/data/results/mpcount/mpcount-ucf-qnrf-val-smoke-5cc5d72/figures/selected-01-fd9373c130ac1077.png",
+      "sha256": "67b007e636b0eaa3cb8000e452d1559d7da5b1ef02d2208f573eb7a08e9f016d"
+    },
+    {
+      "path": "/workspace/data/results/mpcount/mpcount-ucf-qnrf-val-smoke-5cc5d72/figures/selected-02-c5e3d9aa6077e652.png",
+      "sha256": "b82d1a85b266c3049a71b0ab4941f97e92ef34d99c5d73766242b8dcaf743a9f"
+    },
+    {
+      "path": "/workspace/data/results/mpcount/mpcount-ucf-qnrf-val-smoke-5cc5d72/figures/selected-03-8e0a4dbe072725a1.png",
+      "sha256": "7f3f0b2f07f63ba7ad3ee478ef34a6b715b663f8df71aa57775d61cc19459842"
+    },
+    {
+      "path": "/workspace/data/results/mpcount/mpcount-ucf-qnrf-val-smoke-5cc5d72/figures/selected-04-c21f6cc286a93bc0.png",
+      "sha256": "93cff9cb0850a6e79a775e1fff3b1d1ad1352ef83e134db9dd76c70dc9582edc"
+    },
+    {
+      "path": "/workspace/data/results/mpcount/mpcount-ucf-qnrf-val-smoke-5cc5d72/figures/selected-05-4203bc526bce1d84.png",
+      "sha256": "3149e8209d4fe1b9a727b11ce81527e3032f967ae1e0868ceb298ca29ade17e6"
+    },
+    {
+      "path": "/workspace/data/results/mpcount/mpcount-ucf-qnrf-val-smoke-5cc5d72/figures/selected-06-9e3a7ee5803445cf.png",
+      "sha256": "a8d2674b49a998e19ca3dc1780ca759ed7d9b35f78ce58ba3a883713a8d07cf3"
+    },
+    {
+      "path": "/workspace/data/results/mpcount/mpcount-ucf-qnrf-val-smoke-5cc5d72/figures/selected-07-e234c4048be37fca.png",
+      "sha256": "b435a470dfdc629fc237249840e1bd3bb62128fb2fb258476f85a7b469688262"
+    },
+    {
+      "path": "/workspace/data/results/mpcount/mpcount-ucf-qnrf-val-smoke-5cc5d72/figures/selected-08-b136b5ac7f290f06.png",
+      "sha256": "5f9b14466d006a0e1d386796cecdc660eed1ea60c9f17ef782191af7bcbdd287"
+    },
+    {
+      "path": "/workspace/data/results/mpcount/mpcount-ucf-qnrf-val-smoke-5cc5d72/figures/selected-09-eb87a5b258d7e8d8.png",
+      "sha256": "1362904f0370f5d0be422b8fd1d533e13fd55baaa5da0769d013bb68f0cac6e6"
+    },
+    {
+      "path": "/workspace/data/results/mpcount/mpcount-ucf-qnrf-val-smoke-5cc5d72/figures/selected-10-0a828eb9e6e71267.png",
+      "sha256": "691cf50d3c82867fbb966d28e1162f257fb702657b27d3be6979c16e1efc5315"
+    },
+    {
+      "path": "/workspace/data/results/mpcount/mpcount-ucf-qnrf-val-smoke-5cc5d72/figures/selected-11-320ad007a4340168.png",
+      "sha256": "b971fecafc9b44a77e7b374218db7ad507ea5b5e82fe48612734582d871c30c5"
+    },
+    {
+      "path": "/workspace/data/results/mpcount/mpcount-ucf-qnrf-val-smoke-5cc5d72/figures/selected-12-897716f616762b84.png",
+      "sha256": "7f3d87a0343a5b15c89f7b535cb034beb0e771cd6278a8006cac9ef1f9d05700"
+    },
+    {
+      "path": "/workspace/data/results/mpcount/mpcount-ucf-qnrf-val-smoke-5cc5d72/metrics.json",
+      "sha256": "39ebe9bd241e5a205e9763b0a12ad93e8a9e8a47975a9dd15a7afc4b75e9e43d"
+    },
+    {
+      "path": "/workspace/data/results/mpcount/mpcount-ucf-qnrf-val-smoke-5cc5d72/model-brief.md",
+      "sha256": "86142c761553b1d421de231c64cbfdcae91ce6f53a26c046280db29adcc45ea7"
+    },
+    {
+      "path": "/workspace/data/results/mpcount/mpcount-ucf-qnrf-val-smoke-5cc5d72/native-output-metadata.json",
+      "sha256": "159cf1ec0fb484e31eb260ac131124f861c89ab6c9bdc1c3b11d59f668d8a86a"
+    },
+    {
+      "path": "/workspace/data/results/mpcount/mpcount-ucf-qnrf-val-smoke-5cc5d72/predictions.csv",
+      "sha256": "545f0b9b359458b95a36cccdec43fe5e3008dc0c9ede3daed8d9985b56aee569"
+    },
+    {
+      "path": "/workspace/data/results/mpcount/mpcount-ucf-qnrf-val-smoke-5cc5d72/rights-decision.json",
+      "sha256": "9ed237c31e88cdbfc3dd5bbde45d5e75509181cc75c343bbc5d4d2ba1270dd3d"
+    },
+    {
+      "path": "/workspace/data/results/mpcount/mpcount-ucf-qnrf-val-smoke-5cc5d72/sample-manifest.json",
+      "sha256": "cd6efe34c7e6a00346fc1e0d14470cdd95431a7da430dfca788b7d346b9fab44"
+    },
+    {
+      "path": "/workspace/data/results/mpcount/mpcount-ucf-qnrf-val-smoke-5cc5d72/score.json",
+      "sha256": "5c2cd18fe4eca2c203642f0ec5f17c13f18868f38e5fa486f177dfa18be2f2e6"
+    },
+    {
+      "path": "/workspace/data/results/mpcount/mpcount-ucf-qnrf-val-smoke-5cc5d72/selection_manifest.json",
+      "sha256": "4abe1201ab1ae38a6258e3ca96d51e1f30625a3c67a7c6a1c7cbca2165e4fcd6"
+    },
+    {
+      "path": "/workspace/data/results/mpcount/mpcount-ucf-qnrf-val-smoke-5cc5d72/split-source-manifest.json",
+      "sha256": "fff6d271429671f554047848329c0ee5602cec0b90f1114806776c31b740670f"
+    },
+    {
+      "path": "/workspace/data/results/mpcount/mpcount-ucf-qnrf-val-smoke-5cc5d72/summary.md",
+      "sha256": "f22ac1ea7f95c662fa8fb00366567f6577e4033c46edaa0aa91bb7d4e948bd84"
+    },
+    {
+      "path": "/workspace/data/results/pet/pet-ucf-qnrf-val-smoke-9b0fe87/environment-summary.json",
+      "sha256": "d497bad00bbf44cf425bc8ea8d02d46a30daee8146f06b19c2ae6eecae189545"
+    },
+    {
+      "path": "/workspace/data/results/pet/pet-ucf-qnrf-val-smoke-9b0fe87/evidence-manifest.json",
+      "sha256": "5d5a8948b6c26de4f719b1628e232a0882170653cee1d4160847e8d95e72abf0"
+    },
+    {
+      "path": "/workspace/data/results/pet/pet-ucf-qnrf-val-smoke-9b0fe87/figures/selected-01-8e0a4dbe072725a1.png",
+      "sha256": "383413a8f568aac2f89529541e447c7caa11f89e26d1a020b46b1c9d70e9f548"
+    },
+    {
+      "path": "/workspace/data/results/pet/pet-ucf-qnrf-val-smoke-9b0fe87/figures/selected-02-826d4141eedcca6b.png",
+      "sha256": "80135947cb0c59b058c1ad4e4b49a7ec4f8c2f9a1c6228209c26dca7a65e3d2f"
+    },
+    {
+      "path": "/workspace/data/results/pet/pet-ucf-qnrf-val-smoke-9b0fe87/figures/selected-03-fd9373c130ac1077.png",
+      "sha256": "c87edf22bf89c0c34c72bf1b4c64804f7637d84845729f7fee36e625f5923385"
+    },
+    {
+      "path": "/workspace/data/results/pet/pet-ucf-qnrf-val-smoke-9b0fe87/figures/selected-04-ea1387c07af13e07.png",
+      "sha256": "cbff7375035eab82d86008430aba961c60014144bc8a19be57872f31c6e7a08b"
+    },
+    {
+      "path": "/workspace/data/results/pet/pet-ucf-qnrf-val-smoke-9b0fe87/figures/selected-05-eb49d273e13423a7.png",
+      "sha256": "f3b3f3962e081ef5e178253c7947fafd3be3a444963323473f32f026e61d59d1"
+    },
+    {
+      "path": "/workspace/data/results/pet/pet-ucf-qnrf-val-smoke-9b0fe87/figures/selected-06-419fec40ac00261f.png",
+      "sha256": "d5e27437acf8dae0c87e4f531f24016223db0ae4ce930b372f049b0e7d07dc62"
+    },
+    {
+      "path": "/workspace/data/results/pet/pet-ucf-qnrf-val-smoke-9b0fe87/figures/selected-07-c145cb679c8a0d04.png",
+      "sha256": "68b31f8f1154be0ebcc87f472174913f96819944f31ec7792dfe975fc247945d"
+    },
+    {
+      "path": "/workspace/data/results/pet/pet-ucf-qnrf-val-smoke-9b0fe87/figures/selected-08-cc4e59a84ce60dd5.png",
+      "sha256": "be2c2064788442de9c9fd4157a3c07761f61b18cb56f918cd80128aea3b6e74f"
+    },
+    {
+      "path": "/workspace/data/results/pet/pet-ucf-qnrf-val-smoke-9b0fe87/figures/selected-09-897716f616762b84.png",
+      "sha256": "f227bc3420163f077d56c338084255f4629ca03abe842ca18392104a38424ada"
+    },
+    {
+      "path": "/workspace/data/results/pet/pet-ucf-qnrf-val-smoke-9b0fe87/figures/selected-10-ca90cca47cd2592a.png",
+      "sha256": "aca7f9590575bbe8a4e2be48a8098fbab631b338dd7eb10716eaf71f1d5db129"
+    },
+    {
+      "path": "/workspace/data/results/pet/pet-ucf-qnrf-val-smoke-9b0fe87/figures/selected-11-320ad007a4340168.png",
+      "sha256": "ed11f7458b539c090cea177baf1652d9af9cca0c13fdea5d8fa7a9ce2fbb4f9a"
+    },
+    {
+      "path": "/workspace/data/results/pet/pet-ucf-qnrf-val-smoke-9b0fe87/figures/selected-12-d8fafefff7c52849.png",
+      "sha256": "a040b54ce06bbd171d04154d654361cefc43b0b888ecee9e69bb6a9b60c91209"
+    },
+    {
+      "path": "/workspace/data/results/pet/pet-ucf-qnrf-val-smoke-9b0fe87/metrics.json",
+      "sha256": "a1ddd1d2eaf69f5bc3c22fcf538c3a574bc53fdb991161a9cbea708deadf723f"
+    },
+    {
+      "path": "/workspace/data/results/pet/pet-ucf-qnrf-val-smoke-9b0fe87/model-brief.md",
+      "sha256": "60ebc99bf4e1fd0cba01ce5f555ffc13538efab5ba46ce48d2a8808e018eeb44"
+    },
+    {
+      "path": "/workspace/data/results/pet/pet-ucf-qnrf-val-smoke-9b0fe87/native-output-metadata.json",
+      "sha256": "018ec590f7a909779b7a39e8a659a999ce579d73b129e5275d5d6c61b0d3116f"
+    },
+    {
+      "path": "/workspace/data/results/pet/pet-ucf-qnrf-val-smoke-9b0fe87/predictions.csv",
+      "sha256": "b919eb07ad5d7947b7e1b84336bb928f2ba7ab09c20b444f7f961fc1717e57b1"
+    },
+    {
+      "path": "/workspace/data/results/pet/pet-ucf-qnrf-val-smoke-9b0fe87/rights-decision.json",
+      "sha256": "444eafb87ce08e34c5467a2eab4fb62be3b8e90d81933846e643686a9a0f1e1c"
+    },
+    {
+      "path": "/workspace/data/results/pet/pet-ucf-qnrf-val-smoke-9b0fe87/sample-manifest.json",
+      "sha256": "589ac66d5c146854c94f2eeb5139b83ebb484ceb10c907b7b399b331e67bbb42"
+    },
+    {
+      "path": "/workspace/data/results/pet/pet-ucf-qnrf-val-smoke-9b0fe87/score.json",
+      "sha256": "b992c5c03bd334511ecf410807251aadc4292bee9e1c8cbac991f6559fad41b9"
+    },
+    {
+      "path": "/workspace/data/results/pet/pet-ucf-qnrf-val-smoke-9b0fe87/selection_manifest.json",
+      "sha256": "55cad173b2a934d70eb8b7b30b1f6a1f7af4d4635f94ecd6c3d8b1c891d69b09"
+    },
+    {
+      "path": "/workspace/data/results/pet/pet-ucf-qnrf-val-smoke-9b0fe87/split-source-manifest.json",
+      "sha256": "0c2ce85dc998a723c9534dae7ff9aea57987ac90dbd488bb85a64dac6bd41bf6"
+    },
+    {
+      "path": "/workspace/data/results/pet/pet-ucf-qnrf-val-smoke-9b0fe87/summary.md",
+      "sha256": "b2f13fbddada581d477066ea45e712bdbee7c096f02d736eb92b94cb58ff07e8"
+    },
+    {
+      "path": "/workspace/data/results/steerer/steerer-ucf-qnrf-val-smoke-7e6bebb/environment-summary.json",
+      "sha256": "a768f0bc18febbadbaa5b6a7e79287ad78f3258ec315ef05bd375a5dc4e89c03"
+    },
+    {
+      "path": "/workspace/data/results/steerer/steerer-ucf-qnrf-val-smoke-7e6bebb/evidence-manifest.json",
+      "sha256": "4d185aa68bd3709ebcbefb8f6850cc84bc6e0d7fc43321073e4d977fb1300bf0"
+    },
+    {
+      "path": "/workspace/data/results/steerer/steerer-ucf-qnrf-val-smoke-7e6bebb/figures/selected-01-be864ad6ba22cb9a.png",
+      "sha256": "3e98fa49db0a51f2c0a3738435114aa0e9c56f50c4bc77e49bc2f6325852ecf6"
+    },
+    {
+      "path": "/workspace/data/results/steerer/steerer-ucf-qnrf-val-smoke-7e6bebb/figures/selected-02-fd9373c130ac1077.png",
+      "sha256": "7a381dd32119579dc29ecb0037e08782fb0e45cfd5daf828f8303635f512a05d"
+    },
+    {
+      "path": "/workspace/data/results/steerer/steerer-ucf-qnrf-val-smoke-7e6bebb/figures/selected-03-8e0a4dbe072725a1.png",
+      "sha256": "adbbfe53d3f4d6c29cfdaf4e23cb72e49d40ad90ffa2241215b6cbc6191d8a72"
+    },
+    {
+      "path": "/workspace/data/results/steerer/steerer-ucf-qnrf-val-smoke-7e6bebb/figures/selected-04-d8fafefff7c52849.png",
+      "sha256": "aa28745a379d72e8396ddb39cefdbd5a6a24cf282e551cbe23d57d38b044b23b"
+    },
+    {
+      "path": "/workspace/data/results/steerer/steerer-ucf-qnrf-val-smoke-7e6bebb/figures/selected-05-505273f34f445a8f.png",
+      "sha256": "13c213bb645395057e4e183e3008f7fda6f4726668cc1a54f60717e8462e85fe"
+    },
+    {
+      "path": "/workspace/data/results/steerer/steerer-ucf-qnrf-val-smoke-7e6bebb/figures/selected-06-9e3a7ee5803445cf.png",
+      "sha256": "3928663cc5e092b5e62d5d11c9b6331f22906d93840a5fd29dda75921473a8ad"
+    },
+    {
+      "path": "/workspace/data/results/steerer/steerer-ucf-qnrf-val-smoke-7e6bebb/figures/selected-07-c145cb679c8a0d04.png",
+      "sha256": "79ae099d3fe013855cb1f4e5221e8a5f405f34a1921734ff3d47574a18ac6b3f"
+    },
+    {
+      "path": "/workspace/data/results/steerer/steerer-ucf-qnrf-val-smoke-7e6bebb/figures/selected-08-b136b5ac7f290f06.png",
+      "sha256": "5e122ac98c7234eb034d7f422ad4f2a836db50a6dea176c0fdc4e3868259dcb7"
+    },
+    {
+      "path": "/workspace/data/results/steerer/steerer-ucf-qnrf-val-smoke-7e6bebb/figures/selected-09-c70e58b5e6bae0d3.png",
+      "sha256": "25934fe9b0c859717a9bc9eb71a689bf897a69a6762e8df38d343eb2ccc0cb95"
+    },
+    {
+      "path": "/workspace/data/results/steerer/steerer-ucf-qnrf-val-smoke-7e6bebb/figures/selected-10-ca90cca47cd2592a.png",
+      "sha256": "0f87cfd87784fc4d6b2d82290fb69a60ed6814345ee5e35018eeaebef6baa931"
+    },
+    {
+      "path": "/workspace/data/results/steerer/steerer-ucf-qnrf-val-smoke-7e6bebb/figures/selected-11-3124be1f1fb9e789.png",
+      "sha256": "ec6e85b6e3f4815f1411e838434b176870d63f5e63b2c251ea5f99ee88c6e961"
+    },
+    {
+      "path": "/workspace/data/results/steerer/steerer-ucf-qnrf-val-smoke-7e6bebb/figures/selected-12-cc4e59a84ce60dd5.png",
+      "sha256": "fbb47fdf0a3e1ca3647d51332a0f72d721850715663510b3e92124b9330bbae4"
+    },
+    {
+      "path": "/workspace/data/results/steerer/steerer-ucf-qnrf-val-smoke-7e6bebb/metrics.json",
+      "sha256": "496491bdbd9f50444c0a38841b060ae27a979ccfe34f49c906520c1895c75240"
+    },
+    {
+      "path": "/workspace/data/results/steerer/steerer-ucf-qnrf-val-smoke-7e6bebb/model-brief.md",
+      "sha256": "44393bb3bdd5041b941ee5684712c32c7a6e9307aad739fa1520acacf5415178"
+    },
+    {
+      "path": "/workspace/data/results/steerer/steerer-ucf-qnrf-val-smoke-7e6bebb/native-output-metadata.json",
+      "sha256": "5cbe169958829cdd9cbf75957269860e7309af658f07868d05ba896701d56094"
+    },
+    {
+      "path": "/workspace/data/results/steerer/steerer-ucf-qnrf-val-smoke-7e6bebb/predictions.csv",
+      "sha256": "2b442d0b35acca227cb70500175235aa05372cd172509a4e2f8eb46f280f9d28"
+    },
+    {
+      "path": "/workspace/data/results/steerer/steerer-ucf-qnrf-val-smoke-7e6bebb/rights-decision.json",
+      "sha256": "20c8ab2c056a2fca2b2904869073ff2615ce3cd2872525f29a6ddde23535f669"
+    },
+    {
+      "path": "/workspace/data/results/steerer/steerer-ucf-qnrf-val-smoke-7e6bebb/sample-manifest.json",
+      "sha256": "742f39bf63daaa6081df21989c6b75e8b848340c479dc95b0ae4bee8ba30ed2e"
+    },
+    {
+      "path": "/workspace/data/results/steerer/steerer-ucf-qnrf-val-smoke-7e6bebb/score.json",
+      "sha256": "1d21f48c69e1d2a4612923716e12e14b313bd08801075ba8f8fb323cc7eef185"
+    },
+    {
+      "path": "/workspace/data/results/steerer/steerer-ucf-qnrf-val-smoke-7e6bebb/selection_manifest.json",
+      "sha256": "baf10237caed4c238f4d36ebebc8e1feffff19739e2844f5c6c7986e08b36bd5"
+    },
+    {
+      "path": "/workspace/data/results/steerer/steerer-ucf-qnrf-val-smoke-7e6bebb/split-source-manifest.json",
+      "sha256": "409fbf8593f9733d4ae6ca6bbe7fa80de4e7b7a43083633716caf5514e61eda2"
+    },
+    {
+      "path": "/workspace/data/results/steerer/steerer-ucf-qnrf-val-smoke-7e6bebb/summary.md",
+      "sha256": "0ec6713acbf49aa1b80d922acda642b76c48b1de0738389c966764ae5252c803"
+    }
+  ],
+  "outputs": [
+    {
+      "path": "comparison.csv",
+      "sha256": "4711885a5010e915372bd119f4f39ce0884509da0320670c6dac925455a2474b"
+    },
+    {
+      "path": "comparison.json",
+      "sha256": "4e3fe228658429f428d40c9b24cbc6ad9cdf6e82b6c9d162d12449b73ce1535c"
+    },
+    {
+      "path": "comparison.md",
+      "sha256": "2f1415b1c38076a4e0d2b74c4553828e21cb5dc42d8a572d5a547807efdf2053"
+    },
+    {
+      "path": "scorecard-config.snapshot.json",
+      "sha256": "2c1929c522346a2f3946fa46a70f90d16ad033956fb13369e707c6e3faa5e6f3"
+    }
+  ],
+  "schema_version": 1
+}

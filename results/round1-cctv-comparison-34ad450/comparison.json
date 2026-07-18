@@ -1,0 +1,528 @@
+{
+  "comparison_id": "round1-fixed-cctv-technical-shortlist-v1",
+  "comparison_scope": "compatibility_smoke",
+  "dataset": {
+    "canonical_split_sha256": "da1d947aad73d45be573d52a6462fa8022948fba2b1026a3bfff76b11a4b5c67",
+    "dataset_id": "ucf-qnrf-kaggle-apache",
+    "expected_samples": 36,
+    "split_id": "dm-count-upstream-qnrf-val-smoke-36-v1",
+    "split_role": "validation"
+  },
+  "git_commit": "34ad450a3526831580f4e93c34c9600fc1c4f6c2",
+  "limitations": [
+    "Official checkpoints do not share one training protocol.",
+    "This is a 36-image cross-domain operational screen, not an official ranking.",
+    "Technical score does not grant code, dataset, weight, derived-weight, or deployment rights.",
+    "Fine-tuning and test-split access are outside this comparison stage."
+  ],
+  "models": [
+    {
+      "aggregates": {
+        "density_psnr": 23.396408221398037,
+        "density_ssim": 0.7004973794579129,
+        "high_band_bias": 4.669948067332086,
+        "localization_f1": null,
+        "localization_mean_distance": null,
+        "localization_precision": null,
+        "localization_recall": null,
+        "mae": 154.28648082510838,
+        "mape_reference": 12.989676663227876,
+        "max_absolute_band_bias": 4.669948067332086,
+        "mean_game_l1": 168.80681324176805,
+        "mean_zone_mae": 42.165621553750434,
+        "median_latency_ms": 69.53307999719982,
+        "peak_vram_mb": 8980.25537109375,
+        "rmse": 229.8056367778225,
+        "signed_bias": 3.0315921870790197,
+        "spatial_metric_value": 168.80681324176803,
+        "throughput_fps_batch1": 14.381643960547573
+      },
+      "capabilities": {
+        "confidence": "NOT_DEMONSTRATED",
+        "density_map": "DEMONSTRATED",
+        "point_localization": "NOT_DEMONSTRATED",
+        "zone_aggregation": "DEMONSTRATED"
+      },
+      "categories": {
+        "count_stability": 13.461274976387664,
+        "evidence_quality": 10.0,
+        "operator_integration": 10.0,
+        "runtime_resources": 14.65186783497107,
+        "zone_spatial": 25.943406510489595
+      },
+      "checkpoint_training_split_status": "VERIFIED_DISJOINT",
+      "comparison_scope": "compatibility_smoke",
+      "deployment_label": "PENDING_DUE_DILIGENCE",
+      "family": "density",
+      "model_id": "dm-count",
+      "primary_spatial_metric": "game_l1",
+      "ranking_eligible": false,
+      "representative_panels": [
+        "../dm-count/ucf-qnrf-val-smoke-aeb92da/figures/selected-01-fd9373c130ac1077.png",
+        "../dm-count/ucf-qnrf-val-smoke-aeb92da/figures/selected-02-ccb64a426e7cd837.png",
+        "../dm-count/ucf-qnrf-val-smoke-aeb92da/figures/selected-03-8e0a4dbe072725a1.png",
+        "../dm-count/ucf-qnrf-val-smoke-aeb92da/figures/selected-04-8fba49295a243a3d.png",
+        "../dm-count/ucf-qnrf-val-smoke-aeb92da/figures/selected-05-c21f6cc286a93bc0.png",
+        "../dm-count/ucf-qnrf-val-smoke-aeb92da/figures/selected-06-4203bc526bce1d84.png",
+        "../dm-count/ucf-qnrf-val-smoke-aeb92da/figures/selected-07-b136b5ac7f290f06.png",
+        "../dm-count/ucf-qnrf-val-smoke-aeb92da/figures/selected-08-c145cb679c8a0d04.png",
+        "../dm-count/ucf-qnrf-val-smoke-aeb92da/figures/selected-09-f30a3d3953dce3da.png",
+        "../dm-count/ucf-qnrf-val-smoke-aeb92da/figures/selected-10-3124be1f1fb9e789.png",
+        "../dm-count/ucf-qnrf-val-smoke-aeb92da/figures/selected-11-320ad007a4340168.png",
+        "../dm-count/ucf-qnrf-val-smoke-aeb92da/figures/selected-12-897716f616762b84.png"
+      ],
+      "rights_components": {
+        "code": {
+          "component_id": "dm-count-official-cc5f2132",
+          "status": "REVIEWED_NO_EXPLICIT_PROHIBITION"
+        },
+        "dataset": {
+          "component_id": "ucf-qnrf-kaggle-apache",
+          "status": "REVIEWED_NO_EXPLICIT_PROHIBITION"
+        },
+        "deployment": {
+          "component_id": "droneai-festival-deployment-pending",
+          "status": "PENDING"
+        },
+        "derived_weights": {
+          "component_id": "droneai-derived-weights-not-created",
+          "status": "PENDING"
+        },
+        "pretrained_weights": {
+          "component_id": "dm-count-model-qnrf-cc5f2132",
+          "status": "REVIEWED_NO_EXPLICIT_PROHIBITION"
+        }
+      },
+      "rights_scope": "PASS_COMMERCIAL_CANDIDATE",
+      "technical_order": 2,
+      "technical_score": 74.05654932184832,
+      "technical_score_display": 74.06
+    },
+    {
+      "aggregates": {
+        "density_psnr": 24.038965853643656,
+        "density_ssim": 0.7466787066497029,
+        "high_band_bias": 92.1152363621232,
+        "localization_f1": 0.796461964727525,
+        "localization_mean_distance": 5.6909536202854385,
+        "localization_precision": 0.860264523383631,
+        "localization_recall": 0.7514675745021416,
+        "mae": 71.58789788775105,
+        "mape_reference": 6.200965069372624,
+        "max_absolute_band_bias": 92.1152363621232,
+        "mean_game_l1": 79.15199264459253,
+        "mean_zone_mae": 19.767642748165613,
+        "median_latency_ms": 130.69571800042468,
+        "peak_vram_mb": 3408.521484375,
+        "rmse": 97.96504379779495,
+        "signed_bias": 43.92363210348982,
+        "spatial_metric_value": 79.15199264459251,
+        "throughput_fps_batch1": 7.651360085085195
+      },
+      "capabilities": {
+        "confidence": "NOT_DEMONSTRATED",
+        "density_map": "DEMONSTRATED",
+        "point_localization": "DEMONSTRATED",
+        "zone_aggregation": "DEMONSTRATED"
+      },
+      "categories": {
+        "count_stability": 18.88084694747005,
+        "evidence_quality": 8.0,
+        "operator_integration": 13.0,
+        "runtime_resources": 13.670224858643937,
+        "zone_spatial": 29.629833992826196
+      },
+      "checkpoint_training_split_status": "UNKNOWN",
+      "comparison_scope": "compatibility_smoke",
+      "deployment_label": "PENDING_DUE_DILIGENCE",
+      "family": "density_and_points",
+      "model_id": "steerer",
+      "primary_spatial_metric": "game_l1",
+      "ranking_eligible": false,
+      "representative_panels": [
+        "../steerer/steerer-ucf-qnrf-val-smoke-7e6bebb/figures/selected-01-be864ad6ba22cb9a.png",
+        "../steerer/steerer-ucf-qnrf-val-smoke-7e6bebb/figures/selected-02-fd9373c130ac1077.png",
+        "../steerer/steerer-ucf-qnrf-val-smoke-7e6bebb/figures/selected-03-8e0a4dbe072725a1.png",
+        "../steerer/steerer-ucf-qnrf-val-smoke-7e6bebb/figures/selected-04-d8fafefff7c52849.png",
+        "../steerer/steerer-ucf-qnrf-val-smoke-7e6bebb/figures/selected-05-505273f34f445a8f.png",
+        "../steerer/steerer-ucf-qnrf-val-smoke-7e6bebb/figures/selected-06-9e3a7ee5803445cf.png",
+        "../steerer/steerer-ucf-qnrf-val-smoke-7e6bebb/figures/selected-07-c145cb679c8a0d04.png",
+        "../steerer/steerer-ucf-qnrf-val-smoke-7e6bebb/figures/selected-08-b136b5ac7f290f06.png",
+        "../steerer/steerer-ucf-qnrf-val-smoke-7e6bebb/figures/selected-09-c70e58b5e6bae0d3.png",
+        "../steerer/steerer-ucf-qnrf-val-smoke-7e6bebb/figures/selected-10-ca90cca47cd2592a.png",
+        "../steerer/steerer-ucf-qnrf-val-smoke-7e6bebb/figures/selected-11-3124be1f1fb9e789.png",
+        "../steerer/steerer-ucf-qnrf-val-smoke-7e6bebb/figures/selected-12-cc4e59a84ce60dd5.png"
+      ],
+      "rights_components": {
+        "code": {
+          "component_id": "steerer-official-5b1854db",
+          "status": "REVIEWED_NO_EXPLICIT_PROHIBITION"
+        },
+        "dataset": {
+          "component_id": "ucf-qnrf-kaggle-apache",
+          "status": "REVIEWED_NO_EXPLICIT_PROHIBITION"
+        },
+        "deployment": {
+          "component_id": "droneai-festival-deployment-pending",
+          "status": "PENDING"
+        },
+        "derived_weights": {
+          "component_id": "droneai-derived-weights-not-created",
+          "status": "PENDING"
+        },
+        "pretrained_weights": {
+          "component_id": "steerer-official-ucf-qnrf-checkpoint",
+          "status": "PENDING"
+        }
+      },
+      "rights_scope": "PASS_COMMERCIAL_CANDIDATE",
+      "technical_order": 1,
+      "technical_score": 83.18090579894019,
+      "technical_score_display": 83.18
+    },
+    {
+      "aggregates": {
+        "density_psnr": null,
+        "density_ssim": null,
+        "high_band_bias": 7.5,
+        "localization_f1": 0.5121234229790129,
+        "localization_mean_distance": 8.442530073302224,
+        "localization_precision": 0.5097020188266339,
+        "localization_recall": 0.5160705090107326,
+        "mae": 76.44444444444444,
+        "mape_reference": 6.045856688841498,
+        "max_absolute_band_bias": 34.5,
+        "mean_game_l1": null,
+        "mean_zone_mae": 66.31944444444444,
+        "median_latency_ms": 57.99415199908253,
+        "peak_vram_mb": 4291.91455078125,
+        "rmse": 129.80177194476198,
+        "signed_bias": 15.666666666666666,
+        "spatial_metric_value": 0.5121234229790129,
+        "throughput_fps_batch1": 17.243117892573377
+      },
+      "capabilities": {
+        "confidence": "NOT_DEMONSTRATED",
+        "density_map": "NOT_DEMONSTRATED",
+        "point_localization": "DEMONSTRATED",
+        "zone_aggregation": "DEMONSTRATED"
+      },
+      "categories": {
+        "count_stability": 18.991105544304737,
+        "evidence_quality": 8.0,
+        "operator_integration": 9.0,
+        "runtime_resources": 15.0,
+        "zone_spatial": 22.127700194645072
+      },
+      "checkpoint_training_split_status": "UNKNOWN",
+      "comparison_scope": "compatibility_smoke",
+      "deployment_label": "RESEARCH_ONLY",
+      "family": "points",
+      "model_id": "pet",
+      "primary_spatial_metric": "localization_f1",
+      "ranking_eligible": false,
+      "representative_panels": [
+        "../pet/pet-ucf-qnrf-val-smoke-9b0fe87/figures/selected-01-8e0a4dbe072725a1.png",
+        "../pet/pet-ucf-qnrf-val-smoke-9b0fe87/figures/selected-02-826d4141eedcca6b.png",
+        "../pet/pet-ucf-qnrf-val-smoke-9b0fe87/figures/selected-03-fd9373c130ac1077.png",
+        "../pet/pet-ucf-qnrf-val-smoke-9b0fe87/figures/selected-04-ea1387c07af13e07.png",
+        "../pet/pet-ucf-qnrf-val-smoke-9b0fe87/figures/selected-05-eb49d273e13423a7.png",
+        "../pet/pet-ucf-qnrf-val-smoke-9b0fe87/figures/selected-06-419fec40ac00261f.png",
+        "../pet/pet-ucf-qnrf-val-smoke-9b0fe87/figures/selected-07-c145cb679c8a0d04.png",
+        "../pet/pet-ucf-qnrf-val-smoke-9b0fe87/figures/selected-08-cc4e59a84ce60dd5.png",
+        "../pet/pet-ucf-qnrf-val-smoke-9b0fe87/figures/selected-09-897716f616762b84.png",
+        "../pet/pet-ucf-qnrf-val-smoke-9b0fe87/figures/selected-10-ca90cca47cd2592a.png",
+        "../pet/pet-ucf-qnrf-val-smoke-9b0fe87/figures/selected-11-320ad007a4340168.png",
+        "../pet/pet-ucf-qnrf-val-smoke-9b0fe87/figures/selected-12-d8fafefff7c52849.png"
+      ],
+      "rights_components": {
+        "code": {
+          "component_id": "pet-official-5b4dd7da",
+          "status": "RESTRICTED"
+        },
+        "dataset": {
+          "component_id": "ucf-qnrf-kaggle-apache",
+          "status": "REVIEWED_NO_EXPLICIT_PROHIBITION"
+        },
+        "deployment": {
+          "component_id": "droneai-festival-deployment-pending",
+          "status": "PENDING"
+        },
+        "derived_weights": {
+          "component_id": "droneai-derived-weights-not-created",
+          "status": "PENDING"
+        },
+        "pretrained_weights": {
+          "component_id": "pet-official-ucf-qnrf-checkpoint",
+          "status": "RESTRICTED"
+        }
+      },
+      "rights_scope": "PASS_RESEARCH_ONLY",
+      "technical_order": 3,
+      "technical_score": 73.11880573894982,
+      "technical_score_display": 73.12
+    },
+    {
+      "aggregates": {
+        "density_psnr": 23.583836563179744,
+        "density_ssim": 0.7177113228411697,
+        "high_band_bias": -77.74381282842906,
+        "localization_f1": null,
+        "localization_mean_distance": null,
+        "localization_precision": null,
+        "localization_recall": null,
+        "mae": 213.62444629494576,
+        "mape_reference": 21.014946335851093,
+        "max_absolute_band_bias": 77.74381282842906,
+        "mean_game_l1": 239.27004881572404,
+        "mean_zone_mae": 59.741104163053365,
+        "median_latency_ms": 139.44401850312715,
+        "peak_vram_mb": 13281.50146484375,
+        "rmse": 333.5529108109868,
+        "signed_bias": -17.600798534913864,
+        "spatial_metric_value": 239.27004881572398,
+        "throughput_fps_batch1": 7.171336646308527
+      },
+      "capabilities": {
+        "confidence": "NOT_DEMONSTRATED",
+        "density_map": "DEMONSTRATED",
+        "point_localization": "NOT_DEMONSTRATED",
+        "zone_aggregation": "DEMONSTRATED"
+      },
+      "categories": {
+        "count_stability": 7.7389134471405,
+        "evidence_quality": 10.0,
+        "operator_integration": 10.0,
+        "runtime_resources": 11.624696886148453,
+        "zone_spatial": 21.277320808256373
+      },
+      "checkpoint_training_split_status": "VERIFIED_DISJOINT",
+      "comparison_scope": "compatibility_smoke",
+      "deployment_label": "PENDING_DUE_DILIGENCE",
+      "family": "density",
+      "model_id": "mpcount",
+      "primary_spatial_metric": "game_l1",
+      "ranking_eligible": false,
+      "representative_panels": [
+        "../mpcount/mpcount-ucf-qnrf-val-smoke-5cc5d72/figures/selected-01-fd9373c130ac1077.png",
+        "../mpcount/mpcount-ucf-qnrf-val-smoke-5cc5d72/figures/selected-02-c5e3d9aa6077e652.png",
+        "../mpcount/mpcount-ucf-qnrf-val-smoke-5cc5d72/figures/selected-03-8e0a4dbe072725a1.png",
+        "../mpcount/mpcount-ucf-qnrf-val-smoke-5cc5d72/figures/selected-04-c21f6cc286a93bc0.png",
+        "../mpcount/mpcount-ucf-qnrf-val-smoke-5cc5d72/figures/selected-05-4203bc526bce1d84.png",
+        "../mpcount/mpcount-ucf-qnrf-val-smoke-5cc5d72/figures/selected-06-9e3a7ee5803445cf.png",
+        "../mpcount/mpcount-ucf-qnrf-val-smoke-5cc5d72/figures/selected-07-e234c4048be37fca.png",
+        "../mpcount/mpcount-ucf-qnrf-val-smoke-5cc5d72/figures/selected-08-b136b5ac7f290f06.png",
+        "../mpcount/mpcount-ucf-qnrf-val-smoke-5cc5d72/figures/selected-09-eb87a5b258d7e8d8.png",
+        "../mpcount/mpcount-ucf-qnrf-val-smoke-5cc5d72/figures/selected-10-0a828eb9e6e71267.png",
+        "../mpcount/mpcount-ucf-qnrf-val-smoke-5cc5d72/figures/selected-11-320ad007a4340168.png",
+        "../mpcount/mpcount-ucf-qnrf-val-smoke-5cc5d72/figures/selected-12-897716f616762b84.png"
+      ],
+      "rights_components": {
+        "code": {
+          "component_id": "mpcount-official-6eb06772",
+          "status": "REVIEWED_NO_EXPLICIT_PROHIBITION"
+        },
+        "dataset": {
+          "component_id": "ucf-qnrf-kaggle-apache",
+          "status": "REVIEWED_NO_EXPLICIT_PROHIBITION"
+        },
+        "deployment": {
+          "component_id": "droneai-festival-deployment-pending",
+          "status": "PENDING"
+        },
+        "derived_weights": {
+          "component_id": "droneai-derived-weights-not-created",
+          "status": "PENDING"
+        },
+        "pretrained_weights": {
+          "component_id": "mpcount-deterministic-sta-source-google-drive-1EBQzAcw",
+          "status": "REVIEWED_NO_EXPLICIT_PROHIBITION"
+        }
+      },
+      "rights_scope": "PASS_COMMERCIAL_CANDIDATE",
+      "technical_order": 4,
+      "technical_score": 60.64093114154532,
+      "technical_score_display": 60.64
+    },
+    {
+      "aggregates": {
+        "density_psnr": null,
+        "density_ssim": null,
+        "high_band_bias": -261.6666666666667,
+        "localization_f1": 0.6831052027940661,
+        "localization_mean_distance": 6.999414387996865,
+        "localization_precision": 0.7319572018137701,
+        "localization_recall": 0.6629285242136265,
+        "mae": 266.19444444444446,
+        "mape_reference": 21.515871703688603,
+        "max_absolute_band_bias": 261.6666666666667,
+        "mean_game_l1": null,
+        "mean_zone_mae": 73.03472222222223,
+        "median_latency_ms": 67.66282950047753,
+        "peak_vram_mb": 5258.68603515625,
+        "rmse": 431.2962052541926,
+        "signed_bias": -93.63888888888889,
+        "spatial_metric_value": 0.6831052027940661,
+        "throughput_fps_batch1": 14.779163203527315
+      },
+      "capabilities": {
+        "confidence": "NOT_DEMONSTRATED",
+        "density_map": "NOT_DEMONSTRATED",
+        "point_localization": "DEMONSTRATED",
+        "zone_aggregation": "DEMONSTRATED"
+      },
+      "categories": {
+        "count_stability": 3.231746162964473,
+        "evidence_quality": 10.0,
+        "operator_integration": 9.0,
+        "runtime_resources": 14.979379536371132,
+        "zone_spatial": 20.53001873862953
+      },
+      "checkpoint_training_split_status": "VERIFIED_DISJOINT",
+      "comparison_scope": "compatibility_smoke",
+      "deployment_label": "PENDING_DUE_DILIGENCE",
+      "family": "points",
+      "model_id": "apgcc",
+      "primary_spatial_metric": "localization_f1",
+      "ranking_eligible": false,
+      "representative_panels": [
+        "../apgcc/apgcc-ucf-qnrf-val-smoke-82d9285/figures/selected-01-1963ff1aa6492929.png",
+        "../apgcc/apgcc-ucf-qnrf-val-smoke-82d9285/figures/selected-02-8e0a4dbe072725a1.png",
+        "../apgcc/apgcc-ucf-qnrf-val-smoke-82d9285/figures/selected-03-ad26bfc3e5c98b18.png",
+        "../apgcc/apgcc-ucf-qnrf-val-smoke-82d9285/figures/selected-04-419fec40ac00261f.png",
+        "../apgcc/apgcc-ucf-qnrf-val-smoke-82d9285/figures/selected-05-90e81f32d2d93e17.png",
+        "../apgcc/apgcc-ucf-qnrf-val-smoke-82d9285/figures/selected-06-9e3a7ee5803445cf.png",
+        "../apgcc/apgcc-ucf-qnrf-val-smoke-82d9285/figures/selected-07-ca90cca47cd2592a.png",
+        "../apgcc/apgcc-ucf-qnrf-val-smoke-82d9285/figures/selected-08-c70e58b5e6bae0d3.png",
+        "../apgcc/apgcc-ucf-qnrf-val-smoke-82d9285/figures/selected-09-897716f616762b84.png",
+        "../apgcc/apgcc-ucf-qnrf-val-smoke-82d9285/figures/selected-10-0a828eb9e6e71267.png",
+        "../apgcc/apgcc-ucf-qnrf-val-smoke-82d9285/figures/selected-11-320ad007a4340168.png",
+        "../apgcc/apgcc-ucf-qnrf-val-smoke-82d9285/figures/selected-12-551885f3fe5f750a.png"
+      ],
+      "rights_components": {
+        "code": {
+          "component_id": "apgcc-official-e3e997bf",
+          "status": "REVIEWED_NO_EXPLICIT_PROHIBITION"
+        },
+        "dataset": {
+          "component_id": "ucf-qnrf-kaggle-apache",
+          "status": "REVIEWED_NO_EXPLICIT_PROHIBITION"
+        },
+        "deployment": {
+          "component_id": "droneai-festival-deployment-pending",
+          "status": "PENDING"
+        },
+        "derived_weights": {
+          "component_id": "droneai-derived-weights-not-created",
+          "status": "PENDING"
+        },
+        "pretrained_weights": {
+          "component_id": "apgcc-official-shha-checkpoint",
+          "status": "PENDING"
+        }
+      },
+      "rights_scope": "PASS_COMMERCIAL_CANDIDATE",
+      "technical_order": 5,
+      "technical_score": 57.74114443796513,
+      "technical_score_display": 57.74
+    },
+    {
+      "aggregates": {
+        "density_psnr": 23.31136671250411,
+        "density_ssim": 0.6788557280754934,
+        "high_band_bias": -268.8269533459323,
+        "localization_f1": null,
+        "localization_mean_distance": null,
+        "localization_precision": null,
+        "localization_recall": null,
+        "mae": 332.32906150891324,
+        "mape_reference": 32.8203328703028,
+        "max_absolute_band_bias": 268.8269533459323,
+        "mean_game_l1": 364.1291174650485,
+        "mean_zone_mae": 91.05494394155933,
+        "median_latency_ms": 80.33628200064413,
+        "peak_vram_mb": 20838.06005859375,
+        "rmse": 522.0312611108126,
+        "signed_bias": -86.80387484112694,
+        "spatial_metric_value": 364.1291174650485,
+        "throughput_fps_batch1": 12.447675883133128
+      },
+      "capabilities": {
+        "confidence": "NOT_DEMONSTRATED",
+        "density_map": "DEMONSTRATED",
+        "point_localization": "NOT_DEMONSTRATED",
+        "zone_aggregation": "DEMONSTRATED"
+      },
+      "categories": {
+        "count_stability": 2.0296971795103973,
+        "evidence_quality": 10.0,
+        "operator_integration": 10.0,
+        "runtime_resources": 10.085034142245023,
+        "zone_spatial": 12.216421541666968
+      },
+      "checkpoint_training_split_status": "VERIFIED_DISJOINT",
+      "comparison_scope": "compatibility_smoke",
+      "deployment_label": "PENDING_DUE_DILIGENCE",
+      "family": "density",
+      "model_id": "csrnet",
+      "primary_spatial_metric": "game_l1",
+      "ranking_eligible": false,
+      "representative_panels": [
+        "../csrnet/csrnet-ucf-qnrf-val-smoke-745d5b6/figures/selected-01-fd9373c130ac1077.png",
+        "../csrnet/csrnet-ucf-qnrf-val-smoke-745d5b6/figures/selected-02-c5e3d9aa6077e652.png",
+        "../csrnet/csrnet-ucf-qnrf-val-smoke-745d5b6/figures/selected-03-0a3e30df85e751e6.png",
+        "../csrnet/csrnet-ucf-qnrf-val-smoke-745d5b6/figures/selected-04-419fec40ac00261f.png",
+        "../csrnet/csrnet-ucf-qnrf-val-smoke-745d5b6/figures/selected-05-c21f6cc286a93bc0.png",
+        "../csrnet/csrnet-ucf-qnrf-val-smoke-745d5b6/figures/selected-06-5f883365dbf8fabe.png",
+        "../csrnet/csrnet-ucf-qnrf-val-smoke-745d5b6/figures/selected-07-ca90cca47cd2592a.png",
+        "../csrnet/csrnet-ucf-qnrf-val-smoke-745d5b6/figures/selected-08-c145cb679c8a0d04.png",
+        "../csrnet/csrnet-ucf-qnrf-val-smoke-745d5b6/figures/selected-09-897716f616762b84.png",
+        "../csrnet/csrnet-ucf-qnrf-val-smoke-745d5b6/figures/selected-10-0a828eb9e6e71267.png",
+        "../csrnet/csrnet-ucf-qnrf-val-smoke-745d5b6/figures/selected-11-320ad007a4340168.png",
+        "../csrnet/csrnet-ucf-qnrf-val-smoke-745d5b6/figures/selected-12-cc4e59a84ce60dd5.png"
+      ],
+      "rights_components": {
+        "code": {
+          "component_id": "csrnet-droneai-independent-5c9dd5ca",
+          "status": "REVIEWED_NO_EXPLICIT_PROHIBITION"
+        },
+        "dataset": {
+          "component_id": "ucf-qnrf-kaggle-apache",
+          "status": "REVIEWED_NO_EXPLICIT_PROHIBITION"
+        },
+        "deployment": {
+          "component_id": "droneai-festival-deployment-pending",
+          "status": "PENDING"
+        },
+        "derived_weights": {
+          "component_id": "droneai-derived-weights-not-created",
+          "status": "PENDING"
+        },
+        "pretrained_weights": {
+          "component_id": "csrnet-official-shha-mae66.4",
+          "status": "PENDING"
+        }
+      },
+      "rights_scope": "PASS_COMMERCIAL_CANDIDATE",
+      "technical_order": 6,
+      "technical_score": 44.33115286342239,
+      "technical_score_display": 44.33
+    }
+  ],
+  "ranking_eligible": false,
+  "round_id": "round-1-static-ucf-qnrf",
+  "schema_version": 1,
+  "shortlist": {
+    "label": "PROVISIONAL_TECHNICAL_SHORTLIST",
+    "model_ids": [
+      "steerer",
+      "dm-count",
+      "pet"
+    ],
+    "tie_breakers": [
+      "mean_zone_mae",
+      "mae",
+      "model_id"
+    ]
+  }
+}

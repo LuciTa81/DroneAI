@@ -1,0 +1,53 @@
+{
+  "anchors": {
+    "band_bias_zero": 400.0,
+    "game_l1_zero": 500.0,
+    "high_bias_zero": 400.0,
+    "latency_full_ms": 66.67,
+    "latency_zero_ms": 500.0,
+    "localization_f1_full": 0.8,
+    "mae_zero": 250.0,
+    "mape_zero_percent": 40.0,
+    "rmse_zero": 400.0,
+    "vram_full_mb": 8192.0,
+    "vram_zero_mb": 24576.0,
+    "zone_mae_zero": 150.0
+  },
+  "capability_points": {
+    "confidence": 2,
+    "density_map": 4,
+    "point_localization": 3,
+    "zone_aggregation": 6
+  },
+  "category_weights": {
+    "count_stability": 25,
+    "evidence_quality": 10,
+    "operator_integration": 15,
+    "runtime_resources": 15,
+    "zone_spatial": 35
+  },
+  "comparison_id": "round1-fixed-cctv-technical-shortlist-v1",
+  "dataset_id": "ucf-qnrf-kaggle-apache",
+  "expected_samples": 36,
+  "ranking_eligible": false,
+  "required_model_ids": [
+    "dm-count",
+    "steerer",
+    "pet",
+    "mpcount",
+    "apgcc",
+    "csrnet"
+  ],
+  "review_budget_bytes": 26214400,
+  "round_id": "round-1-static-ucf-qnrf",
+  "schema_version": 1,
+  "shortlist_label": "PROVISIONAL_TECHNICAL_SHORTLIST",
+  "shortlist_size": 3,
+  "split_id": "dm-count-upstream-qnrf-val-smoke-36-v1",
+  "split_role": "validation",
+  "tie_breakers": [
+    "mean_zone_mae",
+    "mae",
+    "model_id"
+  ]
+}
