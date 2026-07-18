@@ -314,6 +314,32 @@ The output directory must be new or empty. Review `result.json`,
 `one-sample-panel.png`. Stop after this gate; the 36-image benchmark requires a
 separate approval.
 
+After that approval is recorded and compact status reports `benchmark`, run the
+same frozen validation split without a test or training argument:
+
+```bash
+cd /workspace
+. /workspace/.venvs/apgcc/bin/activate
+python scripts/run_apgcc_ucf_qnrf_smoke.py \
+  --config configs/evaluation/apgcc_ucf_qnrf_smoke.json \
+  --train-root /workspace/data/datasets/ucf-qnrf-kaggle-apache/raw/UCF-QNRF_ECCV18/Train \
+  --upstream-dir /workspace/upstreams/APGCC \
+  --split-upstream-dir /workspace/upstreams/DM-Count \
+  --train-list /workspace/upstreams/DM-Count/preprocess/qnrf_train.txt \
+  --validation-list /workspace/upstreams/DM-Count/preprocess/qnrf_val.txt \
+  --checkpoint /workspace/data/checkpoints/apgcc/SHHA_best.pth \
+  --checkpoint-sha256 cd9aa0f65882c81bb753a4ea8c821e07573b2ae4a31fffd5595fa0a43925cf90 \
+  --rights-decision /workspace/data/results/apgcc/rights-1bd8ca8/rights-decision.json \
+  --rights-manifest configs/candidates/apgcc_shha_to_ucf_qnrf.candidate.json \
+  --output-dir /workspace/data/results/apgcc/apgcc-ucf-qnrf-val-smoke-<commit> \
+  --device cuda
+```
+
+The runner requires exactly 36 validation samples and delegates metrics,
+failure capture, score generation, and 12-panel selection to the common
+evaluation harness. Review the run before accepting benchmark evidence or
+advancing the queue.
+
 ## Dataset transfer gate
 
 Do not execute this section until Stage 3C records dataset rights, intended

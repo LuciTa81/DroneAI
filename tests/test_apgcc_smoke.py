@@ -9,6 +9,7 @@ import pytest
 
 from droneai.apgcc_smoke import (
     APGCC_CANDIDATE_ID,
+    build_apgcc_protocol,
     load_apgcc_smoke_config,
     validate_apgcc_rights_decision,
 )
@@ -81,6 +82,23 @@ def test_rights_binding_rejects_changed_candidate(tmp_path: Path) -> None:
             manifest_path=MANIFEST,
             expected_candidate_id=APGCC_CANDIDATE_ID,
         )
+
+
+def test_protocol_freezes_validation_localization_contract(tmp_path: Path) -> None:
+    protocol = build_apgcc_protocol(
+        load_apgcc_smoke_config(CONFIG),
+        rights_decision_path=_rights(tmp_path),
+        rights_manifest_path=MANIFEST,
+        split_verified=True,
+    )
+
+    assert protocol.expected_samples == 36
+    assert protocol.split_role == "validation"
+    assert protocol.checkpoint_training_split_status == "VERIFIED_DISJOINT"
+    assert protocol.comparison_scope == "compatibility_smoke"
+    assert protocol.spatial_metric_name == "localization_f1"
+    assert protocol.spatial_direction == "maximize"
+    assert protocol.spatial_target == 0.0
 
 
 def test_one_sample_runner_requires_frozen_inputs() -> None:

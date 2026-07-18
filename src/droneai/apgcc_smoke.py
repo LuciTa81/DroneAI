@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Literal, cast
 
 from droneai.dm_count_adapter import _git_head, _git_status
 from droneai.dm_count_smoke import (
@@ -13,6 +14,8 @@ from droneai.dm_count_smoke import (
     validate_official_split_paths,
     write_split_source_manifest as _write_dm_split_manifest,
 )
+from droneai.evaluation_runner import EvaluationProtocol
+from droneai.integrity import sha256_file
 from droneai.stage3c import REQUIRED_COMPONENTS, manifest_semantic_sha256
 
 
@@ -197,8 +200,70 @@ def write_split_source_manifest(
     return target
 
 
+def _strings(value: object) -> tuple[str, ...]:
+    if not isinstance(value, list) or any(not isinstance(item, str) for item in value):
+        raise ValueError("expected a string list")
+    return tuple(value)
+
+
+def build_apgcc_protocol(
+    config: dict[str, object],
+    *,
+    rights_decision_path: str | Path,
+    rights_manifest_path: str | Path,
+    split_verified: bool,
+) -> EvaluationProtocol:
+    if config != _expected_config():
+        raise ValueError("APGCC protocol config is not frozen")
+    rights = Path(rights_decision_path).resolve()
+    validate_apgcc_rights_decision(
+        rights,
+        manifest_path=rights_manifest_path,
+        expected_candidate_id=str(config["candidate_id"]),
+    )
+    targets = cast(dict[str, object], config["targets"])
+    return EvaluationProtocol(
+        run_id=str(config["run_id"]),
+        protocol_id=str(config["protocol_id"]),
+        dataset_id=str(config["dataset_id"]),
+        split_id=str(config["split_id"]),
+        split_role=cast(Literal["train", "validation", "test", "smoke"], config["split_role"]),
+        expected_samples=int(config["expected_samples"]),
+        split_verified=split_verified,
+        leakage_free=split_verified,
+        checkpoint_training_split_status=str(
+            config["checkpoint_training_split_status"]
+        ),
+        comparison_scope=str(config["comparison_scope"]),
+        checkpoint_split_evidence=str(config["checkpoint_split_evidence"]),
+        sealed_test_access_approved=False,
+        require_clean_git=bool(config["require_clean_git"]),
+        rights_decision_path=str(rights),
+        rights_decision_sha256=sha256_file(rights),
+        localization_radius=float(config["localization_radius"]),
+        mae_max=float(targets["mae_max"]),
+        rmse_max=float(targets["rmse_max"]),
+        bias_max=float(targets["bias_max"]),
+        band_bias_max=float(targets["band_bias_max"]),
+        condition_bias_max=float(targets["condition_bias_max"]),
+        latency_max_ms=float(targets["latency_max_ms"]),
+        vram_max_mb=float(targets["vram_max_mb"]),
+        spatial_metric_name=str(targets["spatial_metric_name"]),
+        spatial_direction=cast(
+            Literal["minimize", "maximize"], targets["spatial_direction"]
+        ),
+        spatial_target=float(targets["spatial_target"]),
+        required_density_bands=_strings(targets["required_density_bands"]),
+        density_band_rules=_strings(targets["density_band_rules"]),
+        required_condition_keys=_strings(targets["required_condition_keys"]),
+        zone_warning_count=float(targets["zone_warning_count"]),
+        zone_critical_count=float(targets["zone_critical_count"]),
+    )
+
+
 __all__ = [
     "APGCC_CANDIDATE_ID",
+    "build_apgcc_protocol",
     "load_apgcc_smoke_config",
     "prepare_smoke_samples",
     "validate_apgcc_rights_decision",
