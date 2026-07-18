@@ -446,6 +446,26 @@ and an evidence manifest. Full raw arrays are not duplicated for all 36 samples;
 the accepted one-sample raw audit remains on SSD. Stop for review before changing
 the active model.
 
+## Round 1 fixed-CCTV technical comparison
+
+Run only when all six queue entries have accepted 36-image benchmark evidence
+and workflow status reports `review_and_advance`. This command aggregates
+existing validation evidence only; it performs no inference, training,
+fine-tuning, or test access.
+
+```bash
+cd /workspace
+/workspace/.venvs/harness/bin/python scripts/build_round1_cctv_comparison.py \
+  --queue configs/evaluation/model_queue.json \
+  --results-root /workspace/data/results \
+  --scorecard configs/evaluation/round1_cctv_scorecard.json \
+  --output-dir /workspace/data/results/round1-cctv-comparison-<implementation-commit>
+```
+
+Review all raw metrics, category subscores, limitations, input/output SHA-256
+values, and the independent rights/deployment columns before accepting the
+provisional shortlist. Do not advance the queue or start fine-tuning here.
+
 ## Dataset transfer gate
 
 Do not execute this section until Stage 3C records dataset rights, intended
