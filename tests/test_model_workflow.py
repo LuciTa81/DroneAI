@@ -232,7 +232,7 @@ def test_benchmark_requires_explicit_user_approval(tmp_path: Path) -> None:
     assert_action_allowed(status, "benchmark", user_approved=True)
 
 
-def test_repository_queue_records_apgcc_preflight_and_advances_to_one_sample() -> None:
+def test_repository_queue_records_apgcc_one_sample_and_advances_to_benchmark() -> None:
     queue = load_model_queue(Path("configs/evaluation/model_queue.json"))
     models = {model["model_id"]: model for model in queue["models"]}
 
@@ -256,9 +256,15 @@ def test_repository_queue_records_apgcc_preflight_and_advances_to_one_sample() -
         ("rights", "rights_decision"),
         ("rights", "manifest_snapshot"),
         ("preflight", "preflight_record"),
+        ("one_sample", "one_sample_result"),
     ]
-    preflight = models["apgcc"]["accepted_evidence"][-1]
+    preflight = models["apgcc"]["accepted_evidence"][-2]
     assert preflight["path"] == "apgcc/preflight-6671ab0/preflight.json"
     assert preflight["sha256"] == (
         "a8c894a78c96f629060f7953d40ff10316883bf45aca40ff03bacaf17c2c1370"
+    )
+    one_sample = models["apgcc"]["accepted_evidence"][-1]
+    assert one_sample["path"] == "apgcc/apgcc-one-sample-37c5501/result.json"
+    assert one_sample["sha256"] == (
+        "fb674ad54f1f36341c66dd3228a2321263e33d72da352beeecaa946630082a49"
     )

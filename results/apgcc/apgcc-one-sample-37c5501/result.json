@@ -1,0 +1,79 @@
+{
+  "annotation_sha256": "12050f0ee82ae56e936d42000847b38b6b9e3dfaf240d92a9a50bb921d2ed3f2",
+  "checkpoint_sha256": "cd9aa0f65882c81bb753a4ea8c821e07573b2ae4a31fffd5595fa0a43925cf90",
+  "comparison_scope": "compatibility_smoke",
+  "compatibility_checks": {
+    "checkpoint_loaded_strictly": true,
+    "native_point_output": true,
+    "point_confidences_aligned": true,
+    "point_count_matches_output": true,
+    "points_finite_in_bounds": true,
+    "runtime_metrics_finite": true,
+    "successful_forward": true
+  },
+  "dataset_id": "ucf-qnrf-kaggle-apache",
+  "environment_sha256": "904110a4196fc3b84ea869a7a2e908833e78ba35785bb96211103535131e6bc0",
+  "evaluation_scope": "research_comparison_only",
+  "failure_state": null,
+  "gate": "one_sample",
+  "ground_truth_count": 1453.0,
+  "panel": {
+    "path": "one-sample-panel.png",
+    "sha256": "9321de6c3b9407615f563c1c5d65e413851ef2cbefe4a2fbaddf504037408825"
+  },
+  "parameter_count": 17750480,
+  "point_confidence_count": 1151,
+  "predicted_count": 1151.0,
+  "prediction_metadata": {
+    "discarded_out_of_bounds_point_count": 0,
+    "missing_checkpoint_key_count": 0,
+    "native_density_available": false,
+    "original_height": 2848,
+    "original_width": 4288,
+    "point_probability_threshold": 0.5,
+    "raw_thresholded_point_count": 1151,
+    "unexpected_checkpoint_key_count": 0
+  },
+  "ranking_eligible": false,
+  "record": {
+    "absolute_error": 302.0,
+    "condition_values": {
+      "density_band": "medium",
+      "source_partition": "official_validation"
+    },
+    "density_band": "medium",
+    "extra_metrics": {
+      "localization_f1": 0.5698924731182796,
+      "localization_mean_distance": 7.805329442512206,
+      "localization_precision": 0.6446568201563857,
+      "localization_radius": 16.0,
+      "localization_recall": 0.5106675843083276,
+      "point_zone_mae": 84.0,
+      "zone_mae": 84.0
+    },
+    "failure_state": null,
+    "ground_truth_count": 1453.0,
+    "latency_ms": 284.67202100000577,
+    "normalized_error": 0.20784583620096353,
+    "output_type": "points",
+    "peak_vram_mb": 12138.419921875,
+    "predicted_count": 1151.0,
+    "sample_id": "img_0067",
+    "signed_error": -302.0,
+    "spatial_metric_name": "localization_f1",
+    "spatial_metric_value": 0.5698924731182796
+  },
+  "rights_decision_sha256": "bbf1199fd11c415bc5643ee7936ad443b08e9c6dbdf35fa6aefe5a42aa3a871b",
+  "rights_manifest_sha256": "0dd3b90504d55b8632f518eb79e2adb14195d400b9f0586c999149e070ced370",
+  "rights_scope": "PASS_COMMERCIAL_CANDIDATE",
+  "sample_id": "img_0067",
+  "schema_version": 1,
+  "seed": 20260715,
+  "source_sha256": "0ae12709e570308bbdbfb860b7ac6f8a9df2df71ab844c57df63433bb9d3ec1c",
+  "split_id": "dm-count-upstream-qnrf-val-smoke-36-v1",
+  "split_manifest_sha256": "70e3d0101778e3247d9589cfc6a234451b293feb7d5007472188984ae0594f02",
+  "split_role": "validation",
+  "status": "PASS",
+  "technical_score": 100.0,
+  "upstream_commit": "e3e997bf592a70fd34233a432a974200d8c0c847"
+}

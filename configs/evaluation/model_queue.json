@@ -228,6 +228,12 @@
           "artifact_kind": "preflight_record",
           "path": "apgcc/preflight-6671ab0/preflight.json",
           "sha256": "a8c894a78c96f629060f7953d40ff10316883bf45aca40ff03bacaf17c2c1370"
+        },
+        {
+          "gate": "one_sample",
+          "artifact_kind": "one_sample_result",
+          "path": "apgcc/apgcc-one-sample-37c5501/result.json",
+          "sha256": "fb674ad54f1f36341c66dd3228a2321263e33d72da352beeecaa946630082a49"
         }
       ]
     },
