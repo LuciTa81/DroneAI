@@ -230,3 +230,21 @@ def test_benchmark_requires_explicit_user_approval(tmp_path: Path) -> None:
     with pytest.raises(PermissionError, match="explicit user approval"):
         assert_action_allowed(status, "benchmark", user_approved=False)
     assert_action_allowed(status, "benchmark", user_approved=True)
+
+
+def test_repository_queue_advances_from_mpcount_to_apgcc_rights() -> None:
+    queue = load_model_queue(Path("configs/evaluation/model_queue.json"))
+    models = {model["model_id"]: model for model in queue["models"]}
+
+    assert queue["active_model"] == "apgcc"
+    assert models["mpcount"]["queue_state"] == "completed"
+    assert models["apgcc"]["queue_state"] == "active"
+    assert models["apgcc"]["family"] == "points"
+    assert models["apgcc"]["rights_scope"] == "PENDING"
+    assert models["apgcc"]["gate_order"] == [
+        "rights",
+        "preflight",
+        "one_sample",
+        "benchmark",
+    ]
+    assert models["apgcc"]["accepted_evidence"] == []

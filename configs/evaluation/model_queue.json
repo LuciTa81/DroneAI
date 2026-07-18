@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "round_id": "round-1-static-ucf-qnrf",
-  "active_model": "mpcount",
+  "active_model": "apgcc",
   "models": [
     {
       "model_id": "dm-count",
@@ -138,7 +138,7 @@
     {
       "model_id": "mpcount",
       "family": "density",
-      "queue_state": "active",
+      "queue_state": "completed",
       "rights_scope": "PASS_COMMERCIAL_CANDIDATE",
       "dataset_id": "ucf-qnrf-kaggle-apache",
       "split_id": "dm-count-upstream-qnrf-val-smoke-36-v1",
@@ -191,6 +191,26 @@
           "sha256": "39ebe9bd241e5a205e9763b0a12ad93e8a9e8a47975a9dd15a7afc4b75e9e43d"
         }
       ]
+    },
+    {
+      "model_id": "apgcc",
+      "family": "points",
+      "queue_state": "active",
+      "rights_scope": "PENDING",
+      "dataset_id": "ucf-qnrf-kaggle-apache",
+      "split_id": "dm-count-upstream-qnrf-val-smoke-36-v1",
+      "split_role": "validation",
+      "expected_samples": 36,
+      "checkpoint_training_split_status": "UNKNOWN",
+      "comparison_scope": "compatibility_smoke",
+      "checkpoint_split_evidence": "Official APGCC code and checkpoint identities, licenses, and checkpoint training membership have not yet been pinned; the rights gate must resolve them before preflight.",
+      "gate_order": [
+        "rights",
+        "preflight",
+        "one_sample",
+        "benchmark"
+      ],
+      "accepted_evidence": []
     },
     {
       "model_id": "csrnet",
