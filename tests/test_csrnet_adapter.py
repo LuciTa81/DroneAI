@@ -9,6 +9,7 @@ import pytest
 from PIL import Image
 
 from droneai.evaluation_contract import EvaluationSample
+from droneai.evaluation_runner import _native_output_fingerprint
 from droneai.integrity import sha256_file
 
 
@@ -147,6 +148,25 @@ def test_adapter_clips_operational_density_and_preserves_raw_audit(
     assert prediction.metadata["operational_clipped_values"] == 2
     assert audit is not None
     assert np.array_equal(audit, raw)
+
+
+def test_native_fingerprint_is_independent_of_raw_audit_retention(
+    tmp_path: Path,
+) -> None:
+    raw = np.asarray([[1.0, -1.0], [2.0, -0.5]], dtype=np.float32)
+    adapter, _ = _adapter(
+        tmp_path,
+        raw,
+        negative_density_policy="clip_zero_preserve_raw_audit",
+    )
+    sample = _sample(tmp_path)
+
+    first = adapter.predict(sample, retain_native=False)
+    assert adapter.raw_density_audit() is None
+    retained = adapter.predict(sample, retain_native=True)
+
+    assert adapter.raw_density_audit() is not None
+    assert _native_output_fingerprint(first) == _native_output_fingerprint(retained)
 
 
 @pytest.mark.parametrize(

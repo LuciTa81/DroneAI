@@ -220,7 +220,6 @@ class CSRNetAdapter:
         metadata: dict[str, str | int | float | bool | None] = {
             "normalization": "ImageNet RGB mean/std",
             "output_stride": 8,
-            "retain_native_requested": retain_native,
             "negative_density_policy": self.negative_density_policy,
             "spatial_output_label": (
                 "operational clipped density"
@@ -283,7 +282,6 @@ class CSRNetAdapter:
                         operational.sum(dtype=np.float64)
                     ),
                     "operational_count_method": "sum(max(raw_density, 0))",
-                    "raw_density_audit_retained": retain_native,
                 }
             )
             target_shape = (
