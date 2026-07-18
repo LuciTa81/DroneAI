@@ -65,6 +65,15 @@ MODEL_OUTPUT_NOTES = {
     "apgcc": "출력 해석(APGCC): confidence point 개수가 count이며 위치 오차와 누락을 함께 확인한다.",
     "csrnet": "출력 해석(CSRNet): 비음수 density 합이 count이며 흐린 분포와 zone 오차를 확인한다.",
 }
+MODEL_PAGE_ORDER = ("steerer", "dm-count", "pet", "mpcount", "apgcc", "csrnet")
+MODEL_PAGE_ASSETS = {
+    "steerer": ("points", "steerer"),
+    "dm-count": ("density", "dm-count"),
+    "pet": ("points", "pet"),
+    "mpcount": ("density", "mpcount"),
+    "apgcc": ("points", "apgcc"),
+    "csrnet": ("density", "csrnet"),
+}
 
 
 def readability_contract() -> dict[str, float]:
@@ -84,13 +93,13 @@ def report_page_contract() -> tuple[tuple[str, ...], ...]:
         ("cover",),
         ("summary",),
         ("evaluation",),
-        ("steerer", "dm-count", "pet"),
-        ("mpcount", "apgcc", "csrnet"),
-        ("performance",),
-        ("dm-count", "steerer"),
-        ("mpcount", "csrnet"),
-        ("steerer", "pet"),
+        ("steerer",),
+        ("dm-count",),
+        ("pet",),
+        ("mpcount",),
         ("apgcc",),
+        ("csrnet",),
+        ("performance",),
         ("rights",),
         ("conclusion",),
     )
@@ -105,6 +114,10 @@ def model_output_note(model_id: str) -> str:
         return MODEL_OUTPUT_NOTES[model_id]
     except KeyError as exc:
         raise ValueError(f"unknown model output note: {model_id}") from exc
+
+
+def model_page_asset_contract() -> dict[str, tuple[str, str]]:
+    return dict(MODEL_PAGE_ASSETS)
 
 
 def _background(canvas: canvas_module.Canvas) -> None:
@@ -321,7 +334,7 @@ def _page_cover(c, ctx) -> None:
     c.line(MARGIN, HEIGHT - 221, WIDTH - MARGIN, HEIGHT - 221)
     meta = (
         ("검증 데이터", "UCF-QNRF validation 36장"),
-        ("실행 환경", "RTX 5090 / batch 1 / fine-tuning 없음"),
+        ("실행 조건", "batch 1 / fine-tuning 없음"),
         ("비교 범위", "official checkpoint cross-domain compatibility smoke"),
         ("작성일", ctx["report_date"]),
     )
@@ -456,12 +469,156 @@ def _spatial_text(row: dict[str, object]) -> str:
     return f"Zone {_fmt(aggregate['mean_zone_mae'], 1)}"
 
 
+def _draw_model_metrics(c, row: dict[str, object], *, fonts: tuple[str, str]) -> None:
+    regular, bold = fonts
+    aggregate = row["aggregates"]
+    metrics = (
+        ("기술 점수", _fmt(row["technical_score"], 2)),
+        ("MAE", _fmt(aggregate["mae"], 1)),
+        ("RMSE", _fmt(aggregate["rmse"], 1)),
+        ("공간 지표", _spatial_text(row)),
+        ("FPS", _fmt(aggregate["throughput_fps_batch1"], 1)),
+        ("VRAM", f"{float(aggregate['peak_vram_mb']) / 1024:.1f} GB"),
+    )
+    width = CONTENT_WIDTH / len(metrics)
+    for index, (label, value) in enumerate(metrics):
+        x = MARGIN + index * width
+        c.setFillColor(white if index % 2 == 0 else SOFT_BLUE)
+        c.setStrokeColor(LINE)
+        c.rect(x, 635, width, 54, fill=1, stroke=1)
+        c.setFont(bold, 8.5)
+        c.setFillColor(BLUE)
+        c.drawString(x + 7, 672, label)
+        draw_wrapped(
+            c,
+            value,
+            x + 7,
+            652,
+            width - 14,
+            font=regular,
+            size=9.5,
+            leading=11,
+            max_lines=2,
+        )
+
+
+def _draw_model_detail_card(
+    c,
+    *,
+    x: float,
+    y: float,
+    width: float,
+    height: float,
+    title: str,
+    entries: tuple[tuple[str, str, int], ...],
+    fonts: tuple[str, str],
+) -> None:
+    regular, bold = fonts
+    c.setFillColor(white)
+    c.setStrokeColor(LINE)
+    c.roundRect(x, y, width, height, 4, fill=1, stroke=1)
+    c.setFont(bold, 11)
+    c.setFillColor(NAVY)
+    c.drawString(x + 12, y + height - 22, title)
+    cursor = y + height - 43
+    for label, value, max_lines in entries:
+        c.setFont(bold, 8.5)
+        c.setFillColor(BLUE)
+        c.drawString(x + 12, cursor, label)
+        cursor = draw_wrapped(
+            c,
+            value,
+            x + 72,
+            cursor,
+            width - 84,
+            font=regular,
+            size=BODY_SIZE,
+            leading=BODY_LEADING,
+            max_lines=max_lines,
+        ) - 7
+
+
+def _page_model_detail(
+    c,
+    ctx,
+    *,
+    model_id: str,
+    number: str,
+) -> None:
+    regular, bold = ctx["fonts"]
+    item: ModelContent = ctx["content_by_id"][model_id]
+    row = ctx["comparison_by_id"][model_id]
+    draw_section_title(
+        c,
+        number,
+        f"{DISPLAY_NAMES[model_id]} 모델 상세",
+        f"{item.family} | {item.backbone}",
+        regular_font=regular,
+        bold_font=bold,
+    )
+    _draw_model_metrics(c, row, fonts=ctx["fonts"])
+
+    family, asset_model_id = MODEL_PAGE_ASSETS[model_id]
+    panel = ctx["assets"]["comparisons"][family][asset_model_id]
+    caption = (
+        f"그림 {int(number)}-1. {_panel_caption(panel)}\n"
+        f"{model_output_note(model_id)}"
+    )
+    draw_figure(
+        c,
+        ctx["asset_root"] / panel["packaged_path"],
+        caption,
+        MARGIN,
+        350,
+        CONTENT_WIDTH,
+        245,
+        regular_font=regular,
+    )
+
+    card_gap = 12
+    card_width = (CONTENT_WIDTH - card_gap) / 2
+    _draw_model_detail_card(
+        c,
+        x=MARGIN,
+        y=72,
+        width=card_width,
+        height=246,
+        title="구조·입출력",
+        entries=(
+            ("입력", item.input, 3),
+            ("출력", item.native_output, 3),
+            ("Count", item.count_method, 3),
+        ),
+        fonts=ctx["fonts"],
+    )
+    rights_text = (
+        "PASS_RESEARCH_ONLY / 제품 lane 제외"
+        if model_id == "pet"
+        else f"{row['rights_scope']} / 배포 권리 확인 필요"
+    )
+    _draw_model_detail_card(
+        c,
+        x=MARGIN + card_width + card_gap,
+        y=72,
+        width=card_width,
+        height=246,
+        title="관제 활용·제약·권리",
+        entries=(
+            ("활용", item.cctv_interpretation, 4),
+            ("장점", item.strengths[0], 2),
+            ("제약", item.limitations[0], 2),
+            ("권리", rights_text, 2),
+        ),
+        fonts=ctx["fonts"],
+    )
+
+
 def _page_performance(c, ctx) -> None:
     regular, bold = ctx["fonts"]
-    draw_section_title(c, "05", "성능 비교와 해석", "Count 정확도, 공간 출력, 속도와 자원 사용량을 함께 본다.", regular_font=regular, bold_font=bold)
+    draw_section_title(c, "09", "성능 비교와 해석", "Count 정확도, 공간 출력, 속도와 자원 사용량을 함께 본다.", regular_font=regular, bold_font=bold)
     c.setFont(bold, 9)
     c.setFillColor(NAVY)
-    c.drawString(MARGIN, 690, "표 5-1. UCF-QNRF validation 36장 비교 결과")
+    c.drawString(MARGIN, 690, "표 9-1. UCF-QNRF validation 36장 비교 결과")
     rows = [["Model", "기술 점수", "MAE", "RMSE", "공간 지표", "FPS", "VRAM"]]
     ordered = sorted(ctx["comparison"]["models"], key=lambda row: row["technical_order"])
     for row in ordered:
@@ -476,7 +633,7 @@ def _page_performance(c, ctx) -> None:
             f"{float(aggregate['peak_vram_mb']) / 1024:.1f} GB",
         ])
     y = draw_report_table(c, rows, (70, 70, 61, 61, 105, 60, 84), MARGIN, 675, row_height=52, fonts=ctx["fonts"])
-    _section_label(c, "5.1 결과 해석", MARGIN, y - 28, bold_font=bold)
+    _section_label(c, "9.1 결과 해석", MARGIN, y - 28, bold_font=bold)
     analysis = (
         "STEERER는 MAE 71.6, RMSE 98.0, zone MAE 19.8, localization F1 0.80으로 출력 기능과 공간 정확도의 균형이 가장 좋았다.",
         "DM-Count는 MAE 154.3이지만 14.4 FPS와 8.8 GB 수준의 VRAM으로 density 기반 CCTV baseline 후보가 된다.",
@@ -648,6 +805,9 @@ def build_round1_share_pdf(
         "asset_root": assets_source.parent,
         "content": content,
         "content_by_id": {item.model_id: item for item in content.models},
+        "comparison_by_id": {
+            item["model_id"]: item for item in comparison["models"]
+        },
         "fonts": fonts,
         "report_date": report_date,
     }
@@ -656,86 +816,30 @@ def build_round1_share_pdf(
         ("요약 및 핵심 결론", _page_summary),
         ("검증 목적·데이터·조건", _page_evaluation),
         (
-            "모델 구조 I",
-            lambda c, ctx: _page_models_group(
-                c,
-                ctx,
-                number="03",
-                title="모델 구조와 입출력 I",
-                subtitle="상위 기술 후보와 연구 비교군의 native output을 비교한다.",
-                model_ids=("steerer", "dm-count", "pet"),
-                table_label="표 3-1. STEERER·DM-Count·PET 구조 및 CCTV 활용",
-            ),
+            "STEERER 모델 상세",
+            lambda c, ctx: _page_model_detail(c, ctx, model_id="steerer", number="03"),
         ),
         (
-            "모델 구조 II",
-            lambda c, ctx: _page_models_group(
-                c,
-                ctx,
-                number="04",
-                title="모델 구조와 입출력 II",
-                subtitle="추가 후보와 고전 baseline의 출력 및 운영 연결성을 비교한다.",
-                model_ids=("mpcount", "apgcc", "csrnet"),
-                table_label="표 4-1. MPCount·APGCC·CSRNet 구조 및 CCTV 활용",
-            ),
+            "DM-Count 모델 상세",
+            lambda c, ctx: _page_model_detail(c, ctx, model_id="dm-count", number="04"),
+        ),
+        (
+            "PET 모델 상세",
+            lambda c, ctx: _page_model_detail(c, ctx, model_id="pet", number="05"),
+        ),
+        (
+            "MPCount 모델 상세",
+            lambda c, ctx: _page_model_detail(c, ctx, model_id="mpcount", number="06"),
+        ),
+        (
+            "APGCC 모델 상세",
+            lambda c, ctx: _page_model_detail(c, ctx, model_id="apgcc", number="07"),
+        ),
+        (
+            "CSRNet 모델 상세",
+            lambda c, ctx: _page_model_detail(c, ctx, model_id="csrnet", number="08"),
         ),
         ("성능 비교와 해석", _page_performance),
-        (
-            "Density 출력 I",
-            lambda c, ctx: _page_output_group(
-                c,
-                ctx,
-                number="06",
-                title="Density 계열 출력 I",
-                subtitle="동일 장면 img_0097에서 heatmap과 zone 집계 형태를 비교한다.",
-                family="density",
-                model_ids=("dm-count", "steerer"),
-                figure_labels=("그림 6-1", "그림 6-2"),
-                narrative="Density map은 전체 질량의 합으로 count를 만들고, CCTV zone 안의 질량을 합산해 구역별 밀집도를 계산한다. DM-Count는 단순하고 해석 가능한 baseline이며, STEERER는 point localization을 함께 제공한다.",
-            ),
-        ),
-        (
-            "Density 출력 II",
-            lambda c, ctx: _page_output_group(
-                c,
-                ctx,
-                number="07",
-                title="Density 계열 출력 II",
-                subtitle="동일 장면 img_0097에서 일반화 후보와 고전 baseline을 비교한다.",
-                family="density",
-                model_ids=("mpcount", "csrnet"),
-                figure_labels=("그림 7-1", "그림 7-2"),
-                narrative="동일 장면에서도 density 분포의 선명도와 under/over-count 양상이 다르다. MPCount는 domain generalization 설계 후보이고, CSRNet은 개선 폭을 확인하는 고전 baseline으로 유지한다. 두 모델 모두 현장 perspective calibration이 필요하다.",
-            ),
-        ),
-        (
-            "Point/Hybrid 출력 I",
-            lambda c, ctx: _page_output_group(
-                c,
-                ctx,
-                number="08",
-                title="Point/Hybrid 출력 I",
-                subtitle="동일 장면 img_0062에서 위치 후보와 zone 연결성을 비교한다.",
-                family="points",
-                model_ids=("steerer", "pet"),
-                figure_labels=("그림 8-1", "그림 8-2"),
-                narrative="Point 출력은 예측 좌표를 zone에 직접 할당하고 점 개수로 count를 계산한다. STEERER는 density와 point를 함께 제공한다. PET는 기술 비교에는 유효하지만 academic research only 제한 때문에 연구 비교군으로만 유지한다.",
-            ),
-        ),
-        (
-            "Point/Hybrid 출력 II",
-            lambda c, ctx: _page_output_group(
-                c,
-                ctx,
-                number="09",
-                title="Point/Hybrid 출력 II",
-                subtitle="APGCC의 위치 예측과 고밀도 domain shift를 큰 패널로 확인한다.",
-                family="points",
-                model_ids=("apgcc",),
-                figure_labels=("그림 9-1",),
-                narrative="APGCC는 위치 기반 zone count와 비교적 양호한 실행 효율을 제공한다. 그러나 ShanghaiTech-A checkpoint를 UCF-QNRF에 적용한 현재 결과에서는 고밀도 undercount와 큰 count 오차가 확인되어 우선 제품 후보로 선택하지 않는다. Weight와 deployment 권리도 별도 확인 대상이다.",
-            ),
-        ),
         ("상용화 권리 및 CCTV 적용", _page_rights),
         ("최종 추천과 다음 단계", _page_conclusion),
     ]

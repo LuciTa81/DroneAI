@@ -16,8 +16,10 @@ canvas_module = pytest.importorskip("reportlab.pdfgen.canvas")
 from droneai.integrity import sha256_file
 from droneai.round1_pdf_report import DISPLAY_NAMES, register_korean_fonts
 from droneai.round1_share_report import (
+    MODEL_PAGE_ORDER,
     build_round1_share_pdf,
     draw_report_table,
+    model_page_asset_contract,
     model_output_note,
     model_table_height_contract,
     readability_contract,
@@ -42,15 +44,33 @@ def test_readability_contract_has_no_small_report_text() -> None:
     assert contract["header_footer_size"] >= 8
 
 
-def test_report_page_contract_splits_dense_content() -> None:
+def test_report_page_contract_has_six_model_detail_pages() -> None:
     pages = report_page_contract()
-    assert len(pages) == 12
-    assert pages[3] == ("steerer", "dm-count", "pet")
-    assert pages[4] == ("mpcount", "apgcc", "csrnet")
-    assert pages[6] == ("dm-count", "steerer")
-    assert pages[7] == ("mpcount", "csrnet")
-    assert pages[8] == ("steerer", "pet")
-    assert pages[9] == ("apgcc",)
+    assert pages == (
+        ("cover",),
+        ("summary",),
+        ("evaluation",),
+        ("steerer",),
+        ("dm-count",),
+        ("pet",),
+        ("mpcount",),
+        ("apgcc",),
+        ("csrnet",),
+        ("performance",),
+        ("rights",),
+        ("conclusion",),
+    )
+
+
+def test_model_page_asset_contract_covers_every_model() -> None:
+    assert model_page_asset_contract() == {
+        "steerer": ("points", "steerer"),
+        "dm-count": ("density", "dm-count"),
+        "pet": ("points", "pet"),
+        "mpcount": ("density", "mpcount"),
+        "apgcc": ("points", "apgcc"),
+        "csrnet": ("density", "csrnet"),
+    }
 
 
 def test_model_table_uses_compact_header_and_readable_body() -> None:
@@ -202,6 +222,32 @@ def test_share_report_is_exact_twelve_page_a4_portrait(tmp_path: Path) -> None:
         assert float(page.mediabox.height) > float(page.mediabox.width)
         assert abs(float(page.mediabox.width) - A4[0]) < 1
         assert abs(float(page.mediabox.height) - A4[1]) < 1
+
+
+def test_each_model_page_has_its_output_image_and_no_5090_cover(
+    tmp_path: Path,
+) -> None:
+    manifest = make_assets(tmp_path)
+    output = build_round1_share_pdf(
+        COMPARISON_PATH,
+        manifest,
+        CONTENT_PATH,
+        tmp_path / "share.pdf",
+        report_date="2026-07-19",
+    )
+
+    reader = PdfReader(output)
+    assert "5090" not in (reader.pages[0].extract_text() or "")
+    for page, model_id in zip(reader.pages[3:9], MODEL_PAGE_ORDER, strict=True):
+        text = page.extract_text() or ""
+        normalized = " ".join(text.split())
+        assert DISPLAY_NAMES[model_id] in text
+        assert " ".join(model_output_note(model_id).split()) in normalized
+        assert "MAE" in text
+        assert "RMSE" in text
+        assert "FPS" in text
+        assert "VRAM" in text
+        assert len(page.images) >= 1
 
 
 def test_share_report_contains_required_claim_boundaries(tmp_path: Path) -> None:
