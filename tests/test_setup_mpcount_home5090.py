@@ -13,6 +13,10 @@ FROZEN = (
     "gdown==5.2.0",
     "opencv-python-headless==4.12.0.88",
     "PySocks==1.7.1",
+    "scikit-image==0.26.0",
+    "ImageIO==2.37.3",
+    "tifffile==2026.7.14",
+    "lazy_loader==0.4",
 )
 
 
@@ -52,6 +56,10 @@ class FakeRunner:
                 "gdown": "5.2.0",
                 "opencv-python-headless": "4.12.0.88",
                 "PySocks": "1.7.1",
+                "scikit-image": "0.26.0",
+                "ImageIO": "2.37.3",
+                "tifffile": "2026.7.14",
+                "lazy_loader": "0.4",
                 "opencv-python": None,
             }
             return subprocess.CompletedProcess(call, 0, json.dumps(payload), "")
@@ -63,6 +71,7 @@ class FakeRunner:
                 "gpu": "RTX 5090 fixture" if self.cuda else None,
                 "matmul": 32.0 if self.cuda else None,
                 "mpcount_imports": self.cuda,
+                "metrics_imports": self.cuda,
             }
             return subprocess.CompletedProcess(call, 0, json.dumps(payload), "")
         return subprocess.CompletedProcess(call, 0, "", "")
@@ -78,9 +87,15 @@ def test_requirements_are_exact_and_forbid_torch(tmp_path: Path) -> None:
         )
 
 
-def test_ucf_overlay_does_not_install_jhu_only_pandas(tmp_path: Path) -> None:
+def test_ucf_overlay_adds_metrics_stack_without_jhu_only_pandas(tmp_path: Path) -> None:
     setup = _setup()
     assert all(not item.lower().startswith("pandas==") for item in setup.FROZEN_REQUIREMENTS)
+    assert {
+        "scikit-image==0.26.0",
+        "ImageIO==2.37.3",
+        "tifffile==2026.7.14",
+        "lazy_loader==0.4",
+    }.issubset(set(setup.FROZEN_REQUIREMENTS))
 
 
 def test_setup_installs_overlay_without_dependencies_or_torch(tmp_path: Path) -> None:
@@ -98,6 +113,7 @@ def test_setup_installs_overlay_without_dependencies_or_torch(tmp_path: Path) ->
     assert not any(part.startswith(("torch==", "torchvision==")) for part in install)
     assert result["status"] == "PASS"
     assert result["cuda"]["cuda_available"] is True
+    assert result["cuda"]["metrics_imports"] is True
 
 
 def test_existing_venv_must_inherit_ngc_runtime(tmp_path: Path) -> None:
