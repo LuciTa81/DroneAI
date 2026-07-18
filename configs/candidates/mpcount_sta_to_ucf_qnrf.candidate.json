@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "candidate_id": "mpcount-official-sta-to-ucf-qnrf-apache",
+  "intended_use": "commercial_product_rnd",
+  "components": [
+    {
+      "component_type": "code",
+      "component_id": "mpcount-official-6eb06772",
+      "source_url": "https://github.com/Shimmer93/MPCount/tree/6eb06772bcf7dfb771c43a14d67146fce767f103",
+      "rights": {
+        "status": "verified",
+        "license_id": "Apache-2.0",
+        "evidence_url": "https://github.com/Shimmer93/MPCount/blob/6eb06772bcf7dfb771c43a14d67146fce767f103/LICENSE",
+        "commercial_use": true,
+        "research_use": true,
+        "basis": "explicit_terms"
+      }
+    },
+    {
+      "component_type": "dataset",
+      "component_id": "ucf-qnrf-kaggle-apache",
+      "source_url": "https://www.kaggle.com/datasets/faihajalamtopu/ucf-qnrf",
+      "rights": {
+        "status": "verified",
+        "license_id": "Apache-2.0",
+        "evidence_url": "https://www.kaggle.com/datasets/faihajalamtopu/ucf-qnrf",
+        "commercial_use": true,
+        "research_use": true,
+        "basis": "internal_approval",
+        "notes": "The project owner accepts the Kaggle Apache-2.0 label as permission. The Kaggle uploader states they are not the dataset owner; the risk remains visible in the record."
+      }
+    },
+    {
+      "component_type": "pretrained_weights",
+      "component_id": "mpcount-deterministic-sta-source-google-drive-1EBQzAcw",
+      "source_url": "https://drive.google.com/file/d/1EBQzAcwZOhsrd00XDDnUTQ-wYH36y6oV/view",
+      "rights": {
+        "status": "verified",
+        "license_id": "Apache-2.0",
+        "evidence_url": "https://github.com/Shimmer93/MPCount/blob/6eb06772bcf7dfb771c43a14d67146fce767f103/README.md#new-deterministic-version",
+        "commercial_use": true,
+        "research_use": true,
+        "basis": "internal_approval",
+        "notes": "Project policy accepts Apache-2.0 as permission for the deterministic ShanghaiTech-A source checkpoint officially linked by the repository. The checkpoint will remain a separately hashed component before inference."
+      }
+    },
+    {
+      "component_type": "derived_weights",
+      "component_id": "droneai-derived-weights-not-created",
+      "source_url": "project://DroneAI/derived-weights-policy",
+      "rights": {
+        "status": "pending",
+        "license_id": null,
+        "evidence_url": null,
+        "commercial_use": null,
+        "research_use": null,
+        "basis": "pending_review",
+        "notes": "Round 1 performs no training or fine-tuning. Derived-weight permission is decided only for the final winner."
+      }
+    },
+    {
+      "component_type": "deployment",
+      "component_id": "droneai-festival-deployment-pending",
+      "source_url": "project://DroneAI/deployment-approval",
+      "rights": {
+        "status": "pending",
+        "license_id": null,
+        "evidence_url": null,
+        "commercial_use": null,
+        "research_use": null,
+        "basis": "pending_review",
+        "notes": "Frozen benchmark evaluation may proceed; product deployment remains a separate decision."
+      }
+    }
+  ]
+}

@@ -44,6 +44,18 @@ verified inputs authorize download and frozen-checkpoint evaluation. Derived
 weights and product deployment remain pending, so the bundle stays
 `PASS_COMMERCIAL_CANDIDATE` rather than `PRODUCTION_APPROVED`.
 
+## MPCount deterministic ShanghaiTech-A to UCF-QNRF classification
+
+MPCount is pinned to the official Apache-2.0 repository. Round 1 uses the
+deterministic ShanghaiTech-A source checkpoint officially linked by that
+repository and evaluates it on UCF-QNRF as a cross-domain candidate. Project
+policy accepts Apache-2.0 as permission for that official checkpoint and accepts
+the recorded Kaggle Apache-2.0 dataset label with the existing uploader-provenance
+caveat. Because the source checkpoint is trained on ShanghaiTech-A rather than
+UCF-QNRF, the frozen UCF smoke samples are checkpoint-training disjoint. Derived
+weights and deployment remain pending, so this lane cannot exceed
+`PASS_COMMERCIAL_CANDIDATE`.
+
 ## Run
 
 ```bash
