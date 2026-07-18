@@ -78,7 +78,9 @@ class SetupRunner:
                 "matmul": 32.0 if self.cuda else None,
                 "apgcc_imports": self.cuda,
             }
-            return subprocess.CompletedProcess(call, 0, json.dumps(payload), "")
+            return subprocess.CompletedProcess(
+                call, 0, "0.24.0a0+upstream-print\n" + json.dumps(payload), ""
+            )
         return subprocess.CompletedProcess(call, 0, "", "")
 
 

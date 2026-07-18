@@ -106,9 +106,10 @@ def _parse_json_output(
     result: subprocess.CompletedProcess[str], *, operation: str
 ) -> dict[str, object]:
     _success(result, operation)
+    lines = [line.strip() for line in result.stdout.splitlines() if line.strip()]
     try:
-        value = json.loads(result.stdout)
-    except json.JSONDecodeError as exc:
+        value = json.loads(lines[-1])
+    except (IndexError, json.JSONDecodeError) as exc:
         raise RuntimeError(f"{operation} returned invalid JSON") from exc
     if not isinstance(value, dict):
         raise RuntimeError(f"{operation} must return a JSON object")
