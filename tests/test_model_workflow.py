@@ -232,7 +232,7 @@ def test_benchmark_requires_explicit_user_approval(tmp_path: Path) -> None:
     assert_action_allowed(status, "benchmark", user_approved=True)
 
 
-def test_repository_queue_records_apgcc_rights_and_advances_to_preflight() -> None:
+def test_repository_queue_records_apgcc_preflight_and_advances_to_one_sample() -> None:
     queue = load_model_queue(Path("configs/evaluation/model_queue.json"))
     models = {model["model_id"]: model for model in queue["models"]}
 
@@ -255,4 +255,5 @@ def test_repository_queue_records_apgcc_rights_and_advances_to_preflight() -> No
     ] == [
         ("rights", "rights_decision"),
         ("rights", "manifest_snapshot"),
+        ("preflight", "preflight_record"),
     ]

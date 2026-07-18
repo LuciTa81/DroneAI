@@ -222,6 +222,12 @@
           "artifact_kind": "manifest_snapshot",
           "path": "apgcc/rights-1bd8ca8/manifest.snapshot.json",
           "sha256": "3f11f24dfbad3a173afa6039850477483436570008f6687f2faa9d9a0649049a"
+        },
+        {
+          "gate": "preflight",
+          "artifact_kind": "preflight_record",
+          "path": "apgcc/preflight-11b2fa5/preflight.json",
+          "sha256": "017544357630d8f86643b613f2e9055e3356c7896afa49412b5f1c8b9dd21adc"
         }
       ]
     },
