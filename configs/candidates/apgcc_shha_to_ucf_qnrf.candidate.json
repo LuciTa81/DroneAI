@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "candidate_id": "apgcc-official-shha-to-ucf-qnrf-research-comparison",
+  "intended_use": "commercial_product_rnd",
+  "components": [
+    {
+      "component_type": "code",
+      "component_id": "apgcc-official-e3e997bf",
+      "source_url": "https://github.com/AaronCIH/APGCC/tree/e3e997bf592a70fd34233a432a974200d8c0c847",
+      "rights": {
+        "status": "verified",
+        "license_id": "MIT",
+        "evidence_url": "https://github.com/AaronCIH/APGCC/blob/e3e997bf592a70fd34233a432a974200d8c0c847/LICENSE",
+        "commercial_use": true,
+        "research_use": true,
+        "basis": "explicit_terms"
+      }
+    },
+    {
+      "component_type": "dataset",
+      "component_id": "ucf-qnrf-kaggle-apache",
+      "source_url": "https://www.kaggle.com/datasets/faihajalamtopu/ucf-qnrf",
+      "rights": {
+        "status": "verified",
+        "license_id": "Apache-2.0",
+        "evidence_url": "https://www.kaggle.com/datasets/faihajalamtopu/ucf-qnrf",
+        "commercial_use": true,
+        "research_use": true,
+        "basis": "internal_approval",
+        "notes": "The project owner accepts the Kaggle Apache-2.0 label as permission. The uploader states they are not the dataset owner; that provenance risk remains recorded."
+      }
+    },
+    {
+      "component_type": "pretrained_weights",
+      "component_id": "apgcc-official-shha-checkpoint",
+      "source_url": "https://drive.google.com/file/d/1pEvn5RrvmDqVJUDZ4c9-rCJcl2I7bRhu/view?usp=sharing",
+      "rights": {
+        "status": "unverified",
+        "license_id": null,
+        "evidence_url": "https://github.com/AaronCIH/APGCC/blob/e3e997bf592a70fd34233a432a974200d8c0c847/README.md#inference",
+        "commercial_use": null,
+        "research_use": true,
+        "basis": "internal_approval",
+        "notes": "The pinned official README links the ShanghaiTech Part A checkpoint but does not state separate checkpoint terms. The project owner's standing policy keeps silent assets as candidates and authorizes this frozen research comparison only; commercial checkpoint reuse remains unverified."
+      }
+    },
+    {
+      "component_type": "derived_weights",
+      "component_id": "droneai-derived-weights-not-created",
+      "source_url": "project://DroneAI/derived-weights-policy",
+      "rights": {
+        "status": "pending",
+        "license_id": null,
+        "evidence_url": null,
+        "commercial_use": null,
+        "research_use": null,
+        "basis": "pending_review",
+        "notes": "This lane performs no training or fine-tuning. Derived-weight permission is decided only if APGCC reaches the final winner stage."
+      }
+    },
+    {
+      "component_type": "deployment",
+      "component_id": "droneai-festival-deployment-pending",
+      "source_url": "project://DroneAI/deployment-approval",
+      "rights": {
+        "status": "pending",
+        "license_id": null,
+        "evidence_url": null,
+        "commercial_use": null,
+        "research_use": null,
+        "basis": "pending_review",
+        "notes": "Research checkpoint comparison is authorized; product deployment remains a separate decision."
+      }
+    }
+  ]
+}
