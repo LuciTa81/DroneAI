@@ -38,6 +38,11 @@ def _fixture(tmp_path: Path) -> tuple[Path, Path]:
                         "split_id": "frozen-validation-36",
                         "split_role": "validation",
                         "expected_samples": 36,
+                        "checkpoint_training_split_status": "UNKNOWN",
+                        "comparison_scope": "compatibility_smoke",
+                        "checkpoint_split_evidence": (
+                            "public checkpoint training membership is not published"
+                        ),
                         "gate_order": ["one_sample", "benchmark"],
                         "accepted_evidence": [
                             {
@@ -89,6 +94,9 @@ def test_status_json_is_compact_and_complete(tmp_path: Path) -> None:
     assert status["rights_scope"] == "PASS_COMMERCIAL_CANDIDATE"
     assert status["dataset"]["dataset_id"] == "ucf-qnrf-kaggle-apache"
     assert status["validation"]["expected_samples"] == 36
+    assert status["checkpoint_training_split_status"] == "UNKNOWN"
+    assert status["comparison_scope"] == "compatibility_smoke"
+    assert status["ranking_eligible"] is False
     assert status["roadmap"][0]["model_id"] == "steerer"
     assert len(completed.stdout.encode("utf-8")) < 4096
 
@@ -105,6 +113,7 @@ def test_status_markdown_exposes_review_fields(tmp_path: Path) -> None:
         "Dataset/split: `ucf-qnrf-kaggle-apache` / `frozen-validation-36`",
         "Validation: `36` validation samples; fine-tuning=`False`",
         "Rights scope: `PASS_COMMERCIAL_CANDIDATE`",
+        "Comparison: `compatibility_smoke`; checkpoint split `UNKNOWN`; ranking eligible `False`",
         "Next action: `benchmark`",
         "Approval required: `True`",
         "| steerer | density_and_points | active |",

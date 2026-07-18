@@ -5,6 +5,8 @@ import json
 import re
 from pathlib import Path
 
+from droneai.comparison_claim import is_ranking_eligible, validate_comparison_claim
+
 
 _SHA256 = re.compile(r"^[0-9a-f]{64}$")
 _GATES = ("rights", "preflight", "one_sample", "benchmark")
@@ -52,6 +54,31 @@ def _validate_model(raw: object, *, index: int) -> dict[str, object]:
     if split_role not in {"train", "validation", "smoke"}:
         raise ValueError(f"{prefix}.split_role is invalid")
     model["split_role"] = split_role
+
+    checkpoint_status = _nonempty(
+        model.get("checkpoint_training_split_status"),
+        field=f"{prefix}.checkpoint_training_split_status",
+    )
+    comparison_scope = _nonempty(
+        model.get("comparison_scope"),
+        field=f"{prefix}.comparison_scope",
+    )
+    checkpoint_evidence = _nonempty(
+        model.get("checkpoint_split_evidence"),
+        field=f"{prefix}.checkpoint_split_evidence",
+    )
+    validate_comparison_claim(
+        checkpoint_status,
+        comparison_scope,
+        checkpoint_evidence,
+    )
+    model["checkpoint_training_split_status"] = checkpoint_status
+    model["comparison_scope"] = comparison_scope
+    model["checkpoint_split_evidence"] = checkpoint_evidence
+    model["ranking_eligible"] = is_ranking_eligible(
+        checkpoint_status,
+        comparison_scope,
+    )
 
     expected = model.get("expected_samples")
     if isinstance(expected, bool) or not isinstance(expected, int) or expected <= 0:
@@ -170,6 +197,12 @@ def build_workflow_status(
                 "family": model["family"],
                 "queue_state": model["queue_state"],
                 "rights_scope": model["rights_scope"],
+                "checkpoint_training_split_status": model[
+                    "checkpoint_training_split_status"
+                ],
+                "comparison_scope": model["comparison_scope"],
+                "checkpoint_split_evidence": model["checkpoint_split_evidence"],
+                "ranking_eligible": model["ranking_eligible"],
                 "verified_gates": gates,
             }
         )
@@ -193,6 +226,12 @@ def build_workflow_status(
         "approval_required": next_action in {"benchmark", "review_and_advance"},
         "rights_scope": active["rights_scope"],
         "evaluation_scope": "research_comparison_only",
+        "checkpoint_training_split_status": active[
+            "checkpoint_training_split_status"
+        ],
+        "comparison_scope": active["comparison_scope"],
+        "checkpoint_split_evidence": active["checkpoint_split_evidence"],
+        "ranking_eligible": active["ranking_eligible"],
         "dataset": {
             "dataset_id": active["dataset_id"],
             "split_id": active["split_id"],

@@ -19,6 +19,14 @@ def _write_json(path: Path, payload: object) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def _comparison_claim(status: str = "UNKNOWN") -> dict[str, str]:
+    return {
+        "checkpoint_training_split_status": status,
+        "comparison_scope": "compatibility_smoke",
+        "checkpoint_split_evidence": "pinned fixture evidence",
+    }
+
+
 def _queue(
     tmp_path: Path,
     *,
@@ -71,6 +79,7 @@ def _queue(
                 "active_model": active_model,
                 "models": [
                     {
+                        **_comparison_claim("VERIFIED_DISJOINT"),
                         "model_id": "dm-count",
                         "family": "density",
                         "queue_state": "completed",
@@ -90,6 +99,7 @@ def _queue(
                         ],
                     },
                     {
+                        **_comparison_claim(),
                         "model_id": "steerer",
                         "family": "density_and_points",
                         "queue_state": "active",
@@ -102,6 +112,7 @@ def _queue(
                         "accepted_evidence": evidence,
                     },
                     {
+                        **_comparison_claim(),
                         "model_id": "pet",
                         "family": "points",
                         "queue_state": "queued",
@@ -114,6 +125,7 @@ def _queue(
                         "accepted_evidence": [],
                     },
                     {
+                        **_comparison_claim(),
                         "model_id": "csrnet",
                         "family": "density",
                         "queue_state": "blocked",
@@ -147,6 +159,10 @@ def test_status_uses_hash_verified_evidence_to_select_steerer_benchmark(tmp_path
     assert status["dataset"]["dataset_id"] == "ucf-qnrf-kaggle-apache"
     assert status["validation"]["expected_samples"] == 36
     assert status["validation"]["fine_tuning"] is False
+    assert status["checkpoint_training_split_status"] == "UNKNOWN"
+    assert status["comparison_scope"] == "compatibility_smoke"
+    assert status["ranking_eligible"] is False
+    assert status["roadmap"][1]["ranking_eligible"] is False
     assert [entry["model_id"] for entry in status["roadmap"]] == [
         "dm-count",
         "steerer",
@@ -168,6 +184,26 @@ def test_unknown_active_model_is_rejected(tmp_path: Path) -> None:
     queue_path = _queue(tmp_path, active_model="unknown")
 
     with pytest.raises(ValueError, match="active_model"):
+        load_model_queue(queue_path)
+
+
+def test_missing_checkpoint_split_evidence_is_rejected(tmp_path: Path) -> None:
+    queue_path = _queue(tmp_path)
+    payload = json.loads(queue_path.read_text(encoding="utf-8"))
+    del payload["models"][1]["checkpoint_split_evidence"]
+    queue_path.write_text(json.dumps(payload), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="checkpoint_split_evidence"):
+        load_model_queue(queue_path)
+
+
+def test_unknown_checkpoint_cannot_claim_held_out_performance(tmp_path: Path) -> None:
+    queue_path = _queue(tmp_path)
+    payload = json.loads(queue_path.read_text(encoding="utf-8"))
+    payload["models"][1]["comparison_scope"] = "held_out_performance"
+    queue_path.write_text(json.dumps(payload), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="held-out"):
         load_model_queue(queue_path)
 
 

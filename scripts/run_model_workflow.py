@@ -48,16 +48,22 @@ def _markdown(status: dict[str, object]) -> str:
         f"- Metrics: `{', '.join(validation['metrics'])}`",
         f"- Rights scope: `{status['rights_scope']}`",
         f"- Evaluation scope: `{status['evaluation_scope']}`",
+        (
+            f"- Comparison: `{status['comparison_scope']}`; checkpoint split "
+            f"`{status['checkpoint_training_split_status']}`; ranking eligible "
+            f"`{status['ranking_eligible']}`"
+        ),
+        f"- Checkpoint split evidence: {status['checkpoint_split_evidence']}",
         f"- Completed gates: `{', '.join(status['completed_gates'])}`",
         f"- Next action: `{status['next_action']}`",
         f"- Approval required: `{status['approval_required']}`",
         "",
-        "| Model | Family | Queue | Rights | Verified gates |",
-        "|---|---|---|---|---|",
+        "| Model | Family | Queue | Rights | Comparison | Checkpoint split | Ranking | Verified gates |",
+        "|---|---|---|---|---|---|---|---|",
     ]
     for entry in status["roadmap"]:
         lines.append(
-            "| {model_id} | {family} | {queue_state} | {rights_scope} | {gates} |".format(
+            "| {model_id} | {family} | {queue_state} | {rights_scope} | {comparison_scope} | {checkpoint_training_split_status} | {ranking_eligible} | {gates} |".format(
                 **entry,
                 gates=", ".join(entry["verified_gates"]),
             )

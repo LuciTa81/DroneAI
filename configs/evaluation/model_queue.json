@@ -12,6 +12,9 @@
       "split_id": "dm-count-upstream-qnrf-val-smoke-36-v1",
       "split_role": "validation",
       "expected_samples": 36,
+      "checkpoint_training_split_status": "VERIFIED_DISJOINT",
+      "comparison_scope": "compatibility_smoke",
+      "checkpoint_split_evidence": "Official DM-Count UCF-QNRF train.txt and validation.txt pin the checkpoint protocol split; selected 36 samples are drawn only from validation.txt.",
       "gate_order": [
         "benchmark"
       ],
@@ -39,6 +42,9 @@
       "split_id": "dm-count-upstream-qnrf-val-smoke-36-v1",
       "split_role": "validation",
       "expected_samples": 36,
+      "checkpoint_training_split_status": "UNKNOWN",
+      "comparison_scope": "compatibility_smoke",
+      "checkpoint_split_evidence": "Official checkpoint training membership is not published; pinned upstream preparation uses a separate random validation policy.",
       "gate_order": [
         "rights",
         "preflight",
@@ -87,6 +93,9 @@
       "split_id": "dm-count-upstream-qnrf-val-smoke-36-v1",
       "split_role": "validation",
       "expected_samples": 36,
+      "checkpoint_training_split_status": "UNKNOWN",
+      "comparison_scope": "compatibility_smoke",
+      "checkpoint_split_evidence": "Official checkpoint training membership is not published; pinned preprocessing exposes only original UCF-QNRF Train and Test partitions.",
       "gate_order": [
         "rights",
         "preflight",
@@ -135,6 +144,9 @@
       "split_id": "dm-count-upstream-qnrf-val-smoke-36-v1",
       "split_role": "validation",
       "expected_samples": 36,
+      "checkpoint_training_split_status": "UNKNOWN",
+      "comparison_scope": "compatibility_smoke",
+      "checkpoint_split_evidence": "No eligible CSRNet checkpoint is pinned, so its checkpoint training membership cannot yet be evaluated.",
       "gate_order": [
         "rights",
         "preflight",
