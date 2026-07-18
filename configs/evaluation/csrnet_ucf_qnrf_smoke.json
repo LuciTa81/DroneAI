@@ -16,6 +16,7 @@
   "upstream_commit": "ed29d895989c188cb913a9503721271c6cf1ab1f",
   "split_upstream_commit": "cc5f2132e0d1328909f31b6d665b8e0b15c30467",
   "required_action": "research_checkpoint_evaluation",
+  "negative_density_policy": "clip_zero_preserve_raw_audit",
   "candidate_id": "csrnet-independent-shha-to-ucf-qnrf-research-comparison",
   "split_verified": true,
   "leakage_free": true,

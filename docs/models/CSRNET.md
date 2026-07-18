@@ -4,7 +4,7 @@
 - Family: density regression with dilated convolutions
 - Backbone: VGG-16 frontend through conv4_3
 - Rights scope: `PASS_COMMERCIAL_CANDIDATE`
-- Native output: stride-8 one-channel density map
+- Native output: raw signed stride-8 density plus audited non-negative operational density
 - Reference repository commit: `ed29d895989c188cb913a9503721271c6cf1ab1f`
 
 ## Structure
@@ -26,15 +26,18 @@ is inspected only for provenance and preprocessing compatibility.
 ## Output semantics
 
 ```text
-native_density = CSRNet(normalized_image)[0, 0]
-estimated_count = sum(native_density)
-zone_count = fractional native density mass inside the calibrated CCTV zone
+raw_density = CSRNet(normalized_image)[0, 0]
+operational_density = max(raw_density, 0)
+estimated_count = sum(operational_density)
+zone_count = fractional operational density mass inside the calibrated CCTV zone
 ```
 
-The output head has no ReLU. The compatibility gate therefore fails closed if
-the checkpoint produces any negative density rather than silently clipping and
-changing its published count semantics. Density is mass-preserving aligned to
-the common original-image `/8` evaluation grid for spatial comparisons.
+The output head has no ReLU. The frozen adapter therefore stores the signed raw
+density as an SSD-only compressed audit artifact and records its hash, signed
+sum, negative mass, and clipped-pixel count. Common evaluation, heatmaps, and
+zone integration use the explicitly declared non-negative operational density;
+this is never presented as the unmodified official count. Operational density
+is mass-preserving aligned to the common original-image `/8` evaluation grid.
 
 ## Original training protocol (reference only)
 

@@ -69,7 +69,12 @@ def _sample(tmp_path: Path) -> EvaluationSample:
     )
 
 
-def _adapter(tmp_path: Path, density: np.ndarray):
+def _adapter(
+    tmp_path: Path,
+    density: np.ndarray,
+    *,
+    negative_density_policy: str = "fail",
+):
     upstream = tmp_path / "CSRNet-pytorch"
     commit = _git_repo(upstream)
     checkpoint = tmp_path / "checkpoint.pth"
@@ -82,6 +87,7 @@ def _adapter(tmp_path: Path, density: np.ndarray):
         checkpoint_sha256=sha256_file(checkpoint),
         device="cpu",
         backend=backend,
+        negative_density_policy=negative_density_policy,
     )
     return adapter, backend
 
@@ -107,8 +113,37 @@ def test_adapter_preserves_official_normalization_density_mass_and_count(
         [(1.0 - 0.485) / 0.229, -0.456 / 0.224, -0.406 / 0.225]
     )
     assert brief.parameter_count == 16_263_489
-    assert brief.native_output == "stride-8 one-channel density map"
-    assert brief.count_derivation == "sum of the native density-map mass"
+    assert brief.native_output == "raw signed stride-8 density plus audited non-negative operational density"
+    assert brief.count_derivation == "sum of max(raw_density, 0); raw signed sum retained for audit"
+
+
+def test_adapter_clips_operational_density_and_preserves_raw_audit(
+    tmp_path: Path,
+) -> None:
+    raw = np.asarray([[1.0, -1.0], [2.0, -0.5]], dtype=np.float32)
+    adapter, _ = _adapter(
+        tmp_path,
+        raw,
+        negative_density_policy="clip_zero_preserve_raw_audit",
+    )
+
+    prediction = adapter.predict(_sample(tmp_path), retain_native=True)
+    audit = adapter.raw_density_audit()
+
+    assert prediction.failure_state is None
+    assert prediction.predicted_count == pytest.approx(3.0)
+    assert prediction.density is not None
+    assert np.all(prediction.density >= 0)
+    assert float(prediction.density.sum()) == pytest.approx(3.0)
+    assert prediction.metadata["negative_density_policy"] == (
+        "clip_zero_preserve_raw_audit"
+    )
+    assert prediction.metadata["native_raw_sum"] == pytest.approx(1.5)
+    assert prediction.metadata["native_negative_mass"] == pytest.approx(1.5)
+    assert prediction.metadata["operational_density_sum"] == pytest.approx(3.0)
+    assert prediction.metadata["operational_clipped_values"] == 2
+    assert audit is not None
+    assert np.array_equal(audit, raw)
 
 
 @pytest.mark.parametrize(

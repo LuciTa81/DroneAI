@@ -411,9 +411,11 @@ cd /workspace
 ```
 
 Review `result.json`, `model-brief.md`, `split-source-manifest.json`,
-`environment-summary.json`, and `one-sample-panel.png`. Any non-finite or
-negative native density fails closed. Stop after this gate; the 36-image
-benchmark requires separate approval.
+`environment-summary.json`, and `one-sample-panel.png`. The frozen policy stores
+`raw-density-audit.npz` on SSD only and records its SHA-256, while common metrics
+and zone outputs use `max(raw_density, 0)`. Any non-finite raw density still
+fails closed. Stop after this gate; the 36-image benchmark requires separate
+approval.
 
 ## Dataset transfer gate
 

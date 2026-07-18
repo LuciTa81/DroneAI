@@ -90,3 +90,22 @@ def test_compatibility_score_preserves_forward_runtime_and_checkpoint_evidence_o
         "runtime_metrics_finite": True,
     }
     assert score == 50.0
+
+
+def test_raw_density_audit_is_compressed_hashed_and_recoverable(
+    tmp_path: Path,
+) -> None:
+    raw = np.asarray([[1.0, -0.25], [0.5, 2.0]], dtype=np.float32)
+
+    artifact = _runner().write_raw_density_audit(
+        tmp_path / "raw-density-audit.npz",
+        raw,
+    )
+
+    assert artifact["path"] == "raw-density-audit.npz"
+    assert artifact["shape"] == [2, 2]
+    assert artifact["dtype"] == "float32"
+    assert artifact["storage_policy"] == "ssd_only_not_git"
+    assert len(artifact["sha256"]) == 64
+    with np.load(tmp_path / "raw-density-audit.npz") as payload:
+        assert np.array_equal(payload["raw_density"], raw)

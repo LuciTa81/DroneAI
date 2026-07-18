@@ -32,6 +32,7 @@ _CONFIG_OVERRIDES: dict[str, object] = {
     "split_upstream_commit": SPLIT_PINNED_COMMIT,
     "candidate_id": CSRNET_CANDIDATE_ID,
     "required_action": REQUIRED_ACTION,
+    "negative_density_policy": "clip_zero_preserve_raw_audit",
     "checkpoint_training_split_status": "VERIFIED_DISJOINT",
     "comparison_scope": "compatibility_smoke",
     "checkpoint_split_evidence": (

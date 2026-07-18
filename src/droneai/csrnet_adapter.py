@@ -18,6 +18,9 @@ from droneai.model_brief import ModelBrief
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[2]
 _REVIEWED_UPSTREAM_PATHS = ("README.md", "model.py")
+_NEGATIVE_DENSITY_POLICIES = frozenset(
+    {"fail", "clip_zero_preserve_raw_audit"}
+)
 
 
 class CSRNetBackend(Protocol):
@@ -84,6 +87,7 @@ class CSRNetAdapter:
         checkpoint_path: str | Path,
         checkpoint_sha256: str,
         device: str,
+        negative_density_policy: str = "fail",
         backend: CSRNetBackend | None = None,
     ) -> None:
         self.upstream_dir = Path(upstream_dir).resolve()
@@ -91,6 +95,9 @@ class CSRNetAdapter:
         self.checkpoint_path = Path(checkpoint_path).resolve()
         self.checkpoint_sha256 = checkpoint_sha256.lower()
         self.device = device
+        self.negative_density_policy = negative_density_policy
+        if self.negative_density_policy not in _NEGATIVE_DENSITY_POLICIES:
+            raise ValueError("unsupported CSRNet negative-density policy")
         if not self.upstream_dir.is_dir() or any(
             not (self.upstream_dir / relative).is_file()
             for relative in _REVIEWED_UPSTREAM_PATHS
@@ -112,6 +119,7 @@ class CSRNetAdapter:
             checkpoint_path=self.checkpoint_path,
             device=self.device,
         )
+        self._last_raw_density: np.ndarray | None = None
 
     def _normalized_image(self, sample: EvaluationSample) -> np.ndarray:
         with Image.open(sample.image_path) as image:
@@ -150,8 +158,13 @@ class CSRNetAdapter:
                 "mass-preserving alignment from native stride-8 output to the "
                 "original-image /8 evaluation grid"
             ),
-            native_output="stride-8 one-channel density map",
-            count_derivation="sum of the native density-map mass",
+            native_output=(
+                "raw signed stride-8 density plus audited non-negative "
+                "operational density"
+            ),
+            count_derivation=(
+                "sum of max(raw_density, 0); raw signed sum retained for audit"
+            ),
             zone_derivation="fractional density integration inside calibrated CCTV zones",
             original_losses=("Euclidean density-map regression loss",),
             official_protocol=(
@@ -194,14 +207,21 @@ class CSRNetAdapter:
             review_status="approved",
         )
 
+    def raw_density_audit(self) -> np.ndarray | None:
+        if self._last_raw_density is None:
+            return None
+        return self._last_raw_density.copy()
+
     def predict(self, sample: EvaluationSample, *, retain_native: bool) -> NativePrediction:
         started = time.perf_counter()
+        self._last_raw_density = None
         backend_latency_ms: float | None = None
         backend_peak_vram_mb: float | None = None
         metadata: dict[str, str | int | float | bool | None] = {
             "normalization": "ImageNet RGB mean/std",
             "output_stride": 8,
             "retain_native_requested": retain_native,
+            "negative_density_policy": self.negative_density_policy,
             "forward_completed": False,
             "checkpoint_missing_key_count": len(self._backend.missing_keys),
             "checkpoint_unexpected_key_count": len(self._backend.unexpected_keys),
@@ -230,6 +250,8 @@ class CSRNetAdapter:
                 )
             if not np.isfinite(raw).all():
                 raise ValueError("CSRNet density must be finite")
+            if retain_native:
+                self._last_raw_density = raw.copy()
             metadata.update(
                 {
                     "native_density_min": float(raw.min()),
@@ -241,14 +263,32 @@ class CSRNetAdapter:
                     "native_raw_sum": float(raw.sum(dtype=np.float64)),
                 }
             )
-            if np.any(raw < 0):
+            if np.any(raw < 0) and self.negative_density_policy == "fail":
                 raise ValueError("CSRNet density must be non-negative")
+            operational = (
+                np.maximum(raw, 0.0).astype(np.float32, copy=False)
+                if self.negative_density_policy == "clip_zero_preserve_raw_audit"
+                else raw
+            )
+            metadata.update(
+                {
+                    "operational_clipped_values": int(np.count_nonzero(raw < 0)),
+                    "operational_density_sum": float(
+                        operational.sum(dtype=np.float64)
+                    ),
+                    "operational_count_method": "sum(max(raw_density, 0))",
+                    "raw_density_audit_retained": retain_native,
+                }
+            )
             target_shape = (
                 tuple(sample.ground_truth_density.shape)
                 if sample.ground_truth_density is not None
                 else (math.ceil(sample.height / 8), math.ceil(sample.width / 8))
             )
-            density = resize_density_preserve_mass(raw, target_shape=target_shape)
+            density = resize_density_preserve_mass(
+                operational,
+                target_shape=target_shape,
+            )
             count = float(density.sum(dtype=np.float64))
             metadata.update(
                 {

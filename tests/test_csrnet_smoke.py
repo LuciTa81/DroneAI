@@ -48,6 +48,7 @@ def test_csrnet_config_preserves_frozen_validation_contract() -> None:
     assert config["comparison_scope"] == "compatibility_smoke"
     assert config["sealed_test_access_approved"] is False
     assert config["required_action"] == "research_checkpoint_evaluation"
+    assert config["negative_density_policy"] == "clip_zero_preserve_raw_audit"
 
 
 def test_csrnet_rights_bind_candidate_and_research_action(tmp_path: Path) -> None:

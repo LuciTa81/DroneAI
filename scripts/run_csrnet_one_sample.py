@@ -74,6 +74,22 @@ def compatibility_checks(
     return checks, score
 
 
+def write_raw_density_audit(path: Path, raw_density: np.ndarray) -> dict[str, object]:
+    target = path.resolve()
+    target.parent.mkdir(parents=True, exist_ok=True)
+    raw = np.asarray(raw_density, dtype=np.float32)
+    if raw.ndim != 2 or not np.isfinite(raw).all():
+        raise ValueError("raw density audit requires one finite 2D array")
+    np.savez_compressed(target, raw_density=raw)
+    return {
+        "path": target.name,
+        "sha256": sha256_file(target),
+        "shape": list(raw.shape),
+        "dtype": str(raw.dtype),
+        "storage_policy": "ssd_only_not_git",
+    }
+
+
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Run one frozen CSRNet validation sample."
@@ -164,10 +180,20 @@ def main(argv: Sequence[str] | None = None) -> int:
         checkpoint_path=paths["checkpoint"],
         checkpoint_sha256=args.checkpoint_sha256,
         device=args.device,
+        negative_density_policy=str(config["negative_density_policy"]),
     )
     brief = adapter.brief()
     brief.require_full_run_approval()
     prediction = adapter.predict(sample, retain_native=True)
+    raw_density = adapter.raw_density_audit()
+    raw_density_artifact = (
+        None
+        if raw_density is None
+        else write_raw_density_audit(
+            output / "raw-density-audit.npz",
+            raw_density,
+        )
+    )
     checks, technical_score = compatibility_checks(prediction)
     record = evaluate_sample(
         sample,
@@ -200,6 +226,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         "evaluation_scope": "research_comparison_only",
         "comparison_scope": str(config["comparison_scope"]),
         "ranking_eligible": False,
+        "negative_density_policy": str(config["negative_density_policy"]),
         "sample_id": sample.sample_id,
         "dataset_id": sample.dataset_id,
         "split_id": sample.split_id,
@@ -212,6 +239,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         "failure_state": prediction.failure_state,
         "record": asdict(record),
         "prediction_metadata": prediction.metadata,
+        "raw_density_audit": raw_density_artifact,
         "native_density_sum": None
         if prediction.density is None
         else float(np.asarray(prediction.density).sum(dtype=np.float64)),
