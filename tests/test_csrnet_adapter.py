@@ -18,13 +18,22 @@ class _Backend:
     missing_keys: tuple[str, ...] = ()
     unexpected_keys: tuple[str, ...] = ()
 
-    def __init__(self, density: np.ndarray) -> None:
+    def __init__(
+        self,
+        density: np.ndarray,
+        *,
+        varying_runtime: bool = False,
+    ) -> None:
         self.density = density
         self.observed: np.ndarray | None = None
+        self.varying_runtime = varying_runtime
+        self.calls = 0
 
     def infer(self, normalized_bchw: np.ndarray) -> tuple[np.ndarray, float, float]:
         self.observed = normalized_bchw
-        return self.density, 3.5, 128.0
+        self.calls += 1
+        latency_ms = 3.5 + (self.calls - 1 if self.varying_runtime else 0)
+        return self.density, latency_ms, 128.0
 
 
 def _module():
@@ -75,12 +84,13 @@ def _adapter(
     density: np.ndarray,
     *,
     negative_density_policy: str = "fail",
+    backend: _Backend | None = None,
 ):
     upstream = tmp_path / "CSRNet-pytorch"
     commit = _git_repo(upstream)
     checkpoint = tmp_path / "checkpoint.pth"
     checkpoint.write_bytes(b"safe state dict fixture")
-    backend = _Backend(density)
+    backend = backend or _Backend(density)
     adapter = _module().CSRNetAdapter(
         upstream_dir=upstream,
         expected_upstream_commit=commit,
@@ -154,10 +164,12 @@ def test_native_fingerprint_is_independent_of_raw_audit_retention(
     tmp_path: Path,
 ) -> None:
     raw = np.asarray([[1.0, -1.0], [2.0, -0.5]], dtype=np.float32)
+    backend = _Backend(raw, varying_runtime=True)
     adapter, _ = _adapter(
         tmp_path,
         raw,
         negative_density_policy="clip_zero_preserve_raw_audit",
+        backend=backend,
     )
     sample = _sample(tmp_path)
 
@@ -166,6 +178,7 @@ def test_native_fingerprint_is_independent_of_raw_audit_retention(
     retained = adapter.predict(sample, retain_native=True)
 
     assert adapter.raw_density_audit() is not None
+    assert first.latency_ms != retained.latency_ms
     assert _native_output_fingerprint(first) == _native_output_fingerprint(retained)
 
 

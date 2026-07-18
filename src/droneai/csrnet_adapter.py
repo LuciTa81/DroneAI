@@ -237,8 +237,6 @@ class CSRNetAdapter:
                 normalized
             )
             metadata["forward_completed"] = True
-            metadata["backend_latency_ms"] = float(backend_latency_ms)
-            metadata["backend_peak_vram_mb"] = float(backend_peak_vram_mb)
             raw = np.asarray(raw_density, dtype=np.float32)
             expected_shape = (sample.height // 8, sample.width // 8)
             metadata.update(
