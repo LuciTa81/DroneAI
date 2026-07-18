@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "candidate_id": "csrnet-independent-shha-to-ucf-qnrf-research-comparison",
+  "intended_use": "commercial_product_rnd",
+  "components": [
+    {
+      "component_type": "code",
+      "component_id": "csrnet-droneai-independent-5c9dd5ca",
+      "source_url": "https://github.com/LuciTa81/DroneAI/blob/5c9dd5cabb91664767da93732c365b6f9940b0f2/src/droneai/csrnet.py",
+      "rights": {
+        "status": "verified",
+        "license_id": "Project-Owned-Internal-Commercial-Use",
+        "evidence_url": "https://github.com/LuciTa81/DroneAI/blob/5c9dd5cabb91664767da93732c365b6f9940b0f2/src/droneai/csrnet.py",
+        "commercial_use": true,
+        "research_use": true,
+        "basis": "internal_approval",
+        "notes": "Project-owned independent implementation for internal commercial R&D; no reference source or weight is incorporated. Public redistribution terms remain a separate repository-level decision."
+      }
+    },
+    {
+      "component_type": "dataset",
+      "component_id": "ucf-qnrf-kaggle-apache",
+      "source_url": "https://www.kaggle.com/datasets/faihajalamtopu/ucf-qnrf",
+      "rights": {
+        "status": "verified",
+        "license_id": "Apache-2.0",
+        "evidence_url": "https://www.kaggle.com/datasets/faihajalamtopu/ucf-qnrf",
+        "commercial_use": true,
+        "research_use": true,
+        "basis": "internal_approval",
+        "notes": "The project owner accepts the Kaggle Apache-2.0 label as permission. The uploader states they are not the dataset owner; that provenance risk remains recorded."
+      }
+    },
+    {
+      "component_type": "pretrained_weights",
+      "component_id": "csrnet-official-shha-mae66.4",
+      "source_url": "https://drive.google.com/open?id=1Z-atzS5Y2pOd-nEWqZRVBDMYJDreGWHH",
+      "rights": {
+        "status": "unverified",
+        "license_id": null,
+        "evidence_url": "https://github.com/leeyeehoo/CSRNet-pytorch/blob/ed29d895989c188cb913a9503721271c6cf1ab1f/README.md#results",
+        "commercial_use": null,
+        "research_use": true,
+        "basis": "internal_approval",
+        "notes": "The official pinned README links this ShanghaiTech Part A checkpoint but publishes no repository license or separate checkpoint terms. The owner's standing policy admits silent assets as research comparison candidates only; commercial checkpoint reuse remains unverified."
+      }
+    },
+    {
+      "component_type": "derived_weights",
+      "component_id": "droneai-derived-weights-not-created",
+      "source_url": "project://DroneAI/derived-weights-policy",
+      "rights": {
+        "status": "pending",
+        "license_id": null,
+        "evidence_url": null,
+        "commercial_use": null,
+        "research_use": null,
+        "basis": "pending_review",
+        "notes": "Round 1 performs no training or fine-tuning. Derived-weight permission is decided only if CSRNet reaches the final winner stage."
+      }
+    },
+    {
+      "component_type": "deployment",
+      "component_id": "droneai-festival-deployment-pending",
+      "source_url": "project://DroneAI/deployment-approval",
+      "rights": {
+        "status": "pending",
+        "license_id": null,
+        "evidence_url": null,
+        "commercial_use": null,
+        "research_use": null,
+        "basis": "pending_review",
+        "notes": "Research checkpoint comparison is authorized; product deployment remains a separate decision."
+      }
+    }
+  ]
+}

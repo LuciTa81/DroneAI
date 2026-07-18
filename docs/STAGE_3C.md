@@ -68,6 +68,20 @@ checkpoint evaluation while withholding commercial checkpoint reuse, derived
 weights, and deployment. UCF-QNRF samples are disjoint from checkpoint training,
 but the cross-domain result is a compatibility smoke and is not ranking-eligible.
 
+## CSRNet independent-code ShanghaiTech-A to UCF-QNRF classification
+
+The previously recorded CSRNet reference SHA was not present in the upstream
+repository and has been replaced by verified upstream commit `ed29d895`. That
+upstream tree has no explicit license file, so no upstream source is incorporated.
+DroneAI instead uses its project-owned independent implementation pinned at
+`5c9dd5ca`. The official upstream README links a ShanghaiTech Part A checkpoint
+but publishes no repository or checkpoint terms. Project policy therefore allows
+that public checkpoint only in the rights-gated research comparison lane. Its
+commercial reuse, all derived weights, and deployment remain pending. Since the
+checkpoint is trained on ShanghaiTech-A and evaluated on UCF-QNRF, the split is
+disjoint but the result is cross-domain compatibility evidence rather than a
+ranking claim.
+
 ## Run
 
 ```bash
