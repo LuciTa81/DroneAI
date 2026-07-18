@@ -253,21 +253,34 @@
       "model_id": "csrnet",
       "family": "density",
       "queue_state": "active",
-      "rights_scope": "NOT_EVALUATED_NO_ELIGIBLE_WEIGHT",
+      "rights_scope": "PASS_COMMERCIAL_CANDIDATE",
       "dataset_id": "ucf-qnrf-kaggle-apache",
       "split_id": "dm-count-upstream-qnrf-val-smoke-36-v1",
       "split_role": "validation",
       "expected_samples": 36,
-      "checkpoint_training_split_status": "UNKNOWN",
+      "checkpoint_training_split_status": "VERIFIED_DISJOINT",
       "comparison_scope": "compatibility_smoke",
-      "checkpoint_split_evidence": "No eligible CSRNet checkpoint is pinned, so its checkpoint training membership cannot yet be evaluated.",
+      "checkpoint_split_evidence": "The rights-gated official checkpoint is trained on ShanghaiTech Part A and the frozen evaluation split is UCF-QNRF validation, so their samples are disjoint; the result remains a cross-domain compatibility smoke.",
       "gate_order": [
         "rights",
         "preflight",
         "one_sample",
         "benchmark"
       ],
-      "accepted_evidence": []
+      "accepted_evidence": [
+        {
+          "gate": "rights",
+          "artifact_kind": "rights_decision",
+          "path": "csrnet/csrnet-rights-e0cebe3/rights-decision.json",
+          "sha256": "314f25024519978f73b6adfab21d51ca2296bdc3ff8d2e8fffbaa762f06cb509"
+        },
+        {
+          "gate": "rights",
+          "artifact_kind": "manifest_snapshot",
+          "path": "csrnet/csrnet-rights-e0cebe3/manifest.snapshot.json",
+          "sha256": "0e238d0700e58806fd00b666d53092f8aebfeaa9ae0f674682f4ecafc6c4d240"
+        }
+      ]
     }
   ]
 }

@@ -280,5 +280,25 @@ def test_repository_queue_completes_apgcc_and_activates_csrnet_rights() -> None:
         "919e2068a9df0ade3a6fc3d87855f67fccd2f7df5568304466fd6d0d24dc6b72"
     )
     assert models["csrnet"]["queue_state"] == "active"
-    assert models["csrnet"]["rights_scope"] == "NOT_EVALUATED_NO_ELIGIBLE_WEIGHT"
-    assert models["csrnet"]["accepted_evidence"] == []
+    assert models["csrnet"]["rights_scope"] == "PASS_COMMERCIAL_CANDIDATE"
+    assert models["csrnet"]["checkpoint_training_split_status"] == "VERIFIED_DISJOINT"
+    assert [
+        (evidence["gate"], evidence["artifact_kind"])
+        for evidence in models["csrnet"]["accepted_evidence"]
+    ] == [
+        ("rights", "rights_decision"),
+        ("rights", "manifest_snapshot"),
+    ]
+    decision, snapshot = models["csrnet"]["accepted_evidence"]
+    assert decision["path"] == (
+        "csrnet/csrnet-rights-e0cebe3/rights-decision.json"
+    )
+    assert decision["sha256"] == (
+        "314f25024519978f73b6adfab21d51ca2296bdc3ff8d2e8fffbaa762f06cb509"
+    )
+    assert snapshot["path"] == (
+        "csrnet/csrnet-rights-e0cebe3/manifest.snapshot.json"
+    )
+    assert snapshot["sha256"] == (
+        "0e238d0700e58806fd00b666d53092f8aebfeaa9ae0f674682f4ecafc6c4d240"
+    )
