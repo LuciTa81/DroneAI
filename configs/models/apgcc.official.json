@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "model_id": "apgcc-official-shha-to-ucf-qnrf",
+  "paper": {
+    "title": "APGCC: Improving Point-based Crowd Counting and Localization Based on Auxiliary Point Guidance",
+    "venue": "ECCV 2024",
+    "url": "https://arxiv.org/abs/2405.10589"
+  },
+  "repository": {
+    "url": "https://github.com/AaronCIH/APGCC",
+    "commit": "e3e997bf592a70fd34233a432a974200d8c0c847",
+    "license": "MIT"
+  },
+  "architecture": {
+    "backbone": "VGG16-BN",
+    "decoder": "IFI",
+    "output_type": "points",
+    "stride": 8,
+    "anchors_per_cell": 4,
+    "blocks": [
+      "VGG16-BN convolutional feature extractor",
+      "ASPP feature aggregation",
+      "Implicit Feature Interpolation decoder",
+      "person-confidence classification head",
+      "point-offset regression head"
+    ]
+  },
+  "input": {
+    "type": "RGB image tensor",
+    "normalization": "ImageNet mean/std",
+    "batch_size": 1
+  },
+  "outputs": {
+    "native": ["pred_logits", "pred_points", "offset"],
+    "count_derivation": "number of in-bounds pred_points whose person-class probability exceeds 0.5",
+    "density_map_available": false,
+    "localization_available": true,
+    "zone_derivation": "count accepted pred_points whose original-image coordinates fall inside each calibrated CCTV zone"
+  },
+  "official_environment": {
+    "python": "3.8",
+    "torch_version": "not pinned by upstream requirements",
+    "torchvision_version": "not pinned by upstream requirements"
+  },
+  "home5090_compatibility_policy": {
+    "base_runtime": "nvcr.io/nvidia/pytorch:25.10-py3",
+    "strategy": "inherit NGC Torch/CUDA and install an isolated no-deps overlay",
+    "official_version_deviation_requires_preflight": true
+  },
+  "checkpoint": {
+    "training_dataset": "ShanghaiTech Part A",
+    "url": "https://drive.google.com/file/d/1pEvn5RrvmDqVJUDZ4c9-rCJcl2I7bRhu/view?usp=sharing",
+    "sha256": "record-at-download-before-use",
+    "rights_scope": "research checkpoint comparison only"
+  },
+  "comparison": {
+    "target_dataset": "UCF-QNRF validation smoke split",
+    "scope": "compatibility_smoke",
+    "ranking_eligible": false,
+    "fine_tuning": false
+  },
+  "failure_modes": [
+    "ShanghaiTech-to-UCF domain shift",
+    "tiny or heavily occluded heads",
+    "confidence-threshold sensitivity",
+    "point-coordinate errors near calibrated zone boundaries",
+    "high proposal count on very large CCTV frames"
+  ]
+}

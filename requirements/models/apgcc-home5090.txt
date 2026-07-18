@@ -1,0 +1,6 @@
+# APGCC-only overlay. The NGC image supplies Torch/CUDA and scientific packages.
+gdown==5.2.0
+opencv-python-headless==4.12.0.88
+PySocks==1.7.1
+easydict==1.13
+tensorboardX==2.6.2.2
