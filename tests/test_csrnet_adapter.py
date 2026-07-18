@@ -138,6 +138,9 @@ def test_adapter_clips_operational_density_and_preserves_raw_audit(
     assert prediction.metadata["negative_density_policy"] == (
         "clip_zero_preserve_raw_audit"
     )
+    assert prediction.metadata["spatial_output_label"] == (
+        "operational clipped density"
+    )
     assert prediction.metadata["native_raw_sum"] == pytest.approx(1.5)
     assert prediction.metadata["native_negative_mass"] == pytest.approx(1.5)
     assert prediction.metadata["operational_density_sum"] == pytest.approx(3.0)

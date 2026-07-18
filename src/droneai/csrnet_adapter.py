@@ -222,6 +222,12 @@ class CSRNetAdapter:
             "output_stride": 8,
             "retain_native_requested": retain_native,
             "negative_density_policy": self.negative_density_policy,
+            "spatial_output_label": (
+                "operational clipped density"
+                if self.negative_density_policy
+                == "clip_zero_preserve_raw_audit"
+                else "native predicted density"
+            ),
             "forward_completed": False,
             "checkpoint_missing_key_count": len(self._backend.missing_keys),
             "checkpoint_unexpected_key_count": len(self._backend.unexpected_keys),

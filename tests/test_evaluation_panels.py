@@ -105,6 +105,30 @@ def test_density_panel_has_four_equal_columns(tmp_path: Path) -> None:
         assert rendered.mode == "RGB"
 
 
+def test_density_panel_uses_declared_operational_output_label(tmp_path: Path) -> None:
+    prediction = replace(
+        _density_prediction(),
+        metadata={"spatial_output_label": "operational clipped density"},
+    )
+
+    path = render_review_panel(
+        _sample(tmp_path),
+        prediction,
+        _density_record(),
+        tmp_path / "operational-density.png",
+        model_id="fixture",
+        checkpoint_sha256="b" * 64,
+        zone_warning_count=1.0,
+        zone_critical_count=2.0,
+        category="compatibility",
+    )
+
+    with Image.open(path) as rendered:
+        columns = rendered.info["panel_columns"]
+        assert "operational clipped density" in columns
+        assert "native predicted density" not in columns
+
+
 def test_panel_records_visible_count_error_and_category_annotations(
     tmp_path: Path,
 ) -> None:

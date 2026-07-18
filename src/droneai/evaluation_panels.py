@@ -276,10 +276,15 @@ def render_review_panel(
             column_size,
             content_box=content_box,
         )
+        declared_label = prediction.metadata.get("spatial_output_label")
         prediction_label = (
-            "native predicted density (hybrid)"
-            if prediction.output_type == "hybrid"
-            else "native predicted density"
+            declared_label.strip()
+            if isinstance(declared_label, str) and declared_label.strip()
+            else (
+                "native predicted density (hybrid)"
+                if prediction.output_type == "hybrid"
+                else "native predicted density"
+            )
         )
     elif prediction_spatial_kind == "points":
         predicted = draw_points(
