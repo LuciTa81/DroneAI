@@ -62,3 +62,31 @@ def test_compatibility_score_requires_all_native_density_checks() -> None:
 
     assert all(checks.values())
     assert score == 100.0
+
+
+def test_compatibility_score_preserves_forward_runtime_and_checkpoint_evidence_on_contract_failure() -> None:
+    prediction = NativePrediction(
+        sample_id="sample",
+        output_type="density",
+        predicted_count=None,
+        latency_ms=3.5,
+        peak_vram_mb=128.0,
+        failure_state="ValueError: CSRNet density must be non-negative",
+        metadata={
+            "forward_completed": True,
+            "checkpoint_missing_key_count": 0,
+            "checkpoint_unexpected_key_count": 0,
+        },
+    )
+
+    checks, score = _runner().compatibility_checks(prediction)
+
+    assert checks == {
+        "successful_forward": True,
+        "native_density_present": False,
+        "density_finite_nonnegative": False,
+        "density_sum_matches_count": False,
+        "checkpoint_loaded_strictly": True,
+        "runtime_metrics_finite": True,
+    }
+    assert score == 50.0

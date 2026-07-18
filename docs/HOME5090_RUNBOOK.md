@@ -394,7 +394,7 @@ no training or fine-tuning.
 
 ```bash
 cd /workspace
-python scripts/run_csrnet_one_sample.py \
+/workspace/.venvs/harness/bin/python scripts/run_csrnet_one_sample.py \
   --config configs/evaluation/csrnet_ucf_qnrf_smoke.json \
   --train-root /workspace/data/datasets/ucf-qnrf-kaggle-apache/raw/UCF-QNRF_ECCV18/Train \
   --upstream-dir /workspace/upstreams/CSRNet-pytorch \

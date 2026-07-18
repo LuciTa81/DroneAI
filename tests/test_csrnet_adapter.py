@@ -129,6 +129,11 @@ def test_adapter_fails_closed_on_invalid_native_density(
     assert prediction.predicted_count is None
     assert prediction.density is None
     assert prediction.failure_state is not None
+    assert prediction.latency_ms == 3.5
+    assert prediction.peak_vram_mb == 128.0
+    assert prediction.metadata["forward_completed"] is True
+    assert prediction.metadata["checkpoint_missing_key_count"] == 0
+    assert prediction.metadata["checkpoint_unexpected_key_count"] == 0
 
 
 def test_adapter_rejects_checkpoint_hash_mismatch(tmp_path: Path) -> None:

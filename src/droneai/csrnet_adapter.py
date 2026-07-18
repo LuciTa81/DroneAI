@@ -196,14 +196,24 @@ class CSRNetAdapter:
 
     def predict(self, sample: EvaluationSample, *, retain_native: bool) -> NativePrediction:
         started = time.perf_counter()
+        backend_latency_ms: float | None = None
+        backend_peak_vram_mb: float | None = None
         metadata: dict[str, str | int | float | bool | None] = {
             "normalization": "ImageNet RGB mean/std",
             "output_stride": 8,
             "retain_native_requested": retain_native,
+            "forward_completed": False,
+            "checkpoint_missing_key_count": len(self._backend.missing_keys),
+            "checkpoint_unexpected_key_count": len(self._backend.unexpected_keys),
         }
         try:
             normalized = self._normalized_image(sample)
-            raw_density, latency_ms, peak_vram_mb = self._backend.infer(normalized)
+            raw_density, backend_latency_ms, backend_peak_vram_mb = self._backend.infer(
+                normalized
+            )
+            metadata["forward_completed"] = True
+            metadata["backend_latency_ms"] = float(backend_latency_ms)
+            metadata["backend_peak_vram_mb"] = float(backend_peak_vram_mb)
             raw = np.asarray(raw_density, dtype=np.float32)
             expected_shape = (sample.height // 8, sample.width // 8)
             metadata.update(
@@ -225,6 +235,10 @@ class CSRNetAdapter:
                     "native_density_min": float(raw.min()),
                     "native_density_max": float(raw.max()),
                     "native_negative_values": int(np.count_nonzero(raw < 0)),
+                    "native_negative_fraction": float(np.mean(raw < 0)),
+                    "native_negative_mass": float(-raw[raw < 0].sum(dtype=np.float64)),
+                    "native_positive_mass": float(raw[raw > 0].sum(dtype=np.float64)),
+                    "native_raw_sum": float(raw.sum(dtype=np.float64)),
                 }
             )
             if np.any(raw < 0):
@@ -240,28 +254,35 @@ class CSRNetAdapter:
                 {
                     "evaluation_density_height": int(density.shape[0]),
                     "evaluation_density_width": int(density.shape[1]),
-                    "checkpoint_missing_key_count": len(self._backend.missing_keys),
-                    "checkpoint_unexpected_key_count": len(self._backend.unexpected_keys),
                 }
             )
             return NativePrediction(
                 sample_id=sample.sample_id,
                 output_type="density",
                 predicted_count=count,
-                latency_ms=float(latency_ms),
-                peak_vram_mb=float(peak_vram_mb),
+                latency_ms=float(backend_latency_ms),
+                peak_vram_mb=float(backend_peak_vram_mb),
                 density=density,
                 coordinate_space="original_pixels",
                 metadata=metadata,
             )
         except Exception as error:
-            elapsed_ms = max((time.perf_counter() - started) * 1000.0, 1e-9)
+            elapsed_ms = (
+                max((time.perf_counter() - started) * 1000.0, 1e-9)
+                if backend_latency_ms is None
+                else float(backend_latency_ms)
+            )
+            peak_vram_mb = (
+                0.0
+                if backend_peak_vram_mb is None
+                else float(backend_peak_vram_mb)
+            )
             return NativePrediction(
                 sample_id=sample.sample_id,
                 output_type="density",
                 predicted_count=None,
                 latency_ms=elapsed_ms,
-                peak_vram_mb=0.0,
+                peak_vram_mb=peak_vram_mb,
                 failure_state=f"{type(error).__name__}: {error}",
                 metadata=metadata,
             )

@@ -36,6 +36,7 @@ def compatibility_checks(
     prediction: NativePrediction,
 ) -> tuple[dict[str, bool], float]:
     success = prediction.failure_state is None and prediction.predicted_count is not None
+    forward_completed = bool(prediction.metadata.get("forward_completed", success))
     density = None if prediction.density is None else np.asarray(prediction.density)
     density_present = bool(success and density is not None and density.ndim == 2)
     density_valid = bool(
@@ -51,19 +52,18 @@ def compatibility_checks(
         )
     )
     checkpoint_strict = bool(
-        success
-        and prediction.metadata.get("checkpoint_missing_key_count") == 0
+        prediction.metadata.get("checkpoint_missing_key_count") == 0
         and prediction.metadata.get("checkpoint_unexpected_key_count") == 0
     )
     runtime_valid = bool(
-        success
+        forward_completed
         and math.isfinite(prediction.latency_ms)
         and prediction.latency_ms > 0
         and math.isfinite(prediction.peak_vram_mb)
         and prediction.peak_vram_mb >= 0
     )
     checks = {
-        "successful_forward": bool(success),
+        "successful_forward": forward_completed,
         "native_density_present": density_present,
         "density_finite_nonnegative": density_valid,
         "density_sum_matches_count": mass_matches,
