@@ -232,7 +232,7 @@ def test_benchmark_requires_explicit_user_approval(tmp_path: Path) -> None:
     assert_action_allowed(status, "benchmark", user_approved=True)
 
 
-def test_repository_queue_advances_from_mpcount_to_apgcc_rights() -> None:
+def test_repository_queue_records_apgcc_rights_and_advances_to_preflight() -> None:
     queue = load_model_queue(Path("configs/evaluation/model_queue.json"))
     models = {model["model_id"]: model for model in queue["models"]}
 
@@ -240,11 +240,19 @@ def test_repository_queue_advances_from_mpcount_to_apgcc_rights() -> None:
     assert models["mpcount"]["queue_state"] == "completed"
     assert models["apgcc"]["queue_state"] == "active"
     assert models["apgcc"]["family"] == "points"
-    assert models["apgcc"]["rights_scope"] == "PENDING"
+    assert models["apgcc"]["rights_scope"] == "PASS_COMMERCIAL_CANDIDATE"
+    assert models["apgcc"]["checkpoint_training_split_status"] == "VERIFIED_DISJOINT"
+    assert models["apgcc"]["comparison_scope"] == "compatibility_smoke"
     assert models["apgcc"]["gate_order"] == [
         "rights",
         "preflight",
         "one_sample",
         "benchmark",
     ]
-    assert models["apgcc"]["accepted_evidence"] == []
+    assert [
+        (evidence["gate"], evidence["artifact_kind"])
+        for evidence in models["apgcc"]["accepted_evidence"]
+    ] == [
+        ("rights", "rights_decision"),
+        ("rights", "manifest_snapshot"),
+    ]

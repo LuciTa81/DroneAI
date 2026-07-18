@@ -56,6 +56,18 @@ UCF-QNRF, the frozen UCF smoke samples are checkpoint-training disjoint. Derived
 weights and deployment remain pending, so this lane cannot exceed
 `PASS_COMMERCIAL_CANDIDATE`.
 
+## APGCC ShanghaiTech-A to UCF-QNRF research classification
+
+APGCC is pinned to official commit `e3e997bf` and its MIT code license. The
+official README links only `SHHA_best.pth`, trained on ShanghaiTech Part A; it
+does not publish separate checkpoint terms or an official UCF-QNRF checkpoint.
+The project owner's standing policy retains silent assets as candidates and
+authorizes this frozen research comparison, but does not treat silence as
+commercial permission. Stage 3C therefore allows research asset download and
+checkpoint evaluation while withholding commercial checkpoint reuse, derived
+weights, and deployment. UCF-QNRF samples are disjoint from checkpoint training,
+but the cross-domain result is a compatibility smoke and is not ranking-eligible.
+
 ## Run
 
 ```bash

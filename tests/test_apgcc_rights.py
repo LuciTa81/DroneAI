@@ -51,4 +51,3 @@ def test_apgcc_rights_keep_silent_checkpoint_in_research_comparison_lane() -> No
         "commercial_training",
         "deployment",
     }.isdisjoint(decision.allowed_actions)
-

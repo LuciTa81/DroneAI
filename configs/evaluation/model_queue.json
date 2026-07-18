@@ -196,21 +196,34 @@
       "model_id": "apgcc",
       "family": "points",
       "queue_state": "active",
-      "rights_scope": "PENDING",
+      "rights_scope": "PASS_COMMERCIAL_CANDIDATE",
       "dataset_id": "ucf-qnrf-kaggle-apache",
       "split_id": "dm-count-upstream-qnrf-val-smoke-36-v1",
       "split_role": "validation",
       "expected_samples": 36,
-      "checkpoint_training_split_status": "UNKNOWN",
+      "checkpoint_training_split_status": "VERIFIED_DISJOINT",
       "comparison_scope": "compatibility_smoke",
-      "checkpoint_split_evidence": "Official APGCC code and checkpoint identities, licenses, and checkpoint training membership have not yet been pinned; the rights gate must resolve them before preflight.",
+      "checkpoint_split_evidence": "The pinned official APGCC README publishes only an SHHA checkpoint. It is trained on ShanghaiTech Part A, so no UCF-QNRF validation sample belongs to checkpoint training; the cross-domain result remains compatibility_smoke rather than a ranking claim.",
       "gate_order": [
         "rights",
         "preflight",
         "one_sample",
         "benchmark"
       ],
-      "accepted_evidence": []
+      "accepted_evidence": [
+        {
+          "gate": "rights",
+          "artifact_kind": "rights_decision",
+          "path": "apgcc/rights-1bd8ca8/rights-decision.json",
+          "sha256": "bbf1199fd11c415bc5643ee7936ad443b08e9c6dbdf35fa6aefe5a42aa3a871b"
+        },
+        {
+          "gate": "rights",
+          "artifact_kind": "manifest_snapshot",
+          "path": "apgcc/rights-1bd8ca8/manifest.snapshot.json",
+          "sha256": "3f11f24dfbad3a173afa6039850477483436570008f6687f2faa9d9a0649049a"
+        }
+      ]
     },
     {
       "model_id": "csrnet",
