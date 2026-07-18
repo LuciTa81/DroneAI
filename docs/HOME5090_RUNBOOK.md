@@ -385,6 +385,36 @@ python scripts/run_csrnet_preflight.py \
 Preflight must report strict state-dict loading with zero missing or unexpected
 keys, CUDA matmul success, and `inference_executed=false`.
 
+### CSRNet one-sample compatibility gate
+
+Only after the accepted rights and preflight records match their queue hashes,
+run one frozen UCF-QNRF validation image. This is cross-domain compatibility
+evidence, not benchmark accuracy. The runner exposes no test path and performs
+no training or fine-tuning.
+
+```bash
+cd /workspace
+python scripts/run_csrnet_one_sample.py \
+  --config configs/evaluation/csrnet_ucf_qnrf_smoke.json \
+  --train-root /workspace/data/datasets/ucf-qnrf-kaggle-apache/raw/UCF-QNRF_ECCV18/Train \
+  --upstream-dir /workspace/upstreams/CSRNet-pytorch \
+  --split-upstream-dir /workspace/upstreams/DM-Count \
+  --train-list /workspace/upstreams/DM-Count/preprocess/qnrf_train.txt \
+  --validation-list /workspace/upstreams/DM-Count/preprocess/qnrf_val.txt \
+  --checkpoint /workspace/data/checkpoints/csrnet/safe/csrnet-official-shha-mae66.4-state-dict.pth \
+  --checkpoint-sha256 7093f29f1469fb4e3a80781fda03665848689ada59c5a13d1b49940b230755e6 \
+  --rights-decision /workspace/data/results/csrnet/csrnet-rights-e0cebe3/rights-decision.json \
+  --rights-manifest configs/candidates/csrnet_shha_to_ucf_qnrf.candidate.json \
+  --sample-id img_0067 \
+  --output-dir /workspace/data/results/csrnet/csrnet-one-sample-<commit> \
+  --device cuda
+```
+
+Review `result.json`, `model-brief.md`, `split-source-manifest.json`,
+`environment-summary.json`, and `one-sample-panel.png`. Any non-finite or
+negative native density fails closed. Stop after this gate; the 36-image
+benchmark requires separate approval.
+
 ## Dataset transfer gate
 
 Do not execute this section until Stage 3C records dataset rights, intended
