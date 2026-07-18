@@ -21,6 +21,13 @@ def test_csrnet_reference_uses_a_real_upstream_commit() -> None:
         "5c9dd5cabb91664767da93732c365b6f9940b0f2"
     )
     assert config["reference_license_status"] == "no_explicit_license_file_found"
+    assert config["checkpoint"]["raw_sha256"] == (
+        "68383c1053be371ad54b0061ab99fed08c2bfff39de73937f2a4388041ab0128"
+    )
+    assert config["checkpoint"]["safe_state_dict_sha256"] == (
+        "7093f29f1469fb4e3a80781fda03665848689ada59c5a13d1b49940b230755e6"
+    )
+    assert config["checkpoint"]["training_dataset"] == "ShanghaiTech Part A"
 
 
 def test_csrnet_rights_keep_the_silent_official_weight_research_only() -> None:

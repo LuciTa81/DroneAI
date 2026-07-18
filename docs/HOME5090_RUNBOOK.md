@@ -340,6 +340,51 @@ failure capture, score generation, and 12-panel selection to the common
 evaluation harness. Review the run before accepting benchmark evidence or
 advancing the queue.
 
+## CSRNet rights-gated preflight
+
+CSRNet uses the NGC base PyTorch environment without a legacy upstream runtime.
+The upstream repository is checked out only for provenance and is never imported.
+The official ShanghaiTech-A checkpoint is permitted only for research comparison.
+Download it to the SSD and verify the recorded raw hash:
+
+```bash
+mkdir -p /workspace/data/checkpoints/csrnet
+/workspace/.venvs/mpcount/bin/python -m gdown \
+  'https://drive.google.com/uc?id=1Z-atzS5Y2pOd-nEWqZRVBDMYJDreGWHH' \
+  -O /workspace/data/checkpoints/csrnet/csrnet-official-shha-mae66.4
+sha256sum /workspace/data/checkpoints/csrnet/csrnet-official-shha-mae66.4
+```
+
+Expected SHA-256:
+`68383c1053be371ad54b0061ab99fed08c2bfff39de73937f2a4388041ab0128`.
+Because this is a legacy pickle checkpoint, never load it directly in the
+workspace container. Extract only its `state_dict` inside a networkless,
+read-only, capability-dropped temporary container, then use only the converted
+file with `weights_only=True`. The accepted converted SHA-256 is
+`7093f29f1469fb4e3a80781fda03665848689ada59c5a13d1b49940b230755e6`.
+
+After the raw and converted files exist, run the non-inference preflight:
+
+```bash
+python scripts/run_csrnet_preflight.py \
+  --repo /workspace \
+  --upstream /workspace/upstreams/CSRNet-pytorch \
+  --expected-upstream-commit ed29d895989c188cb913a9503721271c6cf1ab1f \
+  --raw-checkpoint /workspace/data/checkpoints/csrnet/csrnet-official-shha-mae66.4 \
+  --safe-checkpoint /workspace/data/checkpoints/csrnet/safe/csrnet-official-shha-mae66.4-state-dict.pth \
+  --dataset-config configs/datasets/ucf_qnrf.kaggle_apache.json \
+  --split-manifest /workspace/data/results/apgcc/apgcc-ucf-qnrf-val-smoke-82d9285/split-source-manifest.json \
+  --sample-manifest /workspace/data/results/apgcc/apgcc-ucf-qnrf-val-smoke-82d9285/sample-manifest.json \
+  --model-profile configs/models/csrnet.json \
+  --runtime-profile configs/runtime/home5090_docker.json \
+  --rights-decision /workspace/data/results/csrnet/csrnet-rights-e0cebe3/rights-decision.json \
+  --rights-manifest configs/candidates/csrnet_shha_to_ucf_qnrf.candidate.json \
+  --output /workspace/data/results/csrnet/csrnet-preflight-<commit>/preflight.json
+```
+
+Preflight must report strict state-dict loading with zero missing or unexpected
+keys, CUDA matmul success, and `inference_executed=false`.
+
 ## Dataset transfer gate
 
 Do not execute this section until Stage 3C records dataset rights, intended
