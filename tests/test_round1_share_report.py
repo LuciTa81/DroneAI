@@ -12,7 +12,11 @@ PdfReader = pytest.importorskip("pypdf").PdfReader
 A4 = pytest.importorskip("reportlab.lib.pagesizes").A4
 
 from droneai.integrity import sha256_file
-from droneai.round1_share_report import _share_figure_layout, build_round1_share_pdf
+from droneai.round1_share_report import (
+    build_round1_share_pdf,
+    readability_contract,
+    report_page_contract,
+)
 from scripts.build_round1_share_report import main
 
 
@@ -21,21 +25,26 @@ CONTENT_PATH = Path("configs/reporting/round1_model_analysis_ko.json")
 MODELS = ("dm-count", "steerer", "pet", "mpcount", "apgcc", "csrnet")
 
 
-def test_share_figure_layout_keeps_report_panels_compact() -> None:
-    density = _share_figure_layout("density")
-    assert tuple(item[0] for item in density) == (
-        "dm-count",
-        "steerer",
-        "mpcount",
-        "csrnet",
-    )
-    assert all(item[4] == 145 for item in density)
-    assert len({item[2] for item in density}) == 2
+def test_readability_contract_has_no_small_report_text() -> None:
+    contract = readability_contract()
+    assert contract["body_size"] >= 10.5
+    assert contract["body_leading"] >= 15
+    assert contract["table_header_size"] >= 8.5
+    assert contract["table_body_size"] >= 8.5
+    assert contract["caption_size"] >= 8.5
+    assert contract["caption_leading"] >= 11
+    assert contract["header_footer_size"] >= 8
 
-    points = _share_figure_layout("points")
-    assert tuple(item[0] for item in points) == ("steerer", "pet", "apgcc")
-    assert points[0][4] == points[1][4] == 145
-    assert points[2][4] == 185
+
+def test_report_page_contract_splits_dense_content() -> None:
+    pages = report_page_contract()
+    assert len(pages) == 12
+    assert pages[3] == ("steerer", "dm-count", "pet")
+    assert pages[4] == ("mpcount", "apgcc", "csrnet")
+    assert pages[6] == ("dm-count", "steerer")
+    assert pages[7] == ("mpcount", "csrnet")
+    assert pages[8] == ("steerer", "pet")
+    assert pages[9] == ("apgcc",)
 
 
 def _panel(
@@ -143,7 +152,7 @@ def make_assets(tmp_path: Path) -> Path:
     return manifest
 
 
-def test_share_report_is_exact_nine_page_a4_portrait(tmp_path: Path) -> None:
+def test_share_report_is_exact_twelve_page_a4_portrait(tmp_path: Path) -> None:
     manifest = make_assets(tmp_path)
     output = build_round1_share_pdf(
         COMPARISON_PATH,
@@ -154,7 +163,7 @@ def test_share_report_is_exact_nine_page_a4_portrait(tmp_path: Path) -> None:
     )
 
     reader = PdfReader(output)
-    assert len(reader.pages) == 9
+    assert len(reader.pages) == 12
     for page in reader.pages:
         assert float(page.mediabox.height) > float(page.mediabox.width)
         assert abs(float(page.mediabox.width) - A4[0]) < 1
@@ -229,5 +238,5 @@ def test_share_report_cli_returns_structured_result(
     result = json.loads(capsys.readouterr().out)
     assert code == 0
     assert result["status"] == "PASS_RESEARCH_ONLY"
-    assert result["pages"] == 9
+    assert result["pages"] == 12
     assert result["sha256"] == sha256_file(output)

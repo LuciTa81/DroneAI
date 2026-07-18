@@ -33,10 +33,17 @@ from droneai.round1_pdf_report import (
 
 
 PAGE_SIZE = A4
-PAGE_COUNT = 9
+PAGE_COUNT = 12
 WIDTH, HEIGHT = PAGE_SIZE
 MARGIN = 42
 CONTENT_WIDTH = WIDTH - MARGIN * 2
+BODY_SIZE = 10.5
+BODY_LEADING = 15.0
+TABLE_HEADER_SIZE = 8.5
+TABLE_BODY_SIZE = 8.5
+CAPTION_SIZE = 8.5
+CAPTION_LEADING = 11.0
+HEADER_FOOTER_SIZE = 8.0
 CANONICAL_SPLIT_SHA256 = (
     "da1d947aad73d45be573d52a6462fa8022948fba2b1026a3bfff76b11a4b5c67"
 )
@@ -47,6 +54,35 @@ SOFT_BLUE = HexColor("#EAF2F7")
 SOFT_CYAN = HexColor("#E7F5F7")
 SOFT_GRAY = HexColor("#F2F5F7")
 AMBER = HexColor("#D99122")
+
+
+def readability_contract() -> dict[str, float]:
+    return {
+        "body_size": BODY_SIZE,
+        "body_leading": BODY_LEADING,
+        "table_header_size": TABLE_HEADER_SIZE,
+        "table_body_size": TABLE_BODY_SIZE,
+        "caption_size": CAPTION_SIZE,
+        "caption_leading": CAPTION_LEADING,
+        "header_footer_size": HEADER_FOOTER_SIZE,
+    }
+
+
+def report_page_contract() -> tuple[tuple[str, ...], ...]:
+    return (
+        ("cover",),
+        ("summary",),
+        ("evaluation",),
+        ("steerer", "dm-count", "pet"),
+        ("mpcount", "apgcc", "csrnet"),
+        ("performance",),
+        ("dm-count", "steerer"),
+        ("mpcount", "csrnet"),
+        ("steerer", "pet"),
+        ("apgcc",),
+        ("rights",),
+        ("conclusion",),
+    )
 
 
 def _background(canvas: canvas_module.Canvas) -> None:
@@ -60,7 +96,7 @@ def draw_report_header(
     *,
     regular_font: str,
 ) -> None:
-    canvas.setFont(regular_font, 7.5)
+    canvas.setFont(regular_font, HEADER_FOOTER_SIZE)
     canvas.setFillColor(MUTED)
     canvas.drawString(MARGIN, HEIGHT - 24, "DroneAI | 고정형 CCTV 군중 밀집도 모델 비교")
     canvas.drawRightString(WIDTH - MARGIN, HEIGHT - 24, section)
@@ -78,7 +114,7 @@ def draw_report_footer(
     canvas.setStrokeColor(LINE)
     canvas.setLineWidth(0.7)
     canvas.line(MARGIN, 35, WIDTH - MARGIN, 35)
-    canvas.setFont(regular_font, 7)
+    canvas.setFont(regular_font, HEADER_FOOTER_SIZE)
     canvas.setFillColor(MUTED)
     canvas.drawString(MARGIN, 22, "UCF-QNRF validation 36장 | cross-domain compatibility smoke")
     canvas.drawRightString(WIDTH - MARGIN, 22, f"{page_number} / {PAGE_COUNT}")
@@ -99,7 +135,7 @@ def draw_section_title(
     canvas.setFont(bold_font, 20)
     canvas.setFillColor(NAVY)
     canvas.drawString(MARGIN, HEIGHT - 88, title)
-    canvas.setFont(regular_font, 8.5)
+    canvas.setFont(regular_font, BODY_SIZE)
     canvas.setFillColor(MUTED)
     canvas.drawString(MARGIN, HEIGHT - 106, subtitle)
     canvas.setStrokeColor(CYAN)
@@ -141,10 +177,10 @@ def draw_report_table(
                 row_y + row_height - 11,
                 width - 8,
                 font=bold if row_index == 0 else regular,
-                size=6.3 if row_index == 0 else 6.5,
-                leading=8,
+                size=TABLE_HEADER_SIZE if row_index == 0 else TABLE_BODY_SIZE,
+                leading=11,
                 color=white if row_index == 0 else INK,
-                max_lines=max(1, int((row_height - 7) // 8)),
+                max_lines=max(1, int((row_height - 9) // 11)),
             )
             cell_x += width
         y = row_y
@@ -168,7 +204,7 @@ def draw_figure(
     canvas.rect(x, y, width, height, fill=1, stroke=1)
     reader = ImageReader(str(image_path))
     image_width, image_height = reader.getSize()
-    caption_height = 33
+    caption_height = 50
     available_width = width - 10
     available_height = height - caption_height - 8
     scale = min(available_width / image_width, available_height / image_height)
@@ -190,15 +226,15 @@ def draw_figure(
         y + 23,
         width - 12,
         font=regular_font,
-        size=6.3,
-        leading=7.5,
+        size=CAPTION_SIZE,
+        leading=CAPTION_LEADING,
         color=MUTED,
         max_lines=3,
     )
 
 
 def _section_label(canvas, text: str, x: float, y: float, *, bold_font: str) -> None:
-    canvas.setFont(bold_font, 10)
+    canvas.setFont(bold_font, 12)
     canvas.setFillColor(BLUE)
     canvas.drawString(x, y, text)
     canvas.setStrokeColor(CYAN)
@@ -230,10 +266,10 @@ def _bullets(
             y + 4,
             width - 17,
             font=regular_font,
-            size=8.7,
-            leading=12,
+            size=BODY_SIZE,
+            leading=BODY_LEADING,
             max_lines=3,
-        ) - (leading - 12)
+        ) - max(0, leading - BODY_LEADING)
     return y
 
 
@@ -242,14 +278,14 @@ def _page_cover(c, ctx) -> None:
     _background(c)
     c.setFillColor(NAVY)
     c.rect(0, 0, 16, HEIGHT, fill=1, stroke=0)
-    c.setFont(bold, 9)
+    c.setFont(bold, 10.5)
     c.setFillColor(CYAN)
     c.drawString(MARGIN, HEIGHT - 80, "TECHNICAL REPORT | ROUND 1")
     c.setFont(bold, 27)
     c.setFillColor(NAVY)
     c.drawString(MARGIN, HEIGHT - 132, "고정형 CCTV 군중 밀집도")
     c.drawString(MARGIN, HEIGHT - 169, "모델 비교 보고서")
-    c.setFont(regular, 11)
+    c.setFont(regular, BODY_SIZE)
     c.setFillColor(MUTED)
     c.drawString(MARGIN, HEIGHT - 200, "6개 crowd-counting 모델의 구조, 출력, 성능 및 적용성 검토")
     c.setStrokeColor(CYAN)
@@ -263,22 +299,22 @@ def _page_cover(c, ctx) -> None:
     )
     y = HEIGHT - 285
     for label, value in meta:
-        c.setFont(bold, 8.5)
+        c.setFont(bold, 10)
         c.setFillColor(BLUE)
         c.drawString(MARGIN, y, label)
-        c.setFont(regular, 9.5)
+        c.setFont(regular, BODY_SIZE)
         c.setFillColor(INK)
         c.drawString(MARGIN + 90, y, value)
         y -= 28
     c.setFillColor(SOFT_CYAN)
     c.setStrokeColor(CYAN)
     c.roundRect(MARGIN, 135, CONTENT_WIDTH, 104, 4, fill=1, stroke=1)
-    c.setFont(bold, 9)
+    c.setFont(bold, 10.5)
     c.setFillColor(BLUE)
     c.drawString(MARGIN + 16, 213, "핵심 결론")
     draw_wrapped(
         c,
-        "STEERER와 DM-Count를 고정형 CCTV 제품 검증 후보로 우선하며, PET는 연구 비교군으로 유지한다.",
+        "제품 검증: STEERER·DM-Count. PET는 연구 비교군으로 유지한다.",
         MARGIN + 16,
         187,
         CONTENT_WIDTH - 32,
@@ -288,7 +324,7 @@ def _page_cover(c, ctx) -> None:
         color=NAVY,
         max_lines=3,
     )
-    c.setFont(regular, 7.5)
+    c.setFont(regular, HEADER_FOOTER_SIZE)
     c.setFillColor(MUTED)
     c.drawString(MARGIN, 70, "공유용 검토본 | 공식 모델 순위가 아님 | 제품 배포 승인 문서가 아님")
 
@@ -317,7 +353,7 @@ def _page_summary(c, ctx) -> None:
 def _page_evaluation(c, ctx) -> None:
     regular, bold = ctx["fonts"]
     draw_section_title(c, "02", "검증 목적·데이터·조건", "동일 표본과 기능별 metric을 고정해 출력과 운영 적합성을 비교했다.", regular_font=regular, bold_font=bold)
-    c.setFont(bold, 8)
+    c.setFont(bold, 9)
     c.setFillColor(NAVY)
     c.drawString(MARGIN, 690, "표 2-1. 고정된 평가 조건")
     rows = [
@@ -328,9 +364,9 @@ def _page_evaluation(c, ctx) -> None:
         ["Training", "fine-tuning 없음", "공식 checkpoint의 교차 도메인 적합성 확인"],
         ["Scope", "cross-domain compatibility smoke", "공식 모델 순위가 아님"],
     ]
-    y = draw_report_table(c, rows, (90, 170, 251), MARGIN, 675, row_height=39, fonts=ctx["fonts"])
+    y = draw_report_table(c, rows, (90, 170, 251), MARGIN, 675, row_height=45, fonts=ctx["fonts"])
     _section_label(c, "2.1 공통 지표", MARGIN, y - 28, bold_font=bold)
-    draw_wrapped(c, "MAE, RMSE, signed bias, MAPE 참고치, median latency, batch-1 FPS, peak VRAM을 모든 모델에 공통 적용했다.", MARGIN, y - 52, CONTENT_WIDTH, font=regular, size=9, leading=13, max_lines=3)
+    draw_wrapped(c, "MAE, RMSE, signed bias, MAPE 참고치, median latency, batch-1 FPS, peak VRAM을 모든 모델에 공통 적용했다.", MARGIN, y - 52, CONTENT_WIDTH, font=regular, size=BODY_SIZE, leading=BODY_LEADING, max_lines=3)
     _section_label(c, "2.2 출력 계열별 지표", MARGIN, y - 98, bold_font=bold)
     families = [
         ["계열", "Native output", "추가 평가"],
@@ -338,30 +374,40 @@ def _page_evaluation(c, ctx) -> None:
         ["Points", "point set", "precision, recall, F1, mean distance"],
         ["Hybrid", "density + points", "density와 localization을 각각 입증"],
     ]
-    draw_report_table(c, families, (90, 150, 271), MARGIN, y - 114, row_height=40, fonts=ctx["fonts"])
+    draw_report_table(c, families, (90, 150, 271), MARGIN, y - 114, row_height=44, fonts=ctx["fonts"])
 
 
-def _page_models(c, ctx) -> None:
+def _page_models_group(
+    c,
+    ctx,
+    *,
+    number: str,
+    title: str,
+    subtitle: str,
+    model_ids: tuple[str, ...],
+    table_label: str,
+) -> None:
     regular, bold = ctx["fonts"]
-    draw_section_title(c, "03", "모델 구조와 입출력 비교", "모델 이름보다 native output과 관제 연결 방식을 중심으로 비교한다.", regular_font=regular, bold_font=bold)
-    c.setFont(bold, 8)
+    draw_section_title(c, number, title, subtitle, regular_font=regular, bold_font=bold)
+    c.setFont(bold, 9)
     c.setFillColor(NAVY)
-    c.drawString(MARGIN, 690, "표 3-1. 6개 모델의 구조·출력·CCTV 활용")
-    rows = [["Model", "계열", "Backbone", "Native output", "Count 방식", "CCTV 활용"]]
+    c.drawString(MARGIN, 690, table_label)
+    rows = [["Model", "계열 / Backbone", "Native output / Count", "고정형 CCTV 활용 판단"]]
     content_by_id = ctx["content_by_id"]
-    order = ("steerer", "dm-count", "pet", "mpcount", "apgcc", "csrnet")
-    for model_id in order:
+    for model_id in model_ids:
         item: ModelContent = content_by_id[model_id]
         rows.append([
             DISPLAY_NAMES[model_id],
-            item.family,
-            item.backbone,
-            item.native_output,
-            item.count_method,
+            f"{item.family}\n{item.backbone}",
+            f"{item.native_output}\nCount: {item.count_method}",
             item.cctv_interpretation,
         ])
-    draw_report_table(c, rows, (55, 55, 90, 102, 82, 127), MARGIN, 675, row_height=73, fonts=ctx["fonts"])
-    draw_wrapped(c, "STEERER는 density와 point를 함께 제공하는 hybrid 후보다. DM-Count·MPCount·CSRNet은 density 기반 zone aggregation에, PET·APGCC는 위치 기반 zone count에 직접 연결할 수 있다.", MARGIN, 112, CONTENT_WIDTH, font=regular, size=8.5, leading=12, max_lines=4)
+    y = draw_report_table(c, rows, (70, 135, 135, 171), MARGIN, 675, row_height=126, fonts=ctx["fonts"])
+    summary = (
+        "Density 계열은 heatmap 질량을 zone별로 합산하고, point 계열은 예측 좌표를 zone에 직접 할당한다. "
+        "Hybrid 계열은 두 출력을 함께 제공해 관제 설명력과 위치 기반 후속 판단을 보완한다."
+    )
+    draw_wrapped(c, summary, MARGIN, y - 28, CONTENT_WIDTH, font=regular, size=BODY_SIZE, leading=BODY_LEADING, max_lines=4)
 
 
 def _spatial_text(row: dict[str, object]) -> str:
@@ -375,10 +421,10 @@ def _spatial_text(row: dict[str, object]) -> str:
 
 def _page_performance(c, ctx) -> None:
     regular, bold = ctx["fonts"]
-    draw_section_title(c, "04", "성능 비교와 해석", "Count 정확도, 공간 출력, 속도와 자원 사용량을 함께 본다.", regular_font=regular, bold_font=bold)
-    c.setFont(bold, 8)
+    draw_section_title(c, "05", "성능 비교와 해석", "Count 정확도, 공간 출력, 속도와 자원 사용량을 함께 본다.", regular_font=regular, bold_font=bold)
+    c.setFont(bold, 9)
     c.setFillColor(NAVY)
-    c.drawString(MARGIN, 690, "표 4-1. UCF-QNRF validation 36장 비교 결과")
+    c.drawString(MARGIN, 690, "표 5-1. UCF-QNRF validation 36장 비교 결과")
     rows = [["Model", "기술 점수", "MAE", "RMSE", "공간 지표", "FPS", "VRAM"]]
     ordered = sorted(ctx["comparison"]["models"], key=lambda row: row["technical_order"])
     for row in ordered:
@@ -392,8 +438,8 @@ def _page_performance(c, ctx) -> None:
             _fmt(aggregate["throughput_fps_batch1"], 1),
             f"{float(aggregate['peak_vram_mb']) / 1024:.1f} GB",
         ])
-    y = draw_report_table(c, rows, (70, 70, 61, 61, 105, 60, 84), MARGIN, 675, row_height=42, fonts=ctx["fonts"])
-    _section_label(c, "4.1 결과 해석", MARGIN, y - 28, bold_font=bold)
+    y = draw_report_table(c, rows, (70, 70, 61, 61, 105, 60, 84), MARGIN, 675, row_height=52, fonts=ctx["fonts"])
+    _section_label(c, "5.1 결과 해석", MARGIN, y - 28, bold_font=bold)
     analysis = (
         "STEERER는 MAE 71.6, RMSE 98.0, zone MAE 19.8, localization F1 0.80으로 출력 기능과 공간 정확도의 균형이 가장 좋았다.",
         "DM-Count는 MAE 154.3이지만 14.4 FPS와 8.8 GB 수준의 VRAM으로 density 기반 CCTV baseline 후보가 된다.",
@@ -401,48 +447,41 @@ def _page_performance(c, ctx) -> None:
         "CSRNet은 비교 baseline으로 의미가 있으나 MAE 332.3, zone MAE 91.1, 약 20.4 GB VRAM으로 현 조건의 우선순위는 낮다.",
     )
     _bullets(c, analysis, MARGIN, y - 58, CONTENT_WIDTH, regular_font=regular, bold_font=bold, leading=18)
-    c.setFont(regular, 7)
+    c.setFont(regular, HEADER_FOOTER_SIZE)
     c.setFillColor(RED)
     c.drawString(MARGIN, 62, "주: 기술 점수는 운영 목적의 합성 점수이며 정확도 백분율이나 공식 benchmark 순위가 아니다.")
 
 
-def _share_figure_layout(
+def _page_output_group(
+    c,
+    ctx,
+    *,
+    number: str,
+    title: str,
+    subtitle: str,
     family: str,
-) -> tuple[tuple[str, float, float, float, float, str], ...]:
-    if family == "density":
-        return (
-            ("dm-count", MARGIN, 490, 250, 145, "그림 5-1"),
-            ("steerer", 303, 490, 250, 145, "그림 5-2"),
-            ("mpcount", MARGIN, 320, 250, 145, "그림 5-3"),
-            ("csrnet", 303, 320, 250, 145, "그림 5-4"),
-        )
-    if family == "points":
-        return (
-            ("steerer", MARGIN, 490, 250, 145, "그림 6-1"),
-            ("pet", 303, 490, 250, 145, "그림 6-2"),
-            ("apgcc", MARGIN, 275, CONTENT_WIDTH, 185, "그림 6-3"),
-        )
-    raise ValueError(f"unknown share figure family: {family}")
-
-
-def _page_density(c, ctx) -> None:
+    model_ids: tuple[str, ...],
+    figure_labels: tuple[str, ...],
+    narrative: str,
+) -> None:
     regular, bold = ctx["fonts"]
-    draw_section_title(c, "05", "Density 계열 출력 사례", "동일 장면 img_0097에서 heatmap과 zone 집계 형태를 비교한다.", regular_font=regular, bold_font=bold)
-    group = ctx["assets"]["comparisons"]["density"]
-    for model_id, x, y, width, height, label in _share_figure_layout("density"):
+    draw_section_title(c, number, title, subtitle, regular_font=regular, bold_font=bold)
+    group = ctx["assets"]["comparisons"][family]
+    if len(model_ids) == 1:
+        positions = ((MARGIN, 335, CONTENT_WIDTH, 300),)
+        narrative_y = 295
+    else:
+        positions = (
+            (MARGIN, 430, CONTENT_WIDTH, 205),
+            (MARGIN, 195, CONTENT_WIDTH, 205),
+        )
+        narrative_y = 157
+    for model_id, label, (x, y, width, height) in zip(
+        model_ids, figure_labels, positions, strict=True
+    ):
         panel = group[model_id]
         draw_figure(c, ctx["asset_root"] / panel["packaged_path"], f"{label}. {_panel_caption(panel)}", x, y, width, height, regular_font=regular)
-    draw_wrapped(c, "Density map은 전체 질량의 합으로 count를 만들고, 사전 정의한 CCTV zone 안의 질량을 합산해 구역별 밀집도를 계산할 수 있다. 동일 장면에서도 분포의 선명도와 under/over-count 형태가 다르므로 현장 perspective calibration이 필요하다.", MARGIN, 280, CONTENT_WIDTH, font=regular, size=8.5, leading=12, max_lines=4)
-
-
-def _page_points(c, ctx) -> None:
-    regular, bold = ctx["fonts"]
-    draw_section_title(c, "06", "Point/Hybrid 계열 출력 사례", "동일 장면 img_0062에서 위치 후보와 zone 연결성을 비교한다.", regular_font=regular, bold_font=bold)
-    group = ctx["assets"]["comparisons"]["points"]
-    for model_id, x, y, width, height, label in _share_figure_layout("points"):
-        panel = group[model_id]
-        draw_figure(c, ctx["asset_root"] / panel["packaged_path"], f"{label}. {_panel_caption(panel)}", x, y, width, height, regular_font=regular)
-    draw_wrapped(c, "Point 출력은 예측 위치 개수로 count를 만들고 좌표를 zone에 직접 할당할 수 있다. 다만 고밀도·가림·tiny person에서 누락과 중복이 발생할 수 있다. STEERER는 density와 point를 함께 제공하며, PET는 연구 비교군, APGCC는 상용 권리 확인 전 후보 상태다.", MARGIN, 240, CONTENT_WIDTH, font=regular, size=8.5, leading=12, max_lines=4)
+    draw_wrapped(c, narrative, MARGIN, narrative_y, CONTENT_WIDTH, font=regular, size=BODY_SIZE, leading=BODY_LEADING, max_lines=5)
 
 
 def _status_short(status: str) -> str:
@@ -455,10 +494,10 @@ def _status_short(status: str) -> str:
 
 def _page_rights(c, ctx) -> None:
     regular, bold = ctx["fonts"]
-    draw_section_title(c, "07", "상용화 권리 및 CCTV 적용 판단", "기술 성능과 component-level 권리를 독립적으로 판단한다.", regular_font=regular, bold_font=bold)
-    c.setFont(bold, 8)
+    draw_section_title(c, "10", "상용화 권리 및 CCTV 적용 판단", "기술 성능과 component-level 권리를 독립적으로 판단한다.", regular_font=regular, bold_font=bold)
+    c.setFont(bold, 9)
     c.setFillColor(NAVY)
-    c.drawString(MARGIN, 690, "표 7-1. 코드·데이터·weight·deployment 권리 상태")
+    c.drawString(MARGIN, 690, "표 10-1. 코드·데이터·weight·deployment 권리 상태")
     rows = [["Model", "Code", "Dataset", "Pretrained", "Derived", "Deploy", "판단"]]
     ordered = sorted(ctx["comparison"]["models"], key=lambda row: row["technical_order"])
     for row in ordered:
@@ -472,8 +511,8 @@ def _page_rights(c, ctx) -> None:
             _status_short(rights["deployment"]["status"]),
             "연구 비교" if row["model_id"] == "pet" else "후보 / 확인 필요",
         ])
-    y = draw_report_table(c, rows, (50, 70, 70, 74, 67, 67, 113), MARGIN, 675, row_height=47, fonts=ctx["fonts"])
-    _section_label(c, "7.1 고정형 CCTV 적용", MARGIN, y - 28, bold_font=bold)
+    y = draw_report_table(c, rows, (50, 70, 70, 74, 67, 67, 113), MARGIN, 675, row_height=52, fonts=ctx["fonts"])
+    _section_label(c, "10.1 고정형 CCTV 적용", MARGIN, y - 28, bold_font=bold)
     guidance = (
         "카메라마다 ROI, perspective, 실제 zone 면적과 density threshold를 사전 calibration한다.",
         "인접 CCTV overlap에는 ownership mask를 고정해 한쪽 카메라만 count하도록 하고, 경계 통과는 시간 기반 보정 규칙으로 검증한다.",
@@ -485,8 +524,8 @@ def _page_rights(c, ctx) -> None:
 
 def _page_conclusion(c, ctx) -> None:
     regular, bold = ctx["fonts"]
-    draw_section_title(c, "08", "최종 추천과 다음 단계", "Fine-tuning보다 먼저 CCTV calibration과 field validation을 진행한다.", regular_font=regular, bold_font=bold)
-    _section_label(c, "8.1 최종 추천", MARGIN, 690, bold_font=bold)
+    draw_section_title(c, "11", "최종 추천과 다음 단계", "Fine-tuning보다 먼저 CCTV calibration과 field validation을 진행한다.", regular_font=regular, bold_font=bold)
+    _section_label(c, "11.1 최종 추천", MARGIN, 690, bold_font=bold)
     recommendation = (
         "제품 검증 1순위: STEERER - 낮은 count/zone 오차와 density+point 출력의 조합.",
         "제품 검증 2순위: DM-Count - 해석 가능한 density heatmap과 비교적 높은 처리 속도.",
@@ -494,7 +533,7 @@ def _page_conclusion(c, ctx) -> None:
         "MPCount, APGCC, CSRNet은 현재 cross-domain 결과에서 보조 비교군으로 유지.",
     )
     y = _bullets(c, recommendation, MARGIN, 660, CONTENT_WIDTH, regular_font=regular, bold_font=bold, leading=19)
-    _section_label(c, "8.2 실행 순서", MARGIN, y - 5, bold_font=bold)
+    _section_label(c, "11.2 실행 순서", MARGIN, y - 5, bold_font=bold)
     roadmap = (
         "고정형 CCTV별 ROI, perspective, zone 면적과 density threshold calibration",
         "여러 CCTV의 overlap ownership과 중복 count 제거 규칙 검증",
@@ -503,7 +542,7 @@ def _page_conclusion(c, ctx) -> None:
         "component-level 권리가 적격인 최종 1개 모델만 마지막 단계에서 fine-tuning 검토",
     )
     y = _bullets(c, roadmap, MARGIN, y - 35, CONTENT_WIDTH, regular_font=regular, bold_font=bold, leading=18)
-    _section_label(c, "8.3 증거와 범위", MARGIN, y - 5, bold_font=bold)
+    _section_label(c, "11.3 증거와 범위", MARGIN, y - 5, bold_font=bold)
     dataset = ctx["comparison"]["dataset"]
     evidence = (
         f"Dataset / split: {dataset['dataset_id']} / {dataset['split_id']} / validation 36장",
@@ -512,7 +551,7 @@ def _page_conclusion(c, ctx) -> None:
         "결론 범위: PASS_RESEARCH_ONLY 공유용 검토 | 공식 모델 순위가 아님 | 제품 배포 승인 아님",
     )
     for line in evidence:
-        y = draw_wrapped(c, line, MARGIN, y - 20, CONTENT_WIDTH, font=regular, size=7.2, leading=10, color=MUTED, max_lines=2)
+        y = draw_wrapped(c, line, MARGIN, y - 20, CONTENT_WIDTH, font=regular, size=BODY_SIZE, leading=BODY_LEADING, color=MUTED, max_lines=2)
 
 
 def _validate_share_scope(comparison: dict[str, object], assets: dict[str, object]) -> None:
@@ -566,10 +605,87 @@ def build_round1_share_pdf(
         ("표지", _page_cover),
         ("요약 및 핵심 결론", _page_summary),
         ("검증 목적·데이터·조건", _page_evaluation),
-        ("모델 구조와 입출력 비교", _page_models),
+        (
+            "모델 구조 I",
+            lambda c, ctx: _page_models_group(
+                c,
+                ctx,
+                number="03",
+                title="모델 구조와 입출력 I",
+                subtitle="상위 기술 후보와 연구 비교군의 native output을 비교한다.",
+                model_ids=("steerer", "dm-count", "pet"),
+                table_label="표 3-1. STEERER·DM-Count·PET 구조 및 CCTV 활용",
+            ),
+        ),
+        (
+            "모델 구조 II",
+            lambda c, ctx: _page_models_group(
+                c,
+                ctx,
+                number="04",
+                title="모델 구조와 입출력 II",
+                subtitle="추가 후보와 고전 baseline의 출력 및 운영 연결성을 비교한다.",
+                model_ids=("mpcount", "apgcc", "csrnet"),
+                table_label="표 4-1. MPCount·APGCC·CSRNet 구조 및 CCTV 활용",
+            ),
+        ),
         ("성능 비교와 해석", _page_performance),
-        ("Density 계열 출력", _page_density),
-        ("Point/Hybrid 계열 출력", _page_points),
+        (
+            "Density 출력 I",
+            lambda c, ctx: _page_output_group(
+                c,
+                ctx,
+                number="06",
+                title="Density 계열 출력 I",
+                subtitle="동일 장면 img_0097에서 heatmap과 zone 집계 형태를 비교한다.",
+                family="density",
+                model_ids=("dm-count", "steerer"),
+                figure_labels=("그림 6-1", "그림 6-2"),
+                narrative="Density map은 전체 질량의 합으로 count를 만들고, CCTV zone 안의 질량을 합산해 구역별 밀집도를 계산한다. DM-Count는 단순하고 해석 가능한 baseline이며, STEERER는 point localization을 함께 제공한다.",
+            ),
+        ),
+        (
+            "Density 출력 II",
+            lambda c, ctx: _page_output_group(
+                c,
+                ctx,
+                number="07",
+                title="Density 계열 출력 II",
+                subtitle="동일 장면 img_0097에서 일반화 후보와 고전 baseline을 비교한다.",
+                family="density",
+                model_ids=("mpcount", "csrnet"),
+                figure_labels=("그림 7-1", "그림 7-2"),
+                narrative="동일 장면에서도 density 분포의 선명도와 under/over-count 양상이 다르다. MPCount는 domain generalization 설계 후보이고, CSRNet은 개선 폭을 확인하는 고전 baseline으로 유지한다. 두 모델 모두 현장 perspective calibration이 필요하다.",
+            ),
+        ),
+        (
+            "Point/Hybrid 출력 I",
+            lambda c, ctx: _page_output_group(
+                c,
+                ctx,
+                number="08",
+                title="Point/Hybrid 출력 I",
+                subtitle="동일 장면 img_0062에서 위치 후보와 zone 연결성을 비교한다.",
+                family="points",
+                model_ids=("steerer", "pet"),
+                figure_labels=("그림 8-1", "그림 8-2"),
+                narrative="Point 출력은 예측 좌표를 zone에 직접 할당하고 점 개수로 count를 계산한다. STEERER는 density와 point를 함께 제공한다. PET는 기술 비교에는 유효하지만 academic research only 제한 때문에 연구 비교군으로만 유지한다.",
+            ),
+        ),
+        (
+            "Point/Hybrid 출력 II",
+            lambda c, ctx: _page_output_group(
+                c,
+                ctx,
+                number="09",
+                title="Point/Hybrid 출력 II",
+                subtitle="APGCC의 위치 예측과 고밀도 domain shift를 큰 패널로 확인한다.",
+                family="points",
+                model_ids=("apgcc",),
+                figure_labels=("그림 9-1",),
+                narrative="APGCC는 위치 기반 zone count와 비교적 양호한 실행 효율을 제공한다. 그러나 ShanghaiTech-A checkpoint를 UCF-QNRF에 적용한 현재 결과에서는 고밀도 undercount와 큰 count 오차가 확인되어 우선 제품 후보로 선택하지 않는다. Weight와 deployment 권리도 별도 확인 대상이다.",
+            ),
+        ),
         ("상용화 권리 및 CCTV 적용", _page_rights),
         ("최종 추천과 다음 단계", _page_conclusion),
     ]
