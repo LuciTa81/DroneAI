@@ -11,7 +11,12 @@ Image = pytest.importorskip("PIL.Image")
 PdfReader = pytest.importorskip("pypdf").PdfReader
 
 from droneai.integrity import sha256_file
-from droneai.round1_pdf_report import build_round1_pdf
+from droneai.round1_pdf_report import (
+    _comparison_layout,
+    _evaluation_output_layout,
+    _fit_text_size,
+    build_round1_pdf,
+)
 from scripts.build_round1_model_analysis_pdf import main
 
 
@@ -20,6 +25,39 @@ COMPARISON_PATH = Path(
 )
 CONTENT_PATH = Path("configs/reporting/round1_model_analysis_ko.json")
 MODELS = ("dm-count", "steerer", "pet", "mpcount", "apgcc", "csrnet")
+
+
+def test_comparison_layout_uses_large_fixed_order_cards() -> None:
+    density = _comparison_layout("density")
+    assert tuple(item[0] for item in density) == (
+        "dm-count",
+        "steerer",
+        "mpcount",
+        "csrnet",
+    )
+    assert len({item[1] for item in density}) == 2
+    assert len({item[2] for item in density}) == 2
+    assert all(item[3] >= 370 and item[4] >= 170 for item in density)
+
+    points = _comparison_layout("points")
+    assert tuple(item[0] for item in points) == ("steerer", "pet", "apgcc")
+    assert all(item[3] >= 370 and item[4] >= 170 for item in points)
+    assert points[-1][3] >= 770
+
+
+def test_evaluation_page_keeps_long_values_and_rights_note_in_bounds() -> None:
+    size = _fit_text_size(
+        "low 12 / medium 12 / high 12",
+        "Helvetica-Bold",
+        156,
+        preferred=14,
+        minimum=9,
+    )
+    assert 9 <= size < 14
+
+    row_positions, rights_y = _evaluation_output_layout()
+    assert row_positions[-1] - 44 >= 102
+    assert rights_y < 102
 
 
 def _panel(
@@ -120,6 +158,7 @@ def make_assets(tmp_path: Path) -> Path:
                 "assets": assets,
             },
             indent=2,
+            sort_keys=True,
         ),
         encoding="utf-8",
     )

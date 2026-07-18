@@ -193,6 +193,20 @@ def _card(
     canvas.roundRect(x, y, width, height, radius, fill=1, stroke=1)
 
 
+def _fit_text_size(
+    text: str,
+    font: str,
+    max_width: float,
+    *,
+    preferred: float,
+    minimum: float,
+) -> float:
+    natural_width = pdfmetrics.stringWidth(text, font, preferred)
+    if natural_width <= max_width or natural_width == 0:
+        return preferred
+    return max(minimum, preferred * max_width / natural_width)
+
+
 def draw_metric_card(
     canvas: canvas_module.Canvas,
     title: str,
@@ -212,7 +226,14 @@ def draw_metric_card(
     canvas.setFont(regular_font, 7.5)
     canvas.setFillColor(MUTED)
     canvas.drawString(x + 12, y + height - 16, title)
-    canvas.setFont(bold_font, 14)
+    value_size = _fit_text_size(
+        value,
+        bold_font,
+        width - 24,
+        preferred=14,
+        minimum=9,
+    )
+    canvas.setFont(bold_font, value_size)
     canvas.setFillColor(NAVY)
     canvas.drawString(x + 12, y + 12, value)
 
@@ -330,8 +351,8 @@ def _validate_inputs(
 
     raw_model_assets = assets.get("models")
     comparisons = assets.get("comparisons")
-    if not isinstance(raw_model_assets, dict) or tuple(raw_model_assets) != MODEL_IDS:
-        raise ValueError("assets manifest model order is invalid")
+    if not isinstance(raw_model_assets, dict) or set(raw_model_assets) != set(MODEL_IDS):
+        raise ValueError("assets manifest model set is invalid")
     for model_id in MODEL_IDS:
         model = raw_model_assets[model_id]
         if not isinstance(model, dict):
@@ -348,7 +369,7 @@ def _validate_inputs(
     }
     for group_name, expected_models in expected_groups.items():
         group = comparisons.get(group_name)
-        if not isinstance(group, dict) or tuple(group) != expected_models:
+        if not isinstance(group, dict) or set(group) != set(expected_models):
             raise ValueError(f"comparison panel group is invalid: {group_name}")
         sample_ids = set()
         for model_id, panel in group.items():
@@ -572,6 +593,10 @@ def _page_problem(c, ctx) -> None:
     draw_wrapped(c, "Overlap은 사전 calibration으로 ownership을 고정하고, 인접 카메라 간 합산 시 한쪽만 count한다.", 430, 138, 350, font=regular, size=9, leading=12, max_lines=3)
 
 
+def _evaluation_output_layout() -> tuple[tuple[float, ...], float]:
+    return (338, 274, 210, 146), 82
+
+
 def _page_evaluation(c, ctx) -> None:
     regular, bold = ctx["fonts"]
     _background(c)
@@ -617,8 +642,8 @@ def _page_evaluation(c, ctx) -> None:
         ("Points", "point set", "point count, precision, recall, F1, distance"),
         ("Hybrid", "density + points", "density와 localization을 모두 입증한 경우만 기능 점수"),
     )
-    y = 338
-    for family, output, metrics in rows:
+    row_positions, rights_y = _evaluation_output_layout()
+    for y, (family, output, metrics) in zip(row_positions, rows, strict=True):
         c.setFillColor(HexColor("#EDF3F7"))
         c.roundRect(432, y - 44, 356, 52, 5, fill=1, stroke=0)
         c.setFont(bold, 9)
@@ -628,10 +653,9 @@ def _page_evaluation(c, ctx) -> None:
         c.setFillColor(INK)
         c.drawString(510, y - 2, output)
         draw_wrapped(c, metrics, 444, y - 19, 330, font=regular, size=7.5, leading=9, max_lines=2)
-        y -= 66
     c.setFont(bold, 9)
     c.setFillColor(RED)
-    c.drawString(432, 118, "Rights rule: 기술 점수는 code, dataset, weight, deployment 권리와 독립적으로 계산")
+    c.drawString(432, rights_y, "Rights rule: 기술 점수는 code, dataset, weight, deployment 권리와 독립적으로 계산")
 
 
 def _page_overall(c, ctx) -> None:
@@ -736,25 +760,48 @@ def _model_page(c, ctx, model_id: str) -> None:
     c.drawRightString(808, 82, _rights_summary(row))
 
 
+def _comparison_layout(
+    group_name: str,
+) -> tuple[tuple[str, float, float, float, float], ...]:
+    if group_name == "density":
+        return (
+            ("dm-count", 34, 290, 378, 176),
+            ("steerer", 430, 290, 378, 176),
+            ("mpcount", 34, 96, 378, 176),
+            ("csrnet", 430, 96, 378, 176),
+        )
+    if group_name == "points":
+        return (
+            ("steerer", 34, 290, 378, 176),
+            ("pet", 430, 290, 378, 176),
+            ("apgcc", 34, 96, 774, 176),
+        )
+    raise ValueError(f"unknown comparison group: {group_name}")
+
+
 def _comparison_page(c, ctx, *, group_name: str) -> None:
     regular, bold = ctx["fonts"]
     _background(c)
     if group_name == "density":
         title = "Density-family 동일 장면 비교"
         subtitle = "DM-Count, STEERER, MPCount, CSRNet | 같은 selected sample"
-        height = 91
-        gap = 8
     else:
         title = "Point/Hybrid 동일 장면 비교"
         subtitle = "STEERER, PET, APGCC | 같은 selected sample"
-        height = 121
-        gap = 13
     _title(c, title, subtitle, bold_font=bold, regular_font=regular)
     group = ctx["assets"]["comparisons"][group_name]
-    y = 401 if group_name == "density" else 352
-    for model_id, panel in group.items():
-        draw_panel(c, ctx["asset_root"] / panel["packaged_path"], _panel_caption(panel), 34, y, 774, height, regular_font=regular)
-        y -= height + gap
+    for model_id, x, y, width, height in _comparison_layout(group_name):
+        panel = group[model_id]
+        draw_panel(
+            c,
+            ctx["asset_root"] / panel["packaged_path"],
+            f"{DISPLAY_NAMES[model_id]} | {_panel_caption(panel)}",
+            x,
+            y,
+            width,
+            height,
+            regular_font=regular,
+        )
     c.setFillColor(RED)
     c.setFont(bold, 8)
     c.drawString(35, 78, "시각화는 모델별 native output 차이를 보여주며, 단독으로 정확도나 배포 적합성을 판정하지 않는다.")
@@ -922,4 +969,3 @@ def build_round1_pdf(
         temporary.unlink(missing_ok=True)
         raise
     return output
-
