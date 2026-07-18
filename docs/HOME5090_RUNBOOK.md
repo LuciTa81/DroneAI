@@ -282,6 +282,38 @@ and the split-list checkout at
 `cc5f2132e0d1328909f31b6d665b8e0b15c30467`; both must be clean. The generated
 split-source manifest records both commits independently.
 
+## APGCC one-sample compatibility gate
+
+APGCC is evaluated as a point-localization model. This gate uses the official
+ShanghaiTech Part A checkpoint against one frozen UCF-QNRF validation image;
+it is cross-domain research evidence, not a ranking result or commercial
+checkpoint approval. The image stays at native resolution and the official
+confidence threshold is `0.5`.
+
+```bash
+cd /workspace
+. /workspace/.venvs/apgcc/bin/activate
+python scripts/run_apgcc_one_sample.py \
+  --config configs/evaluation/apgcc_ucf_qnrf_smoke.json \
+  --train-root /workspace/data/datasets/ucf-qnrf-kaggle-apache/raw/UCF-QNRF_ECCV18/Train \
+  --upstream-dir /workspace/upstreams/APGCC \
+  --split-upstream-dir /workspace/upstreams/DM-Count \
+  --train-list /workspace/upstreams/DM-Count/preprocess/qnrf_train.txt \
+  --validation-list /workspace/upstreams/DM-Count/preprocess/qnrf_val.txt \
+  --checkpoint /workspace/data/checkpoints/apgcc/SHHA_best.pth \
+  --checkpoint-sha256 cd9aa0f65882c81bb753a4ea8c821e07573b2ae4a31fffd5595fa0a43925cf90 \
+  --rights-decision /workspace/data/results/apgcc/rights-1bd8ca8/rights-decision.json \
+  --rights-manifest configs/candidates/apgcc_shha_to_ucf_qnrf.candidate.json \
+  --sample-id img_0067 \
+  --output-dir /workspace/data/results/apgcc/apgcc-one-sample-<commit> \
+  --device cuda
+```
+
+The output directory must be new or empty. Review `result.json`,
+`model-brief.md`, `split-source-manifest.json`, `environment-summary.json`, and
+`one-sample-panel.png`. Stop after this gate; the 36-image benchmark requires a
+separate approval.
+
 ## Dataset transfer gate
 
 Do not execute this section until Stage 3C records dataset rights, intended
