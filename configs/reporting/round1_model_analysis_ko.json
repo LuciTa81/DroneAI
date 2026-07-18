@@ -1,0 +1,181 @@
+{
+  "schema_version": 1,
+  "title": "DroneAI 고정형 CCTV 군중 밀집도 모델 분석",
+  "subtitle": "Round 1 - UCF-QNRF 36장 교차 도메인 운영 적합성 검증",
+  "models": [
+    {
+      "model_id": "dm-count",
+      "paper": "Distribution Matching for Crowd Counting (NeurIPS 2020)",
+      "family": "Density map",
+      "backbone": "VGG-19 convolutional features",
+      "structure": [
+        "VGG-19 E 특징 추출기와 네 단계 max pooling",
+        "2배 bilinear feature upsampling",
+        "512-256-128 convolutional regression head",
+        "ReLU가 적용된 1채널 density head"
+      ],
+      "input": "ImageNet 정규화와 공식 QNRF short-side resize를 적용한 RGB 이미지",
+      "native_output": "비음수 density map",
+      "count_method": "density map 전체 질량의 합",
+      "strengths": [
+        "질량 보존형 heatmap과 구역별 density 집계가 가능함",
+        "검증된 MIT 코드와 비교적 단순한 운영 출력 구조",
+        "Round 1에서 14.38 FPS로 density 계열 중 우수한 처리량"
+      ],
+      "limitations": [
+        "극단적인 scale 변화와 고밀도 장면에서 undercount 가능",
+        "고해상도 activation으로 약 8.98 GB VRAM 사용",
+        "학습 도메인 밖 CCTV 시점에서는 별도 calibration 필요"
+      ],
+      "cctv_interpretation": "고정형 CCTV heatmap baseline이자 STEERER와 함께 우선 calibration할 제품 후보이다. 파생 weight와 deployment 권리는 아직 확인이 필요하다.",
+      "reference_source": "results/dm-count/ucf-qnrf-val-smoke-cab50d1/model-brief.md"
+    },
+    {
+      "model_id": "steerer",
+      "paper": "STEERER: Resolving Scale Variations for Counting and Localization via Selective Inheritance Learning",
+      "family": "Hybrid density and points",
+      "backbone": "HRNet-W48",
+      "structure": [
+        "HRNet-W48 multi-resolution backbone",
+        "다중 해상도 counting heads",
+        "Selective inheritance와 upsample module",
+        "Gaussian density local-maximum point decoder"
+      ],
+      "input": "긴 변 3072 제한, 32 배수 padding, ImageNet 정규화를 적용한 RGB 이미지",
+      "native_output": "다중 해상도 density maps와 병합된 localization points",
+      "count_method": "유효 영상 영역의 최고 해상도 density 질량 합",
+      "strengths": [
+        "Round 1 최저 MAE와 Zone MAE를 기록함",
+        "Density heatmap과 point localization을 동시에 제공함",
+        "고정형 CCTV 관제의 zone, heatmap, 위치 후보를 한 모델에서 지원"
+      ],
+      "limitations": [
+        "HRNet 고해상도 연산으로 7.65 FPS 수준의 지연",
+        "작은 머리, 가림, 극단적 perspective와 threshold에 민감",
+        "공식 checkpoint 권리가 불명확하여 실사가 필요"
+      ],
+      "cctv_interpretation": "기술 점수 1위로 CCTV 관제 기능 적합성이 가장 높다. 코드와 데이터는 검토됐지만 pretrained weight, 파생 weight, deployment는 due diligence가 남은 제품 후보이다.",
+      "reference_source": "results/steerer/steerer-ucf-qnrf-val-smoke-7e6bebb/model-brief.md"
+    },
+    {
+      "model_id": "pet",
+      "paper": "Point-Query Quadtree for Crowd Counting, Localization, and More",
+      "family": "Point-query quadtree",
+      "backbone": "VGG16-BN",
+      "structure": [
+        "VGG16-BN convolutional backbone",
+        "Progressive rectangular-window encoder",
+        "Point-query quadtree decoder",
+        "Point classification과 coordinate heads"
+      ],
+      "input": "긴 변 1536 제한과 ImageNet 정규화를 적용한 RGB 이미지",
+      "native_output": "Thresholded point coordinates, confidence, quadtree split map",
+      "count_method": "확률 0.5 이상으로 유지된 point query 개수",
+      "strengths": [
+        "원래 출력이 사람 위치 point여서 구역별 인원 집계가 직접적임",
+        "밀집 영역에 계산을 집중하는 adaptive quadtree 구조",
+        "17.24 FPS와 약 4.29 GB VRAM으로 Round 1 실행 효율이 높음"
+      ],
+      "limitations": [
+        "작거나 가려진 사람과 viewpoint domain shift에 민감",
+        "Confidence threshold와 zone 경계 좌표 오차의 영향",
+        "공식 코드와 checkpoint가 academic research only로 제한됨"
+      ],
+      "cctv_interpretation": "기술 비교에서는 3위지만 PET은 연구 비교군으로만 유지한다. 상용 제품, 상용 fine-tuning, deployment 후보로 사용하지 않는다.",
+      "reference_source": "results/pet/pet-ucf-qnrf-val-smoke-9b0fe87/model-brief.md"
+    },
+    {
+      "model_id": "mpcount",
+      "paper": "Single Domain Generalization for Crowd Counting (CVPR 2024)",
+      "family": "Density and single-domain generalization",
+      "backbone": "VGG16-BN with memory-enhanced decoder",
+      "structure": [
+        "VGG16-BN multi-stage encoder",
+        "Multi-scale decoder와 density feature fusion",
+        "1024-slot density memory bank",
+        "Patch-wise density mask와 deterministic upsampling head"
+      ],
+      "input": "16 배수 대칭 padding과 0.5 mean/std 정규화를 적용한 RGB 이미지",
+      "native_output": "비음수 full-resolution density map",
+      "count_method": "Padding 제거 후 density 질량 합을 1000으로 나눔",
+      "strengths": [
+        "단일 소스 domain generalization을 명시적으로 목표로 함",
+        "Density heatmap과 CCTV zone aggregation을 직접 지원",
+        "Apache-2.0 코드와 checkpoint 범위가 프로젝트 정책상 검토됨"
+      ],
+      "limitations": [
+        "Round 1 MAE 213.62로 상위 후보보다 count 오차가 큼",
+        "약 13.28 GB VRAM과 7.17 FPS로 자원 부담이 큼",
+        "Patch 경계와 source-domain 밖 perspective 변화 가능성"
+      ],
+      "cctv_interpretation": "일반화 설계는 검토 가치가 있으나 현재 고정형 CCTV 우선 후보는 아니다. 파생 weight와 deployment 확인 전에는 기술 후보 상태를 유지한다.",
+      "reference_source": "results/mpcount/mpcount-ucf-qnrf-val-smoke-5cc5d72/model-brief.md"
+    },
+    {
+      "model_id": "apgcc",
+      "paper": "APGCC: Improving Point-based Crowd Counting and Localization Based on Auxiliary Point Guidance",
+      "family": "Point-based APGCC",
+      "backbone": "VGG16-BN",
+      "structure": [
+        "VGG16-BN convolutional backbone",
+        "ASPP feature aggregation",
+        "Implicit Feature Interpolation decoder",
+        "Confidence와 point-offset heads"
+      ],
+      "input": "최대 변 2560 resize, ImageNet 정규화, 128 배수 padding을 적용한 RGB 이미지",
+      "native_output": "Class logits, point coordinates, offsets",
+      "count_method": "Confidence threshold를 통과한 영상 내부 point 개수",
+      "strengths": [
+        "Point localization과 구역별 point count를 직접 제공",
+        "Auxiliary point guidance와 IFI decoder 사용",
+        "14.78 FPS와 약 5.26 GB VRAM으로 실행 효율은 양호"
+      ],
+      "limitations": [
+        "ShanghaiTech-A checkpoint의 UCF-QNRF domain shift가 큼",
+        "Round 1에서 고밀도 undercount와 큰 count 오차",
+        "공식 checkpoint의 상용 재사용 권리가 확인되지 않음"
+      ],
+      "cctv_interpretation": "Point 기반 관제 후보지만 현재 정확도로는 우선순위가 낮다. Pretrained weight, 파생 weight, deployment 권리를 별도로 확인해야 한다.",
+      "reference_source": "results/apgcc/apgcc-ucf-qnrf-val-smoke-82d9285/model-brief.md"
+    },
+    {
+      "model_id": "csrnet",
+      "paper": "CSRNet: Dilated Convolutional Neural Networks for Understanding the Highly Congested Scenes (CVPR 2018)",
+      "family": "Density regression with dilated convolutions",
+      "backbone": "VGG-16 frontend through conv4_3",
+      "structure": [
+        "세 단계 max pooling의 VGG-style frontend",
+        "여섯 층 dilation-2 convolutional backend",
+        "1채널 1x1 stride-8 density output"
+      ],
+      "input": "Native-resolution RGB 이미지와 ImageNet 정규화",
+      "native_output": "Signed stride-8 density와 비음수 operational density",
+      "count_method": "max(raw density, 0)의 질량 합",
+      "strengths": [
+        "직접적인 density heatmap과 zone aggregation",
+        "구조가 단순하고 잘 알려진 고전 baseline",
+        "독립 구현으로 코드 변경과 분석이 용이함"
+      ],
+      "limitations": [
+        "Round 1에서 가장 큰 MAE, RMSE, Zone MAE",
+        "약 20.84 GB VRAM으로 4K CCTV 입력 시 부담이 큼",
+        "2018 구조와 ShanghaiTech-A checkpoint의 domain shift"
+      ],
+      "cctv_interpretation": "최신 후보의 개선 폭을 확인하는 기준선으로 유지한다. 기술 점수와 자원 효율 때문에 우선 제품 모델로 권장하지 않는다.",
+      "reference_source": "results/csrnet/csrnet-ucf-qnrf-val-smoke-745d5b6/model-brief.md"
+    }
+  ],
+  "conclusion": [
+    "36장 cross-domain 운영 적합성 검증의 기술 우선순위는 STEERER, DM-Count, PET이다.",
+    "PET은 연구 전용이므로 제품 검증은 STEERER와 DM-Count를 우선하고 PET은 연구 비교군으로 유지한다.",
+    "기술 점수는 정확도 백분율이나 공식 benchmark 순위가 아니라 고정형 CCTV 관제 목적의 100점 하네스 점수이다.",
+    "현재 결과만으로 상용 배포를 승인할 수 없으며 component-level 권리 확인이 별도로 필요하다."
+  ],
+  "roadmap": [
+    "고정형 CCTV별 ROI, perspective, zone 면적과 density threshold를 calibration한다.",
+    "여러 CCTV의 overlap ownership과 중복 count 제거 규칙을 검증한다.",
+    "실제 행사 또는 유사 CCTV 영상에서 시간대, 조도, 가림, 고밀도 변화를 평가한다.",
+    "고정형 CCTV 검증 이후에만 UP-COUNT 또는 DroneCrowd 등 추가 domain 평가를 검토한다.",
+    "권리 적격 최종 1개 모델에 한해 마지막 단계에서 fine-tuning을 검토한다."
+  ]
+}
