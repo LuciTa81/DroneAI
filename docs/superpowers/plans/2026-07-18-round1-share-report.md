@@ -144,8 +144,9 @@ Render pages in this exact order:
 9. Final recommendation, ordered roadmap, evidence identities, and non-ranking disclaimer.
 
 Every non-cover page must contain a small report header and a `page / 9` footer.
-Figure captions must begin with `그림 6-` or `그림 7-`; model and performance
-tables must begin with `표 4-1`, `표 5-1`, and `표 8-1` respectively.
+Section-based figure captions must begin with `그림 5-` or `그림 6-`; model,
+performance, and rights tables must begin with `표 3-1`, `표 4-1`, and
+`표 7-1` respectively.
 
 - [ ] **Step 5: Add an atomic CLI**
 

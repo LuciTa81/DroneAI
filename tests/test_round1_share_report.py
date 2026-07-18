@@ -12,13 +12,30 @@ PdfReader = pytest.importorskip("pypdf").PdfReader
 A4 = pytest.importorskip("reportlab.lib.pagesizes").A4
 
 from droneai.integrity import sha256_file
-from droneai.round1_share_report import build_round1_share_pdf
+from droneai.round1_share_report import _share_figure_layout, build_round1_share_pdf
 from scripts.build_round1_share_report import main
 
 
 COMPARISON_PATH = Path("results/round1-cctv-comparison-34ad450/comparison.json")
 CONTENT_PATH = Path("configs/reporting/round1_model_analysis_ko.json")
 MODELS = ("dm-count", "steerer", "pet", "mpcount", "apgcc", "csrnet")
+
+
+def test_share_figure_layout_keeps_report_panels_compact() -> None:
+    density = _share_figure_layout("density")
+    assert tuple(item[0] for item in density) == (
+        "dm-count",
+        "steerer",
+        "mpcount",
+        "csrnet",
+    )
+    assert all(item[4] == 145 for item in density)
+    assert len({item[2] for item in density}) == 2
+
+    points = _share_figure_layout("points")
+    assert tuple(item[0] for item in points) == ("steerer", "pet", "apgcc")
+    assert points[0][4] == points[1][4] == 145
+    assert points[2][4] == 185
 
 
 def _panel(

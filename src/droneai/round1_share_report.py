@@ -406,33 +406,43 @@ def _page_performance(c, ctx) -> None:
     c.drawString(MARGIN, 62, "주: 기술 점수는 운영 목적의 합성 점수이며 정확도 백분율이나 공식 benchmark 순위가 아니다.")
 
 
+def _share_figure_layout(
+    family: str,
+) -> tuple[tuple[str, float, float, float, float, str], ...]:
+    if family == "density":
+        return (
+            ("dm-count", MARGIN, 490, 250, 145, "그림 5-1"),
+            ("steerer", 303, 490, 250, 145, "그림 5-2"),
+            ("mpcount", MARGIN, 320, 250, 145, "그림 5-3"),
+            ("csrnet", 303, 320, 250, 145, "그림 5-4"),
+        )
+    if family == "points":
+        return (
+            ("steerer", MARGIN, 490, 250, 145, "그림 6-1"),
+            ("pet", 303, 490, 250, 145, "그림 6-2"),
+            ("apgcc", MARGIN, 275, CONTENT_WIDTH, 185, "그림 6-3"),
+        )
+    raise ValueError(f"unknown share figure family: {family}")
+
+
 def _page_density(c, ctx) -> None:
     regular, bold = ctx["fonts"]
     draw_section_title(c, "05", "Density 계열 출력 사례", "동일 장면 img_0097에서 heatmap과 zone 집계 형태를 비교한다.", regular_font=regular, bold_font=bold)
     group = ctx["assets"]["comparisons"]["density"]
-    layout = (
-        ("dm-count", MARGIN, 420, "그림 5-1"),
-        ("steerer", 303, 420, "그림 5-2"),
-        ("mpcount", MARGIN, 188, "그림 5-3"),
-        ("csrnet", 303, 188, "그림 5-4"),
-    )
-    for model_id, x, y, label in layout:
+    for model_id, x, y, width, height, label in _share_figure_layout("density"):
         panel = group[model_id]
-        draw_figure(c, ctx["asset_root"] / panel["packaged_path"], f"{label}. {_panel_caption(panel)}", x, y, 250, 205, regular_font=regular)
-    draw_wrapped(c, "Density map은 전체 질량의 합으로 count를 만들고, 사전 정의한 CCTV zone 안의 질량을 합산해 구역별 밀집도를 계산할 수 있다. 동일 장면에서도 분포의 선명도와 under/over-count 형태가 다르므로 현장 perspective calibration이 필요하다.", MARGIN, 158, CONTENT_WIDTH, font=regular, size=8.5, leading=12, max_lines=4)
+        draw_figure(c, ctx["asset_root"] / panel["packaged_path"], f"{label}. {_panel_caption(panel)}", x, y, width, height, regular_font=regular)
+    draw_wrapped(c, "Density map은 전체 질량의 합으로 count를 만들고, 사전 정의한 CCTV zone 안의 질량을 합산해 구역별 밀집도를 계산할 수 있다. 동일 장면에서도 분포의 선명도와 under/over-count 형태가 다르므로 현장 perspective calibration이 필요하다.", MARGIN, 280, CONTENT_WIDTH, font=regular, size=8.5, leading=12, max_lines=4)
 
 
 def _page_points(c, ctx) -> None:
     regular, bold = ctx["fonts"]
     draw_section_title(c, "06", "Point/Hybrid 계열 출력 사례", "동일 장면 img_0062에서 위치 후보와 zone 연결성을 비교한다.", regular_font=regular, bold_font=bold)
     group = ctx["assets"]["comparisons"]["points"]
-    top = (("steerer", MARGIN, "그림 6-1"), ("pet", 303, "그림 6-2"))
-    for model_id, x, label in top:
+    for model_id, x, y, width, height, label in _share_figure_layout("points"):
         panel = group[model_id]
-        draw_figure(c, ctx["asset_root"] / panel["packaged_path"], f"{label}. {_panel_caption(panel)}", x, 425, 250, 200, regular_font=regular)
-    panel = group["apgcc"]
-    draw_figure(c, ctx["asset_root"] / panel["packaged_path"], f"그림 6-3. {_panel_caption(panel)}", MARGIN, 202, CONTENT_WIDTH, 190, regular_font=regular)
-    draw_wrapped(c, "Point 출력은 예측 위치 개수로 count를 만들고 좌표를 zone에 직접 할당할 수 있다. 다만 고밀도·가림·tiny person에서 누락과 중복이 발생할 수 있다. STEERER는 density와 point를 함께 제공하며, PET는 연구 비교군, APGCC는 상용 권리 확인 전 후보 상태다.", MARGIN, 170, CONTENT_WIDTH, font=regular, size=8.5, leading=12, max_lines=4)
+        draw_figure(c, ctx["asset_root"] / panel["packaged_path"], f"{label}. {_panel_caption(panel)}", x, y, width, height, regular_font=regular)
+    draw_wrapped(c, "Point 출력은 예측 위치 개수로 count를 만들고 좌표를 zone에 직접 할당할 수 있다. 다만 고밀도·가림·tiny person에서 누락과 중복이 발생할 수 있다. STEERER는 density와 point를 함께 제공하며, PET는 연구 비교군, APGCC는 상용 권리 확인 전 후보 상태다.", MARGIN, 240, CONTENT_WIDTH, font=regular, size=8.5, leading=12, max_lines=4)
 
 
 def _status_short(status: str) -> str:
