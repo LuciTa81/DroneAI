@@ -16,6 +16,10 @@ FROZEN = (
     "PySocks==1.7.1",
     "easydict==1.13",
     "tensorboardX==2.6.2.2",
+    "scikit-image==0.26.0",
+    "ImageIO==2.37.3",
+    "tifffile==2026.7.14",
+    "lazy_loader==0.4",
 )
 
 
@@ -66,6 +70,10 @@ class SetupRunner:
                 "PySocks": "1.7.1",
                 "easydict": "1.13",
                 "tensorboardX": "2.6.2.2",
+                "scikit-image": "0.26.0",
+                "ImageIO": "2.37.3",
+                "tifffile": "2026.7.14",
+                "lazy_loader": "0.4",
                 "opencv-python": None,
             }
             return subprocess.CompletedProcess(call, 0, json.dumps(payload), "")
@@ -77,6 +85,7 @@ class SetupRunner:
                 "gpu": "RTX 5090 fixture" if self.cuda else None,
                 "matmul": 32.0 if self.cuda else None,
                 "apgcc_imports": self.cuda,
+                "metrics_imports": self.cuda,
             }
             return subprocess.CompletedProcess(
                 call, 0, "0.24.0a0+upstream-print\n" + json.dumps(payload), ""
@@ -118,6 +127,16 @@ def test_apgcc_overlay_is_exact_and_does_not_replace_ngc_torch(tmp_path: Path) -
         setup.parse_requirements(_overlay(tmp_path / "bad.txt", (*FROZEN, "torch==1.12")))
 
 
+def test_apgcc_overlay_includes_common_evaluation_metrics_stack() -> None:
+    setup = _setup()
+    assert {
+        "scikit-image==0.26.0",
+        "ImageIO==2.37.3",
+        "tifffile==2026.7.14",
+        "lazy_loader==0.4",
+    }.issubset(set(setup.FROZEN_REQUIREMENTS))
+
+
 def test_apgcc_setup_verifies_imports_and_cuda_without_inference(tmp_path: Path) -> None:
     setup = _setup()
     runner = SetupRunner()
@@ -134,6 +153,7 @@ def test_apgcc_setup_verifies_imports_and_cuda_without_inference(tmp_path: Path)
     assert result["status"] == "PASS"
     assert result["cuda"]["cuda_available"] is True
     assert result["cuda"]["apgcc_imports"] is True
+    assert result["cuda"]["metrics_imports"] is True
     assert result["inference_executed"] is False
     runtime_probe = next(
         call[-1]

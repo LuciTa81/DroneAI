@@ -22,6 +22,10 @@ FROZEN_REQUIREMENTS = (
     "PySocks==1.7.1",
     "easydict==1.13",
     "tensorboardX==2.6.2.2",
+    "scikit-image==0.26.0",
+    "ImageIO==2.37.3",
+    "tifffile==2026.7.14",
+    "lazy_loader==0.4",
 )
 FROZEN_VERSIONS = {
     requirement.partition("==")[0]: requirement.partition("==")[2]
@@ -145,7 +149,7 @@ def _verify(python: Path, *, upstream: Path, runner: Runner) -> dict[str, object
         "sys.dont_write_bytecode=True\n"
         f"sys.path.insert(0, {str(source)!r})\n"
         "import cv2, gdown, socks, torch, torchvision, numpy, scipy, matplotlib, yaml\n"
-        "import tensorboardX, easydict\n"
+        "import tensorboardX, easydict, skimage\n"
         "from PIL import Image\n"
         "from config import cfg\n"
         "from datasets import build_dataset\n"
@@ -156,7 +160,7 @@ def _verify(python: Path, *, upstream: Path, runner: Runner) -> dict[str, object
         "torch.ones((32,32),device='cuda'))[0,0].item()) if available else None\n"
         "print(json.dumps({'cuda_available':available,'torch':torch.__version__,"
         "'torchvision':torchvision.__version__,'gpu':gpu,'matmul':value,"
-        "'apgcc_imports':True}))\n"
+        "'apgcc_imports':True,'metrics_imports':True}))\n"
     )
     cuda = _parse_json_output(
         runner((str(python), "-c", runtime_code)),
@@ -166,6 +170,7 @@ def _verify(python: Path, *, upstream: Path, runner: Runner) -> dict[str, object
         cuda.get("cuda_available") is not True
         or cuda.get("matmul") != 32.0
         or cuda.get("apgcc_imports") is not True
+        or cuda.get("metrics_imports") is not True
     ):
         raise RuntimeError(f"APGCC CUDA/import smoke failed: {cuda}")
 
