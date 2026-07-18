@@ -257,3 +257,8 @@ def test_repository_queue_records_apgcc_preflight_and_advances_to_one_sample() -
         ("rights", "manifest_snapshot"),
         ("preflight", "preflight_record"),
     ]
+    preflight = models["apgcc"]["accepted_evidence"][-1]
+    assert preflight["path"] == "apgcc/preflight-6671ab0/preflight.json"
+    assert preflight["sha256"] == (
+        "a8c894a78c96f629060f7953d40ff10316883bf45aca40ff03bacaf17c2c1370"
+    )
