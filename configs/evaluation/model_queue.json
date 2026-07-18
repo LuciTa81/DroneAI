@@ -279,6 +279,12 @@
           "artifact_kind": "manifest_snapshot",
           "path": "csrnet/csrnet-rights-e0cebe3/manifest.snapshot.json",
           "sha256": "0e238d0700e58806fd00b666d53092f8aebfeaa9ae0f674682f4ecafc6c4d240"
+        },
+        {
+          "gate": "preflight",
+          "artifact_kind": "preflight_record",
+          "path": "csrnet/csrnet-preflight-3ee5a07/preflight.json",
+          "sha256": "d4417db607340f21efebb5faffe32c841136a7e6e6ef4a5462b5413f560f90f5"
         }
       ]
     }

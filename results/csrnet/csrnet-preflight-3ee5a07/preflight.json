@@ -1,0 +1,92 @@
+{
+  "checkpoint": {
+    "conversion": "raw legacy checkpoint unpickled only in a networkless, read-only, capability-dropped container; state_dict re-saved and thereafter loaded with weights_only=True",
+    "mapping": {
+      "all_finite": true,
+      "missing_keys": [],
+      "state_keys": 34,
+      "strict": true,
+      "unexpected_keys": []
+    },
+    "raw": {
+      "path": "/workspace/data/checkpoints/csrnet/csrnet-official-shha-mae66.4",
+      "sha256": "68383c1053be371ad54b0061ab99fed08c2bfff39de73937f2a4388041ab0128",
+      "size_bytes": 130117002
+    },
+    "safe_state_dict": {
+      "path": "/workspace/data/checkpoints/csrnet/safe/csrnet-official-shha-mae66.4-state-dict.pth",
+      "sha256": "7093f29f1469fb4e3a80781fda03665848689ada59c5a13d1b49940b230755e6",
+      "size_bytes": 65065981
+    }
+  },
+  "created_at_utc": "2026-07-18T07:23:53.954467+00:00",
+  "dataset_config": {
+    "path": "configs/datasets/ucf_qnrf.kaggle_apache.json",
+    "sha256": "6f9a8760ed4983ae00676175ecbdacbd0b478d90a4dccb505151e30277bb73ac",
+    "size_bytes": 1716
+  },
+  "environment": {
+    "all_finite": true,
+    "convolution_layers": 17,
+    "cuda_available": true,
+    "cuda_runtime": "13.0",
+    "dilated_convolution_layers": 6,
+    "gpu": "NVIDIA GeForce RTX 5090",
+    "inference_executed": false,
+    "matmul": 32.0,
+    "missing_keys": [],
+    "output_stride": 8,
+    "parameter_count": 16263489,
+    "python": "3.12.3",
+    "state_keys": 34,
+    "torch": "2.9.0a0+145a3a7bda.nv25.10",
+    "torchvision": "0.24.0a0+094e7af5",
+    "unexpected_keys": []
+  },
+  "gate": "preflight",
+  "git": {
+    "clean": true,
+    "commit": "3ee5a07e3a92eef12b72cb8a3b570edb5326d026",
+    "path": "/workspace"
+  },
+  "inference_executed": false,
+  "model_id": "csrnet",
+  "model_profile": {
+    "path": "configs/models/csrnet.json",
+    "sha256": "f42cbf2757e88118258f43e9fba8430b6b56709b2e07ea8a3a9a061d18270bdd",
+    "size_bytes": 1891
+  },
+  "rights_decision": {
+    "path": "/workspace/data/results/csrnet/csrnet-rights-e0cebe3/rights-decision.json",
+    "sha256": "314f25024519978f73b6adfab21d51ca2296bdc3ff8d2e8fffbaa762f06cb509",
+    "size_bytes": 983
+  },
+  "rights_manifest": {
+    "path": "configs/candidates/csrnet_shha_to_ucf_qnrf.candidate.json",
+    "sha256": "cd846afbc3556d4876ab6c670ada6d3870b76fb056f5f78184a73982d6b73295",
+    "size_bytes": 3440
+  },
+  "runtime_profile": {
+    "path": "configs/runtime/home5090_docker.json",
+    "sha256": "16c27734b7bb53e019843a77de33d0951e7c9c0682fc9e21af94107c86074296",
+    "size_bytes": 708
+  },
+  "sample_manifest": {
+    "path": "/workspace/data/results/apgcc/apgcc-ucf-qnrf-val-smoke-82d9285/sample-manifest.json",
+    "sha256": "71413a14225543b0f419e78dd6e4ba91ad535929c82f362381f4af675decc385",
+    "size_bytes": 8851
+  },
+  "schema_version": 1,
+  "split_manifest": {
+    "path": "/workspace/data/results/apgcc/apgcc-ucf-qnrf-val-smoke-82d9285/split-source-manifest.json",
+    "sha256": "70e3d0101778e3247d9589cfc6a234451b293feb7d5007472188984ae0594f02",
+    "size_bytes": 20305
+  },
+  "status": "PASS",
+  "upstream": {
+    "clean": true,
+    "commit": "ed29d895989c188cb913a9503721271c6cf1ab1f",
+    "executed": false,
+    "path": "/workspace/upstreams/CSRNet-pytorch"
+  }
+}

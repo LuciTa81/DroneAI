@@ -288,8 +288,9 @@ def test_repository_queue_completes_apgcc_and_activates_csrnet_rights() -> None:
     ] == [
         ("rights", "rights_decision"),
         ("rights", "manifest_snapshot"),
+        ("preflight", "preflight_record"),
     ]
-    decision, snapshot = models["csrnet"]["accepted_evidence"]
+    decision, snapshot, preflight = models["csrnet"]["accepted_evidence"]
     assert decision["path"] == (
         "csrnet/csrnet-rights-e0cebe3/rights-decision.json"
     )
@@ -301,4 +302,10 @@ def test_repository_queue_completes_apgcc_and_activates_csrnet_rights() -> None:
     )
     assert snapshot["sha256"] == (
         "0e238d0700e58806fd00b666d53092f8aebfeaa9ae0f674682f4ecafc6c4d240"
+    )
+    assert preflight["path"] == (
+        "csrnet/csrnet-preflight-3ee5a07/preflight.json"
+    )
+    assert preflight["sha256"] == (
+        "d4417db607340f21efebb5faffe32c841136a7e6e6ef4a5462b5413f560f90f5"
     )
