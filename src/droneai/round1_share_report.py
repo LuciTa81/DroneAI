@@ -44,6 +44,8 @@ TABLE_BODY_SIZE = 8.5
 CAPTION_SIZE = 8.5
 CAPTION_LEADING = 11.0
 HEADER_FOOTER_SIZE = 8.0
+MODEL_TABLE_HEADER_HEIGHT = 42.0
+MODEL_TABLE_BODY_HEIGHT = 126.0
 CANONICAL_SPLIT_SHA256 = (
     "da1d947aad73d45be573d52a6462fa8022948fba2b1026a3bfff76b11a4b5c67"
 )
@@ -54,6 +56,15 @@ SOFT_BLUE = HexColor("#EAF2F7")
 SOFT_CYAN = HexColor("#E7F5F7")
 SOFT_GRAY = HexColor("#F2F5F7")
 AMBER = HexColor("#D99122")
+
+MODEL_OUTPUT_NOTES = {
+    "dm-count": "출력 해석(DM-Count): density map 합이 count이며 zone별 합으로 구역 밀집도를 읽는다.",
+    "steerer": "출력 해석(STEERER): density 합으로 count하고 point를 zone 위치 후보로 함께 활용한다.",
+    "pet": "출력 해석(PET): confidence를 통과한 point 개수가 count이며 좌표를 zone에 직접 배정한다.",
+    "mpcount": "출력 해석(MPCount): full-resolution density 합으로 count하고 zone별 질량을 비교한다.",
+    "apgcc": "출력 해석(APGCC): confidence point 개수가 count이며 위치 오차와 누락을 함께 확인한다.",
+    "csrnet": "출력 해석(CSRNet): 비음수 density 합이 count이며 흐린 분포와 zone 오차를 확인한다.",
+}
 
 
 def readability_contract() -> dict[str, float]:
@@ -83,6 +94,17 @@ def report_page_contract() -> tuple[tuple[str, ...], ...]:
         ("rights",),
         ("conclusion",),
     )
+
+
+def model_table_height_contract() -> dict[str, float]:
+    return {"header": MODEL_TABLE_HEADER_HEIGHT, "body": MODEL_TABLE_BODY_HEIGHT}
+
+
+def model_output_note(model_id: str) -> str:
+    try:
+        return MODEL_OUTPUT_NOTES[model_id]
+    except KeyError as exc:
+        raise ValueError(f"unknown model output note: {model_id}") from exc
 
 
 def _background(canvas: canvas_module.Canvas) -> None:
@@ -151,6 +173,7 @@ def draw_report_table(
     y: float,
     *,
     row_height: float,
+    header_row_height: float | None = None,
     fonts: tuple[str, str],
 ) -> float:
     if not rows or any(len(row) != len(column_widths) for row in rows):
@@ -158,29 +181,34 @@ def draw_report_table(
     regular, bold = fonts
     total_width = sum(column_widths)
     for row_index, row in enumerate(rows):
-        row_y = y - row_height
+        current_height = (
+            header_row_height
+            if row_index == 0 and header_row_height is not None
+            else row_height
+        )
+        row_y = y - current_height
         if row_index == 0:
             canvas.setFillColor(NAVY)
-            canvas.rect(x, row_y, total_width, row_height, fill=1, stroke=0)
+            canvas.rect(x, row_y, total_width, current_height, fill=1, stroke=0)
         else:
             canvas.setFillColor(white if row_index % 2 else SOFT_BLUE)
-            canvas.rect(x, row_y, total_width, row_height, fill=1, stroke=0)
+            canvas.rect(x, row_y, total_width, current_height, fill=1, stroke=0)
         cell_x = x
         for width, value in zip(column_widths, row, strict=True):
             canvas.setStrokeColor(LINE)
             canvas.setLineWidth(0.4)
-            canvas.rect(cell_x, row_y, width, row_height, fill=0, stroke=1)
+            canvas.rect(cell_x, row_y, width, current_height, fill=0, stroke=1)
             draw_wrapped(
                 canvas,
                 value,
                 cell_x + 4,
-                row_y + row_height - 11,
+                row_y + current_height - 11,
                 width - 8,
                 font=bold if row_index == 0 else regular,
                 size=TABLE_HEADER_SIZE if row_index == 0 else TABLE_BODY_SIZE,
                 leading=11,
                 color=white if row_index == 0 else INK,
-                max_lines=max(1, int((row_height - 9) // 11)),
+                max_lines=max(1, int((current_height - 9) // 11)),
             )
             cell_x += width
         y = row_y
@@ -402,7 +430,16 @@ def _page_models_group(
             f"{item.native_output}\nCount: {item.count_method}",
             item.cctv_interpretation,
         ])
-    y = draw_report_table(c, rows, (70, 135, 135, 171), MARGIN, 675, row_height=126, fonts=ctx["fonts"])
+    y = draw_report_table(
+        c,
+        rows,
+        (70, 135, 135, 171),
+        MARGIN,
+        675,
+        row_height=MODEL_TABLE_BODY_HEIGHT,
+        header_row_height=MODEL_TABLE_HEADER_HEIGHT,
+        fonts=ctx["fonts"],
+    )
     summary = (
         "Density 계열은 heatmap 질량을 zone별로 합산하고, point 계열은 예측 좌표를 zone에 직접 할당한다. "
         "Hybrid 계열은 두 출력을 함께 제공해 관제 설명력과 위치 기반 후속 판단을 보완한다."
@@ -480,7 +517,20 @@ def _page_output_group(
         model_ids, figure_labels, positions, strict=True
     ):
         panel = group[model_id]
-        draw_figure(c, ctx["asset_root"] / panel["packaged_path"], f"{label}. {_panel_caption(panel)}", x, y, width, height, regular_font=regular)
+        caption = (
+            f"{label}. {_panel_caption(panel)}\n"
+            f"{model_output_note(model_id)}"
+        )
+        draw_figure(
+            c,
+            ctx["asset_root"] / panel["packaged_path"],
+            caption,
+            x,
+            y,
+            width,
+            height,
+            regular_font=regular,
+        )
     draw_wrapped(c, narrative, MARGIN, narrative_y, CONTENT_WIDTH, font=regular, size=BODY_SIZE, leading=BODY_LEADING, max_lines=5)
 
 

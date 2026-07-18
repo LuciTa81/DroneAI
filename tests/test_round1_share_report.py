@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from io import BytesIO
 from pathlib import Path
 
 import pytest
@@ -10,10 +11,15 @@ pytest.importorskip("reportlab")
 Image = pytest.importorskip("PIL.Image")
 PdfReader = pytest.importorskip("pypdf").PdfReader
 A4 = pytest.importorskip("reportlab.lib.pagesizes").A4
+canvas_module = pytest.importorskip("reportlab.pdfgen.canvas")
 
 from droneai.integrity import sha256_file
+from droneai.round1_pdf_report import DISPLAY_NAMES, register_korean_fonts
 from droneai.round1_share_report import (
     build_round1_share_pdf,
+    draw_report_table,
+    model_output_note,
+    model_table_height_contract,
     readability_contract,
     report_page_contract,
 )
@@ -45,6 +51,34 @@ def test_report_page_contract_splits_dense_content() -> None:
     assert pages[7] == ("mpcount", "csrnet")
     assert pages[8] == ("steerer", "pet")
     assert pages[9] == ("apgcc",)
+
+
+def test_model_table_uses_compact_header_and_readable_body() -> None:
+    contract = model_table_height_contract()
+    assert contract == {"header": 42.0, "body": 126.0}
+
+
+def test_report_table_can_size_header_independently() -> None:
+    buffer = BytesIO()
+    pdf = canvas_module.Canvas(buffer, pagesize=A4)
+    end_y = draw_report_table(
+        pdf,
+        [["Header"], ["Body 1"], ["Body 2"]],
+        (120,),
+        42,
+        700,
+        row_height=60,
+        header_row_height=30,
+        fonts=register_korean_fonts(),
+    )
+    assert end_y == 550
+
+
+def test_every_model_has_a_concise_output_note() -> None:
+    for model_id in MODELS:
+        note = model_output_note(model_id)
+        assert note.startswith(f"출력 해석({DISPLAY_NAMES[model_id]}):")
+        assert len(note) <= 115
 
 
 def _panel(
@@ -196,6 +230,22 @@ def test_share_report_contains_required_claim_boundaries(tmp_path: Path) -> None
         "공식 모델 순위가 아님",
     ):
         assert token in text
+
+
+def test_share_report_contains_every_model_output_note(tmp_path: Path) -> None:
+    manifest = make_assets(tmp_path)
+    output = build_round1_share_pdf(
+        COMPARISON_PATH,
+        manifest,
+        CONTENT_PATH,
+        tmp_path / "share.pdf",
+        report_date="2026-07-19",
+    )
+
+    text = "\n".join(page.extract_text() or "" for page in PdfReader(output).pages)
+    normalized = " ".join(text.split())
+    for model_id in MODELS:
+        assert " ".join(model_output_note(model_id).split()) in normalized
 
 
 def test_share_report_rejects_changed_asset_hash(tmp_path: Path) -> None:
