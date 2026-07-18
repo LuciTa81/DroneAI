@@ -1,0 +1,93 @@
+{
+  "annotation_sha256": "12050f0ee82ae56e936d42000847b38b6b9e3dfaf240d92a9a50bb921d2ed3f2",
+  "checkpoint_sha256": "4a0ba849ace0ef2bc87364ec8551de4a3e9dca74fad27764c9b948ebf7928eb0",
+  "comparison_scope": "compatibility_smoke",
+  "compatibility_checks": {
+    "checkpoint_loaded_strictly": true,
+    "density_finite_nonnegative": true,
+    "density_sum_matches_count": true,
+    "native_density_present": true,
+    "runtime_metrics_finite": true,
+    "successful_forward": true
+  },
+  "dataset_id": "ucf-qnrf-kaggle-apache",
+  "environment_sha256": "0b1d405769780c7c54713b65f44247f57f4872a51963caf6b39c70d08758b994",
+  "evaluation_scope": "research_comparison_only",
+  "failure_state": null,
+  "gate": "one_sample",
+  "ground_truth_count": 1453.0,
+  "native_density_shape": [
+    356,
+    536
+  ],
+  "native_density_sum": 1543.9186927245598,
+  "panel": {
+    "path": "one-sample-panel.png",
+    "sha256": "b6beb2d360b285e868a00da521316bb2c74e79772a15089999f8287bb06dd0fa"
+  },
+  "parameter_count": 33233241,
+  "predicted_count": 1543.9186927245598,
+  "prediction_metadata": {
+    "checkpoint_missing_key_count": 0,
+    "checkpoint_unexpected_key_count": 0,
+    "coordinate_transform": "crop symmetric padding, divide raw density by log_para, then mass-preserving resize to original-image /8 evaluation grid",
+    "cropped_density_height": 2848,
+    "cropped_density_width": 4288,
+    "evaluation_density_height": 356,
+    "evaluation_density_width": 536,
+    "log_para": 1000.0,
+    "native_density_height": 2848,
+    "native_density_width": 4288,
+    "normalization": "RGB tensor normalized with mean=0.5 and std=0.5",
+    "original_height": 2848,
+    "original_width": 4288,
+    "padding_bottom": 0,
+    "padding_left": 0,
+    "padding_right": 0,
+    "padding_top": 0,
+    "patch_size": 3584,
+    "processed_height": 2848,
+    "processed_width": 4288,
+    "unit_size": 16
+  },
+  "ranking_eligible": false,
+  "record": {
+    "absolute_error": 90.91869272455983,
+    "condition_values": {
+      "density_band": "medium",
+      "source_partition": "official_validation"
+    },
+    "density_band": "medium",
+    "extra_metrics": {
+      "density_psnr": 27.332127105476744,
+      "density_ssim": 0.8137287029542662,
+      "density_zone_mae": 80.65860620318846,
+      "game_l1": 322.6344248127539,
+      "predicted_mass": 1543.9186927245598,
+      "zone_mae": 80.65860620318846
+    },
+    "failure_state": null,
+    "ground_truth_count": 1453.0,
+    "latency_ms": 383.9327809982933,
+    "normalized_error": 0.06257308515110793,
+    "output_type": "density",
+    "peak_vram_mb": 10283.32177734375,
+    "predicted_count": 1543.9186927245598,
+    "sample_id": "img_0067",
+    "signed_error": 90.91869272455983,
+    "spatial_metric_name": "game_l1",
+    "spatial_metric_value": 322.6344248127539
+  },
+  "rights_decision_sha256": "dd96f15b3dbf679e9615bd1a95e7e802a4c15a4b98e441deabd69dc3f74992a8",
+  "rights_manifest_sha256": "f64ed7cd54e6643a9d082345c34e4a5534c4090a88ef92f13add4fd22b09badb",
+  "rights_scope": "PASS_COMMERCIAL_CANDIDATE",
+  "sample_id": "img_0067",
+  "schema_version": 1,
+  "source_sha256": "0ae12709e570308bbdbfb860b7ac6f8a9df2df71ab844c57df63433bb9d3ec1c",
+  "split_id": "dm-count-upstream-qnrf-val-smoke-36-v1",
+  "split_manifest_sha256": "fff6d271429671f554047848329c0ee5602cec0b90f1114806776c31b740670f",
+  "split_role": "validation",
+  "status": "PASS",
+  "technical_score": 100.0,
+  "upstream_commit": "6eb06772bcf7dfb771c43a14d67146fce767f103"
+}

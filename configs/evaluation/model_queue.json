@@ -171,6 +171,12 @@
           "artifact_kind": "preflight_record",
           "path": "mpcount/mpcount-preflight-d6d8f93/preflight.json",
           "sha256": "695a5c51e02ada281c4cd1b9820738ebc889a310625d57affcaadc7ca86cbf4b"
+        },
+        {
+          "gate": "one_sample",
+          "artifact_kind": "one_sample_result",
+          "path": "mpcount/mpcount-one-sample-4a7a803/result.json",
+          "sha256": "56a18af65d7d32753a5a4b7d0669f045517984573b1997a9e06d78b09d4a0c49"
         }
       ]
     },

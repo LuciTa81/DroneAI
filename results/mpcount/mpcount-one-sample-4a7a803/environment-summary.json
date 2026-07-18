@@ -1,0 +1,22 @@
+{
+  "captured_at": "2026-07-18T02:49:44.469542+00:00",
+  "colab_release_tag": null,
+  "executable": "/workspace/.venvs/mpcount/bin/python",
+  "git_commit": "4a7a8031b6cb5d83694813f2a84bacea2c140b37",
+  "git_dirty": false,
+  "nvidia_smi": "NVIDIA GeForce RTX 5090, 580.82.07, 32607 MiB",
+  "platform": "Linux-6.16.3-76061603-generic-x86_64-with-glibc2.39",
+  "python": "3.12.3 (main, Aug 14 2025, 17:47:21) [GCC 13.3.0]",
+  "tensorflow": {
+    "error": "ModuleNotFoundError: No module named 'tensorflow'"
+  },
+  "torch": {
+    "cuda_available": true,
+    "cuda_runtime": "13.0",
+    "device_count": 1,
+    "device_names": [
+      "NVIDIA GeForce RTX 5090"
+    ],
+    "version": "2.9.0a0+145a3a7bda.nv25.10"
+  }
+}
