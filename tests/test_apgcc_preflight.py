@@ -135,6 +135,12 @@ def test_apgcc_setup_verifies_imports_and_cuda_without_inference(tmp_path: Path)
     assert result["cuda"]["cuda_available"] is True
     assert result["cuda"]["apgcc_imports"] is True
     assert result["inference_executed"] is False
+    runtime_probe = next(
+        call[-1]
+        for call in runner.calls
+        if len(call) >= 2 and call[-2] == "-c" and "torch.cuda" in call[-1]
+    )
+    assert "sys.dont_write_bytecode=True" in runtime_probe
 
 
 def test_capture_apgcc_preflight_hashes_frozen_identities(tmp_path: Path) -> None:

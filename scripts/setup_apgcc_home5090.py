@@ -142,6 +142,7 @@ def _verify(python: Path, *, upstream: Path, runner: Runner) -> dict[str, object
     source = upstream.resolve() / "apgcc"
     runtime_code = (
         "import json, sys\n"
+        "sys.dont_write_bytecode=True\n"
         f"sys.path.insert(0, {str(source)!r})\n"
         "import cv2, gdown, socks, torch, torchvision, numpy, scipy, matplotlib, yaml\n"
         "import tensorboardX, easydict\n"
