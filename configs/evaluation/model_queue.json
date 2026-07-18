@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "round_id": "round-1-static-ucf-qnrf",
-  "active_model": "pet",
+  "active_model": "mpcount",
   "models": [
     {
       "model_id": "dm-count",
@@ -87,7 +87,7 @@
     {
       "model_id": "pet",
       "family": "points",
-      "queue_state": "active",
+      "queue_state": "completed",
       "rights_scope": "PASS_RESEARCH_ONLY",
       "dataset_id": "ucf-qnrf-kaggle-apache",
       "split_id": "dm-count-upstream-qnrf-val-smoke-36-v1",
@@ -132,6 +132,39 @@
           "artifact_kind": "metrics",
           "path": "pet/pet-ucf-qnrf-val-smoke-9b0fe87/metrics.json",
           "sha256": "a1ddd1d2eaf69f5bc3c22fcf538c3a574bc53fdb991161a9cbea708deadf723f"
+        }
+      ]
+    },
+    {
+      "model_id": "mpcount",
+      "family": "density",
+      "queue_state": "active",
+      "rights_scope": "PASS_COMMERCIAL_CANDIDATE",
+      "dataset_id": "ucf-qnrf-kaggle-apache",
+      "split_id": "dm-count-upstream-qnrf-val-smoke-36-v1",
+      "split_role": "validation",
+      "expected_samples": 36,
+      "checkpoint_training_split_status": "VERIFIED_DISJOINT",
+      "comparison_scope": "compatibility_smoke",
+      "checkpoint_split_evidence": "The official deterministic checkpoint is trained on ShanghaiTech-A and officially evaluated on UCF-QNRF, so no UCF-QNRF sample belongs to checkpoint training.",
+      "gate_order": [
+        "rights",
+        "preflight",
+        "one_sample",
+        "benchmark"
+      ],
+      "accepted_evidence": [
+        {
+          "gate": "rights",
+          "artifact_kind": "rights_decision",
+          "path": "mpcount/mpcount-rights-3911238/rights-decision.json",
+          "sha256": "dd96f15b3dbf679e9615bd1a95e7e802a4c15a4b98e441deabd69dc3f74992a8"
+        },
+        {
+          "gate": "rights",
+          "artifact_kind": "manifest_snapshot",
+          "path": "mpcount/mpcount-rights-3911238/manifest.snapshot.json",
+          "sha256": "f64ed7cd54e6643a9d082345c34e4a5534c4090a88ef92f13add4fd22b09badb"
         }
       ]
     },
