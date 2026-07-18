@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "round_id": "round-1-static-ucf-qnrf",
-  "active_model": "apgcc",
+  "active_model": "csrnet",
   "models": [
     {
       "model_id": "dm-count",
@@ -195,7 +195,7 @@
     {
       "model_id": "apgcc",
       "family": "points",
-      "queue_state": "active",
+      "queue_state": "completed",
       "rights_scope": "PASS_COMMERCIAL_CANDIDATE",
       "dataset_id": "ucf-qnrf-kaggle-apache",
       "split_id": "dm-count-upstream-qnrf-val-smoke-36-v1",
@@ -252,7 +252,7 @@
     {
       "model_id": "csrnet",
       "family": "density",
-      "queue_state": "blocked",
+      "queue_state": "active",
       "rights_scope": "NOT_EVALUATED_NO_ELIGIBLE_WEIGHT",
       "dataset_id": "ucf-qnrf-kaggle-apache",
       "split_id": "dm-count-upstream-qnrf-val-smoke-36-v1",

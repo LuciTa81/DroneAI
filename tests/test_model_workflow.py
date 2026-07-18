@@ -232,13 +232,13 @@ def test_benchmark_requires_explicit_user_approval(tmp_path: Path) -> None:
     assert_action_allowed(status, "benchmark", user_approved=True)
 
 
-def test_repository_queue_records_corrected_apgcc_benchmark_for_review() -> None:
+def test_repository_queue_completes_apgcc_and_activates_csrnet_rights() -> None:
     queue = load_model_queue(Path("configs/evaluation/model_queue.json"))
     models = {model["model_id"]: model for model in queue["models"]}
 
-    assert queue["active_model"] == "apgcc"
+    assert queue["active_model"] == "csrnet"
     assert models["mpcount"]["queue_state"] == "completed"
-    assert models["apgcc"]["queue_state"] == "active"
+    assert models["apgcc"]["queue_state"] == "completed"
     assert models["apgcc"]["family"] == "points"
     assert models["apgcc"]["rights_scope"] == "PASS_COMMERCIAL_CANDIDATE"
     assert models["apgcc"]["checkpoint_training_split_status"] == "VERIFIED_DISJOINT"
@@ -279,3 +279,6 @@ def test_repository_queue_records_corrected_apgcc_benchmark_for_review() -> None
     assert metrics["sha256"] == (
         "919e2068a9df0ade3a6fc3d87855f67fccd2f7df5568304466fd6d0d24dc6b72"
     )
+    assert models["csrnet"]["queue_state"] == "active"
+    assert models["csrnet"]["rights_scope"] == "NOT_EVALUATED_NO_ELIGIBLE_WEIGHT"
+    assert models["csrnet"]["accepted_evidence"] == []
