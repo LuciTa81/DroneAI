@@ -247,6 +247,8 @@ def test_each_model_page_has_its_output_image_and_no_5090_cover(
         assert "RMSE" in text
         assert "FPS" in text
         assert "VRAM" in text
+        assert "PASS_" in text
+        assert "..." not in text
         assert len(page.images) >= 1
 
 

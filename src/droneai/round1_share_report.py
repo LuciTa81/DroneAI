@@ -74,6 +74,38 @@ MODEL_PAGE_ASSETS = {
     "apgcc": ("points", "apgcc"),
     "csrnet": ("density", "csrnet"),
 }
+MODEL_PAGE_SUMMARIES = {
+    "steerer": (
+        "Density heatmap과 point 후보를 함께 제공해 zone 밀집도와 위치 확인에 활용한다.",
+        "Round 1 최저 MAE·Zone MAE",
+        "고해상도 연산으로 7.7 FPS",
+    ),
+    "dm-count": (
+        "Density heatmap을 zone별로 합산하는 CCTV baseline 후보이다.",
+        "질량 보존형 heatmap과 14.4 FPS",
+        "고밀도·scale 변화에서 undercount 가능",
+    ),
+    "pet": (
+        "Point 좌표를 zone에 직접 배정해 구역별 인원을 계산한다.",
+        "위치 기반 집계와 17.2 FPS",
+        "작은 사람·가림·domain shift에 민감",
+    ),
+    "mpcount": (
+        "Full-resolution density를 zone별로 합산해 일반화 성능을 본다.",
+        "Single-domain generalization 설계",
+        "13.0 GB VRAM과 비교적 큰 count 오차",
+    ),
+    "apgcc": (
+        "Point 좌표를 zone에 직접 배정해 위치 기반 인원을 계산한다.",
+        "Point localization과 14.8 FPS",
+        "ShanghaiTech-A checkpoint domain shift",
+    ),
+    "csrnet": (
+        "Operational density를 zone별로 합산하는 고전 baseline이다.",
+        "단순한 density heatmap과 zone aggregation",
+        "가장 큰 MAE·RMSE와 20.3 GB VRAM",
+    ),
+}
 
 
 def readability_contract() -> dict[str, float]:
@@ -596,6 +628,9 @@ def _page_model_detail(
         if model_id == "pet"
         else f"{row['rights_scope']} / 배포 권리 확인 필요"
     )
+    cctv_summary, strength_summary, limitation_summary = MODEL_PAGE_SUMMARIES[
+        model_id
+    ]
     _draw_model_detail_card(
         c,
         x=MARGIN + card_width + card_gap,
@@ -604,9 +639,9 @@ def _page_model_detail(
         height=246,
         title="관제 활용·제약·권리",
         entries=(
-            ("활용", item.cctv_interpretation, 4),
-            ("장점", item.strengths[0], 2),
-            ("제약", item.limitations[0], 2),
+            ("활용", cctv_summary, 3),
+            ("장점", strength_summary, 2),
+            ("제약", limitation_summary, 2),
             ("권리", rights_text, 2),
         ),
         fonts=ctx["fonts"],
