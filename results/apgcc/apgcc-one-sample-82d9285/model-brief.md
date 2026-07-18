@@ -5,9 +5,9 @@
 - Family: point-based APGCC
 - Backbone: VGG16-BN
 - Parameter count: 17750480
-- Input: one native-resolution RGB validation image
-- Preprocessing: native resolution with ImageNet normalization
-- Coordinate transform: native APGCC (x,y) pixels; discard out-of-bounds points
+- Input: one RGB validation image
+- Preprocessing: official evaluation resize to maximum side 2560, ImageNet normalization, then pad right/bottom to a multiple of 128
+- Coordinate transform: discard padded predictions and map APGCC (x,y) pixels back to the original image
 - Native output: pred_logits, pred_points, and offsets
 - Count derivation: number of confidence-thresholded in-bounds point predictions
 - Zone derivation: count accepted points inside each calibrated image zone

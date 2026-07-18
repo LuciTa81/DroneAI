@@ -232,7 +232,7 @@ def test_benchmark_requires_explicit_user_approval(tmp_path: Path) -> None:
     assert_action_allowed(status, "benchmark", user_approved=True)
 
 
-def test_repository_queue_records_apgcc_one_sample_and_advances_to_benchmark() -> None:
+def test_repository_queue_records_corrected_apgcc_benchmark_for_review() -> None:
     queue = load_model_queue(Path("configs/evaluation/model_queue.json"))
     models = {model["model_id"]: model for model in queue["models"]}
 
@@ -257,14 +257,25 @@ def test_repository_queue_records_apgcc_one_sample_and_advances_to_benchmark() -
         ("rights", "manifest_snapshot"),
         ("preflight", "preflight_record"),
         ("one_sample", "one_sample_result"),
+        ("benchmark", "score"),
+        ("benchmark", "metrics"),
     ]
-    preflight = models["apgcc"]["accepted_evidence"][-2]
+    preflight = models["apgcc"]["accepted_evidence"][2]
     assert preflight["path"] == "apgcc/preflight-6671ab0/preflight.json"
     assert preflight["sha256"] == (
         "a8c894a78c96f629060f7953d40ff10316883bf45aca40ff03bacaf17c2c1370"
     )
-    one_sample = models["apgcc"]["accepted_evidence"][-1]
-    assert one_sample["path"] == "apgcc/apgcc-one-sample-37c5501/result.json"
+    one_sample = models["apgcc"]["accepted_evidence"][3]
+    assert one_sample["path"] == "apgcc/apgcc-one-sample-82d9285/result.json"
     assert one_sample["sha256"] == (
-        "fb674ad54f1f36341c66dd3228a2321263e33d72da352beeecaa946630082a49"
+        "e85afd3a88e07fb12958f6678bfb218f38b922cb7ca6ffa5deabd13c0fe64fe9"
+    )
+    score, metrics = models["apgcc"]["accepted_evidence"][-2:]
+    assert score["path"] == "apgcc/apgcc-ucf-qnrf-val-smoke-82d9285/score.json"
+    assert score["sha256"] == (
+        "ca90b88cf7681709748c51663a6b78db68a49f2044eef8fd74833bc6adb50666"
+    )
+    assert metrics["path"] == "apgcc/apgcc-ucf-qnrf-val-smoke-82d9285/metrics.json"
+    assert metrics["sha256"] == (
+        "919e2068a9df0ade3a6fc3d87855f67fccd2f7df5568304466fd6d0d24dc6b72"
     )

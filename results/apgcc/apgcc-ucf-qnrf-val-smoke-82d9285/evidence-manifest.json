@@ -1,0 +1,165 @@
+{
+  "artifacts": [
+    {
+      "path": "split-source-manifest.json",
+      "sha256": "70e3d0101778e3247d9589cfc6a234451b293feb7d5007472188984ae0594f02"
+    },
+    {
+      "path": "sample-manifest.json",
+      "sha256": "71413a14225543b0f419e78dd6e4ba91ad535929c82f362381f4af675decc385"
+    },
+    {
+      "path": "rights-decision.json",
+      "sha256": "dc2e613b469cfdeeec60e00fd7840893fa4024857d272b7486e85a05c46d1dc2"
+    },
+    {
+      "path": "predictions.csv",
+      "sha256": "ea48a50aa88a737a071e68fa685ed54cff3fd06d647f1f70eb228be977ab89bc"
+    },
+    {
+      "path": "native-output-metadata.json",
+      "sha256": "fa9d18d71fb3ce4bebca865c2cd8e741edfc31510bfa6c1fe7b4490ccf655e39"
+    },
+    {
+      "path": "metrics.json",
+      "sha256": "919e2068a9df0ade3a6fc3d87855f67fccd2f7df5568304466fd6d0d24dc6b72"
+    },
+    {
+      "path": "selection_manifest.json",
+      "sha256": "c76ac3f1dad38d22012f09973d705f9adafa1e1568eec94466b7495d1014bacf"
+    },
+    {
+      "path": "model-brief.md",
+      "sha256": "9c6bf6befcce0fa38f36ae16fa7a8ff617d596ce1b330a70033c868620395ab6"
+    },
+    {
+      "path": "summary.md",
+      "sha256": "93cc05a20ce5871830a8253906aacb45a666d78d1c4d1c6a6583c9ecffbd26bf"
+    },
+    {
+      "path": "environment-summary.json",
+      "sha256": "dd080037f50feaae27d4cbbcfbfdf2dc20b169d973c452f3de8bf273dda69886"
+    },
+    {
+      "path": "figures/selected-01-1963ff1aa6492929.png",
+      "sha256": "5ad8f6af07e294d57ee6c77d64a70b270e6797808bda35d5fe15610ba5632bcc"
+    },
+    {
+      "path": "figures/selected-02-8e0a4dbe072725a1.png",
+      "sha256": "7e1c3b23339af237034b1cb22f93d7576437157d1edf6a42e04caa2cc8c5d67c"
+    },
+    {
+      "path": "figures/selected-03-ad26bfc3e5c98b18.png",
+      "sha256": "96af2ac3dfd54d22b50005fd3c0d1727cba20f44010b8f598929f2c8acb4ad6a"
+    },
+    {
+      "path": "figures/selected-04-419fec40ac00261f.png",
+      "sha256": "8b19302bcf263f9e5f1c9d70f1cc26e36bb9443dad37db4a16430f0770cd4c3b"
+    },
+    {
+      "path": "figures/selected-05-90e81f32d2d93e17.png",
+      "sha256": "cf4face77e0fb5317df6fb5a9270e746e3b70281ae997457e20a14da99da8db9"
+    },
+    {
+      "path": "figures/selected-06-9e3a7ee5803445cf.png",
+      "sha256": "1bb86de5cbdfa9fee58614d4b481b5ef2edf7bcbab9e0ebe1ec47b893662e227"
+    },
+    {
+      "path": "figures/selected-07-ca90cca47cd2592a.png",
+      "sha256": "9f7ee08645a24c21a2a0ab03d3d1435aa1cac6dd5e7964644795a1442ac39129"
+    },
+    {
+      "path": "figures/selected-08-c70e58b5e6bae0d3.png",
+      "sha256": "5d11df261a0f0164edd68c813dade0fb975df29ee5c3581eb6b8ac9c9a7c4904"
+    },
+    {
+      "path": "figures/selected-09-897716f616762b84.png",
+      "sha256": "6325ed7429b077a920d25fbdbb5cb9e6e480dd98fe4ebf79fd87b3b3f2da6e15"
+    },
+    {
+      "path": "figures/selected-10-0a828eb9e6e71267.png",
+      "sha256": "61c80fbd11e7fe5cd2983318d2181237d1ec496810f0158bf50a3e79baaf1f7b"
+    },
+    {
+      "path": "figures/selected-11-320ad007a4340168.png",
+      "sha256": "1ff374147a679a59a21034b41668c655dc73e8c2a36c93f74e844334c78d7af6"
+    },
+    {
+      "path": "figures/selected-12-551885f3fe5f750a.png",
+      "sha256": "93c9b42f107ae77d18baedc2332047c46c0323e3878215c40d24962454b488cb"
+    }
+  ],
+  "checkpoint": {
+    "path": "/workspace/data/checkpoints/apgcc/SHHA_best.pth",
+    "sha256": "cd9aa0f65882c81bb753a4ea8c821e07573b2ae4a31fffd5595fa0a43925cf90",
+    "verified": true
+  },
+  "comparison_claim": {
+    "checkpoint_split_evidence": "The official checkpoint is trained on ShanghaiTech Part A, so no UCF-QNRF validation sample belongs to checkpoint training; the result is cross-domain compatibility evidence only.",
+    "checkpoint_training_split_status": "VERIFIED_DISJOINT",
+    "comparison_scope": "compatibility_smoke",
+    "ranking_eligible": false
+  },
+  "protocol": {
+    "band_bias_max": 400.0,
+    "bias_max": 250.0,
+    "checkpoint_split_evidence": "The official checkpoint is trained on ShanghaiTech Part A, so no UCF-QNRF validation sample belongs to checkpoint training; the result is cross-domain compatibility evidence only.",
+    "checkpoint_training_split_status": "VERIFIED_DISJOINT",
+    "comparison_scope": "compatibility_smoke",
+    "condition_bias_max": 250.0,
+    "dataset_id": "ucf-qnrf-kaggle-apache",
+    "density_band_rules": [
+      "low: count < 500",
+      "medium: 500 <= count < 1500",
+      "high: count >= 1500"
+    ],
+    "expected_samples": 36,
+    "latency_max_ms": 2000.0,
+    "leakage_free": true,
+    "localization_radius": 16.0,
+    "mae_max": 250.0,
+    "protocol_id": "apgcc-official-shha-to-qnrf-val-smoke-v1",
+    "require_clean_git": true,
+    "required_condition_keys": [
+      "source_partition"
+    ],
+    "required_density_bands": [
+      "low",
+      "medium",
+      "high"
+    ],
+    "rights_decision_path": "/workspace/data/results/apgcc/rights-1bd8ca8/rights-decision.json",
+    "rights_decision_sha256": "bbf1199fd11c415bc5643ee7936ad443b08e9c6dbdf35fa6aefe5a42aa3a871b",
+    "rmse_max": 400.0,
+    "run_id": "apgcc-ucf-qnrf-validation-smoke",
+    "sealed_test_access_approved": false,
+    "spatial_direction": "maximize",
+    "spatial_metric_name": "localization_f1",
+    "spatial_target": 0.0,
+    "split_id": "dm-count-upstream-qnrf-val-smoke-36-v1",
+    "split_role": "validation",
+    "split_verified": true,
+    "vram_max_mb": 24000.0,
+    "zone_critical_count": 150.0,
+    "zone_warning_count": 50.0
+  },
+  "reviewed_paths": {
+    "paths": [
+      "/workspace/upstreams/APGCC/README.md",
+      "/workspace/upstreams/APGCC/LICENSE",
+      "/workspace/upstreams/APGCC/apgcc/configs/SHHA_test.yml",
+      "/workspace/upstreams/APGCC/apgcc/models/APGCC.py",
+      "/workspace/upstreams/APGCC/apgcc/models/Decoder.py",
+      "/workspace/upstreams/APGCC/apgcc/models/Encoder.py",
+      "/workspace/upstreams/APGCC/apgcc/models/backbones/vgg.py",
+      "/workspace/upstreams/APGCC/apgcc/engine.py"
+    ],
+    "verified": true
+  },
+  "rights_decision": {
+    "source_path": "/workspace/data/results/apgcc/rights-1bd8ca8/rights-decision.json",
+    "source_sha256": "bbf1199fd11c415bc5643ee7936ad443b08e9c6dbdf35fa6aefe5a42aa3a871b",
+    "verified": true
+  },
+  "schema_version": 1
+}

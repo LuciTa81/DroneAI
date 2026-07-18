@@ -1,0 +1,27 @@
+{
+  "allowed_actions": [
+    "catalog",
+    "license_due_diligence",
+    "synthetic_compatibility_smoke",
+    "research_asset_download",
+    "research_checkpoint_evaluation"
+  ],
+  "ambiguous_components": [
+    "deployment",
+    "derived_weights",
+    "pretrained_weights"
+  ],
+  "blockers": [],
+  "candidate_id": "apgcc-official-shha-to-ucf-qnrf-research-comparison",
+  "component_ids": {
+    "code": "apgcc-official-e3e997bf",
+    "dataset": "ucf-qnrf-kaggle-apache",
+    "deployment": "droneai-festival-deployment-pending",
+    "derived_weights": "droneai-derived-weights-not-created",
+    "pretrained_weights": "apgcc-official-shha-checkpoint"
+  },
+  "manifest_semantic_sha256": "4e91d594fefe82f5451c5417fe37d9ef79d27c691784d89cc4a660719f337db8",
+  "rationale": "No explicit commercial prohibition is recorded, but at least one required permission is absent, silent, pending, or unverified.",
+  "restricted_components": [],
+  "status": "PASS_COMMERCIAL_CANDIDATE"
+}

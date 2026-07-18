@@ -1,0 +1,112 @@
+{
+  "accounting_complete": true,
+  "band_coverage": {
+    "high": {
+      "coverage": 1.0,
+      "expected_samples": 12,
+      "explicit_failures": 0,
+      "recorded_samples": 12,
+      "successful_samples": 12
+    },
+    "low": {
+      "coverage": 1.0,
+      "expected_samples": 12,
+      "explicit_failures": 0,
+      "recorded_samples": 12,
+      "successful_samples": 12
+    },
+    "medium": {
+      "coverage": 1.0,
+      "expected_samples": 12,
+      "explicit_failures": 0,
+      "recorded_samples": 12,
+      "successful_samples": 12
+    }
+  },
+  "band_signed_bias": {
+    "high": -261.6666666666667,
+    "low": -11.75,
+    "medium": -7.5
+  },
+  "condition_coverage": {
+    "density_band": {
+      "high": {
+        "coverage": 1.0,
+        "expected_samples": 12,
+        "explicit_failures": 0,
+        "recorded_samples": 12,
+        "successful_samples": 12
+      },
+      "low": {
+        "coverage": 1.0,
+        "expected_samples": 12,
+        "explicit_failures": 0,
+        "recorded_samples": 12,
+        "successful_samples": 12
+      },
+      "medium": {
+        "coverage": 1.0,
+        "expected_samples": 12,
+        "explicit_failures": 0,
+        "recorded_samples": 12,
+        "successful_samples": 12
+      }
+    },
+    "source_partition": {
+      "official_validation": {
+        "coverage": 1.0,
+        "expected_samples": 36,
+        "explicit_failures": 0,
+        "recorded_samples": 36,
+        "successful_samples": 36
+      }
+    }
+  },
+  "condition_signed_bias": {
+    "density_band": {
+      "high": -261.6666666666667,
+      "low": -11.75,
+      "medium": -7.5
+    },
+    "source_partition": {
+      "official_validation": -93.63888888888889
+    }
+  },
+  "coverage": 1.0,
+  "expected_samples": 36,
+  "explicit_failures": 0,
+  "extra_metric_finite_samples": {
+    "localization_f1": 36,
+    "localization_mean_distance": 36,
+    "localization_precision": 36,
+    "localization_radius": 36,
+    "localization_recall": 36,
+    "point_zone_mae": 36,
+    "zone_mae": 36
+  },
+  "extra_metric_means": {
+    "localization_f1": 0.6831052027940661,
+    "localization_mean_distance": 6.999414387996863,
+    "localization_precision": 0.7319572018137701,
+    "localization_radius": 16.0,
+    "localization_recall": 0.6629285242136265,
+    "point_zone_mae": 73.03472222222223,
+    "zone_mae": 73.03472222222223
+  },
+  "failures": 0,
+  "mae": 266.19444444444446,
+  "mape_reference": 21.515871703688603,
+  "mape_reference_unit": "percent",
+  "median_latency_ms": 67.66282950047753,
+  "peak_vram_mb": 5258.68603515625,
+  "recorded_samples": 36,
+  "rmse": 431.2962052541926,
+  "robustness_pass": true,
+  "signed_bias": -93.63888888888889,
+  "spatial_direction": "maximize",
+  "spatial_mean": 0.6831052027940661,
+  "spatial_metric_name": "localization_f1",
+  "spatial_target": 0.0,
+  "successful_samples": 36,
+  "throughput_fps_batch1": 14.779163203527315
+}

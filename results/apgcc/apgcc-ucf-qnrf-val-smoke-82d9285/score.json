@@ -1,0 +1,109 @@
+{
+  "checks": [
+    {
+      "blocker": true,
+      "category": "data and split integrity",
+      "check_id": "data.split",
+      "description": "Frozen split and no leakage",
+      "earned": 15,
+      "evidence": "",
+      "expected": "",
+      "observed": "split=True; leakage_free=True",
+      "passed": true,
+      "weight": 15
+    },
+    {
+      "blocker": true,
+      "category": "evaluation coverage",
+      "check_id": "coverage.accounting",
+      "description": "Every expected sample has a success or explicit failure record",
+      "earned": 10,
+      "evidence": "",
+      "expected": "records=36; successes+failures=36",
+      "observed": "records=36; successes+failures=36",
+      "passed": true,
+      "weight": 10
+    },
+    {
+      "blocker": false,
+      "category": "count quality",
+      "check_id": "count.quality",
+      "description": "MAE, RMSE, and absolute bias meet frozen targets",
+      "earned": 0.0,
+      "evidence": "",
+      "expected": "",
+      "observed": "mae=266.19444444444446/250.0; rmse=431.2962052541926/400.0; bias=93.63888888888889/250.0",
+      "passed": false,
+      "weight": 20
+    },
+    {
+      "blocker": false,
+      "category": "spatial output quality",
+      "check_id": "spatial.quality",
+      "description": "Family-specific spatial targets pass",
+      "earned": 15,
+      "evidence": "split-source-manifest.json@70e3d0101778e3247d9589cfc6a234451b293feb7d5007472188984ae0594f02; sample-manifest.json@71413a14225543b0f419e78dd6e4ba91ad535929c82f362381f4af675decc385; rights-decision.json@dc2e613b469cfdeeec60e00fd7840893fa4024857d272b7486e85a05c46d1dc2; predictions.csv@ea48a50aa88a737a071e68fa685ed54cff3fd06d647f1f70eb228be977ab89bc; native-output-metadata.json@fa9d18d71fb3ce4bebca865c2cd8e741edfc31510bfa6c1fe7b4490ccf655e39; metrics.json@919e2068a9df0ade3a6fc3d87855f67fccd2f7df5568304466fd6d0d24dc6b72; selection_manifest.json@c76ac3f1dad38d22012f09973d705f9adafa1e1568eec94466b7495d1014bacf; model-brief.md@9c6bf6befcce0fa38f36ae16fa7a8ff617d596ce1b330a70033c868620395ab6; summary.md@93cc05a20ce5871830a8253906aacb45a666d78d1c4d1c6a6583c9ecffbd26bf; environment-summary.json@dd080037f50feaae27d4cbbcfbfdf2dc20b169d973c452f3de8bf273dda69886; figures/selected-01-1963ff1aa6492929.png@5ad8f6af07e294d57ee6c77d64a70b270e6797808bda35d5fe15610ba5632bcc; figures/selected-02-8e0a4dbe072725a1.png@7e1c3b23339af237034b1cb22f93d7576437157d1edf6a42e04caa2cc8c5d67c; figures/selected-03-ad26bfc3e5c98b18.png@96af2ac3dfd54d22b50005fd3c0d1727cba20f44010b8f598929f2c8acb4ad6a; figures/selected-04-419fec40ac00261f.png@8b19302bcf263f9e5f1c9d70f1cc26e36bb9443dad37db4a16430f0770cd4c3b; figures/selected-05-90e81f32d2d93e17.png@cf4face77e0fb5317df6fb5a9270e746e3b70281ae997457e20a14da99da8db9; figures/selected-06-9e3a7ee5803445cf.png@1bb86de5cbdfa9fee58614d4b481b5ef2edf7bcbab9e0ebe1ec47b893662e227; figures/selected-07-ca90cca47cd2592a.png@9f7ee08645a24c21a2a0ab03d3d1435aa1cac6dd5e7964644795a1442ac39129; figures/selected-08-c70e58b5e6bae0d3.png@5d11df261a0f0164edd68c813dade0fb975df29ee5c3581eb6b8ac9c9a7c4904; figures/selected-09-897716f616762b84.png@6325ed7429b077a920d25fbdbb5cb9e6e480dd98fe4ebf79fd87b3b3f2da6e15; figures/selected-10-0a828eb9e6e71267.png@61c80fbd11e7fe5cd2983318d2181237d1ec496810f0158bf50a3e79baaf1f7b; figures/selected-11-320ad007a4340168.png@1ff374147a679a59a21034b41668c655dc73e8c2a36c93f74e844334c78d7af6; figures/selected-12-551885f3fe5f750a.png@93c9b42f107ae77d18baedc2332047c46c0323e3878215c40d24962454b488cb; evidence-manifest.json@9e13220bf0b63b26a8c1c12d89d551905ad1305c823a37d7635730956ad7b3c2",
+      "expected": "mean localization_f1 maximize target=0.0",
+      "observed": "mean=0.6831052027940661",
+      "passed": true,
+      "weight": 15
+    },
+    {
+      "blocker": false,
+      "category": "condition robustness",
+      "check_id": "condition.robustness",
+      "description": "Density and condition targets pass",
+      "earned": 10,
+      "evidence": "split-source-manifest.json@70e3d0101778e3247d9589cfc6a234451b293feb7d5007472188984ae0594f02; sample-manifest.json@71413a14225543b0f419e78dd6e4ba91ad535929c82f362381f4af675decc385; rights-decision.json@dc2e613b469cfdeeec60e00fd7840893fa4024857d272b7486e85a05c46d1dc2; predictions.csv@ea48a50aa88a737a071e68fa685ed54cff3fd06d647f1f70eb228be977ab89bc; native-output-metadata.json@fa9d18d71fb3ce4bebca865c2cd8e741edfc31510bfa6c1fe7b4490ccf655e39; metrics.json@919e2068a9df0ade3a6fc3d87855f67fccd2f7df5568304466fd6d0d24dc6b72; selection_manifest.json@c76ac3f1dad38d22012f09973d705f9adafa1e1568eec94466b7495d1014bacf; model-brief.md@9c6bf6befcce0fa38f36ae16fa7a8ff617d596ce1b330a70033c868620395ab6; summary.md@93cc05a20ce5871830a8253906aacb45a666d78d1c4d1c6a6583c9ecffbd26bf; environment-summary.json@dd080037f50feaae27d4cbbcfbfdf2dc20b169d973c452f3de8bf273dda69886; figures/selected-01-1963ff1aa6492929.png@5ad8f6af07e294d57ee6c77d64a70b270e6797808bda35d5fe15610ba5632bcc; figures/selected-02-8e0a4dbe072725a1.png@7e1c3b23339af237034b1cb22f93d7576437157d1edf6a42e04caa2cc8c5d67c; figures/selected-03-ad26bfc3e5c98b18.png@96af2ac3dfd54d22b50005fd3c0d1727cba20f44010b8f598929f2c8acb4ad6a; figures/selected-04-419fec40ac00261f.png@8b19302bcf263f9e5f1c9d70f1cc26e36bb9443dad37db4a16430f0770cd4c3b; figures/selected-05-90e81f32d2d93e17.png@cf4face77e0fb5317df6fb5a9270e746e3b70281ae997457e20a14da99da8db9; figures/selected-06-9e3a7ee5803445cf.png@1bb86de5cbdfa9fee58614d4b481b5ef2edf7bcbab9e0ebe1ec47b893662e227; figures/selected-07-ca90cca47cd2592a.png@9f7ee08645a24c21a2a0ab03d3d1435aa1cac6dd5e7964644795a1442ac39129; figures/selected-08-c70e58b5e6bae0d3.png@5d11df261a0f0164edd68c813dade0fb975df29ee5c3581eb6b8ac9c9a7c4904; figures/selected-09-897716f616762b84.png@6325ed7429b077a920d25fbdbb5cb9e6e480dd98fe4ebf79fd87b3b3f2da6e15; figures/selected-10-0a828eb9e6e71267.png@61c80fbd11e7fe5cd2983318d2181237d1ec496810f0158bf50a3e79baaf1f7b; figures/selected-11-320ad007a4340168.png@1ff374147a679a59a21034b41668c655dc73e8c2a36c93f74e844334c78d7af6; figures/selected-12-551885f3fe5f750a.png@93c9b42f107ae77d18baedc2332047c46c0323e3878215c40d24962454b488cb; evidence-manifest.json@9e13220bf0b63b26a8c1c12d89d551905ad1305c823a37d7635730956ad7b3c2",
+      "expected": "bands=['low', 'medium', 'high'] abs_bias<=400.0; condition_keys=['source_partition'] abs_bias<=250.0; complete successful group coverage",
+      "observed": "{\"band_coverage\": {\"high\": {\"coverage\": 1.0, \"expected_samples\": 12, \"explicit_failures\": 0, \"recorded_samples\": 12, \"successful_samples\": 12}, \"low\": {\"coverage\": 1.0, \"expected_samples\": 12, \"explicit_failures\": 0, \"recorded_samples\": 12, \"successful_samples\": 12}, \"medium\": {\"coverage\": 1.0, \"expected_samples\": 12, \"explicit_failures\": 0, \"recorded_samples\": 12, \"successful_samples\": 12}}, \"band_signed_bias\": {\"high\": -261.6666666666667, \"low\": -11.75, \"medium\": -7.5}, \"condition_coverage\": {\"density_band\": {\"high\": {\"coverage\": 1.0, \"expected_samples\": 12, \"explicit_failures\": 0, \"recorded_samples\": 12, \"successful_samples\": 12}, \"low\": {\"coverage\": 1.0, \"expected_samples\": 12, \"explicit_failures\": 0, \"recorded_samples\": 12, \"successful_samples\": 12}, \"medium\": {\"coverage\": 1.0, \"expected_samples\": 12, \"explicit_failures\": 0, \"recorded_samples\": 12, \"successful_samples\": 12}}, \"source_partition\": {\"official_validation\": {\"coverage\": 1.0, \"expected_samples\": 36, \"explicit_failures\": 0, \"recorded_samples\": 36, \"successful_samples\": 36}}}, \"condition_signed_bias\": {\"density_band\": {\"high\": -261.6666666666667, \"low\": -11.75, \"medium\": -7.5}, \"source_partition\": {\"official_validation\": -93.63888888888889}}}",
+      "passed": true,
+      "weight": 10
+    },
+    {
+      "blocker": false,
+      "category": "runtime and resources",
+      "check_id": "runtime.resources",
+      "description": "Latency and peak VRAM meet frozen targets",
+      "earned": 10,
+      "evidence": "",
+      "expected": "",
+      "observed": "latency=67.66282950047753/2000.0; vram=5258.68603515625/24000.0",
+      "passed": true,
+      "weight": 10
+    },
+    {
+      "blocker": true,
+      "category": "reproducibility and provenance",
+      "check_id": "provenance.bundle",
+      "description": "Code, data, checkpoint, config, and environment are verified",
+      "earned": 10,
+      "evidence": "split-source-manifest.json@70e3d0101778e3247d9589cfc6a234451b293feb7d5007472188984ae0594f02; sample-manifest.json@71413a14225543b0f419e78dd6e4ba91ad535929c82f362381f4af675decc385; rights-decision.json@dc2e613b469cfdeeec60e00fd7840893fa4024857d272b7486e85a05c46d1dc2; predictions.csv@ea48a50aa88a737a071e68fa685ed54cff3fd06d647f1f70eb228be977ab89bc; native-output-metadata.json@fa9d18d71fb3ce4bebca865c2cd8e741edfc31510bfa6c1fe7b4490ccf655e39; metrics.json@919e2068a9df0ade3a6fc3d87855f67fccd2f7df5568304466fd6d0d24dc6b72; selection_manifest.json@c76ac3f1dad38d22012f09973d705f9adafa1e1568eec94466b7495d1014bacf; model-brief.md@9c6bf6befcce0fa38f36ae16fa7a8ff617d596ce1b330a70033c868620395ab6; summary.md@93cc05a20ce5871830a8253906aacb45a666d78d1c4d1c6a6583c9ecffbd26bf; environment-summary.json@dd080037f50feaae27d4cbbcfbfdf2dc20b169d973c452f3de8bf273dda69886; figures/selected-01-1963ff1aa6492929.png@5ad8f6af07e294d57ee6c77d64a70b270e6797808bda35d5fe15610ba5632bcc; figures/selected-02-8e0a4dbe072725a1.png@7e1c3b23339af237034b1cb22f93d7576437157d1edf6a42e04caa2cc8c5d67c; figures/selected-03-ad26bfc3e5c98b18.png@96af2ac3dfd54d22b50005fd3c0d1727cba20f44010b8f598929f2c8acb4ad6a; figures/selected-04-419fec40ac00261f.png@8b19302bcf263f9e5f1c9d70f1cc26e36bb9443dad37db4a16430f0770cd4c3b; figures/selected-05-90e81f32d2d93e17.png@cf4face77e0fb5317df6fb5a9270e746e3b70281ae997457e20a14da99da8db9; figures/selected-06-9e3a7ee5803445cf.png@1bb86de5cbdfa9fee58614d4b481b5ef2edf7bcbab9e0ebe1ec47b893662e227; figures/selected-07-ca90cca47cd2592a.png@9f7ee08645a24c21a2a0ab03d3d1435aa1cac6dd5e7964644795a1442ac39129; figures/selected-08-c70e58b5e6bae0d3.png@5d11df261a0f0164edd68c813dade0fb975df29ee5c3581eb6b8ac9c9a7c4904; figures/selected-09-897716f616762b84.png@6325ed7429b077a920d25fbdbb5cb9e6e480dd98fe4ebf79fd87b3b3f2da6e15; figures/selected-10-0a828eb9e6e71267.png@61c80fbd11e7fe5cd2983318d2181237d1ec496810f0158bf50a3e79baaf1f7b; figures/selected-11-320ad007a4340168.png@1ff374147a679a59a21034b41668c655dc73e8c2a36c93f74e844334c78d7af6; figures/selected-12-551885f3fe5f750a.png@93c9b42f107ae77d18baedc2332047c46c0323e3878215c40d24962454b488cb; evidence-manifest.json@9e13220bf0b63b26a8c1c12d89d551905ad1305c823a37d7635730956ad7b3c2",
+      "expected": "",
+      "observed": "True",
+      "passed": true,
+      "weight": 10
+    },
+    {
+      "blocker": true,
+      "category": "review artifacts",
+      "check_id": "review.bundle",
+      "description": "Approved model brief and verified budgeted review bundle exist",
+      "earned": 10,
+      "evidence": "split-source-manifest.json@70e3d0101778e3247d9589cfc6a234451b293feb7d5007472188984ae0594f02; sample-manifest.json@71413a14225543b0f419e78dd6e4ba91ad535929c82f362381f4af675decc385; rights-decision.json@dc2e613b469cfdeeec60e00fd7840893fa4024857d272b7486e85a05c46d1dc2; predictions.csv@ea48a50aa88a737a071e68fa685ed54cff3fd06d647f1f70eb228be977ab89bc; native-output-metadata.json@fa9d18d71fb3ce4bebca865c2cd8e741edfc31510bfa6c1fe7b4490ccf655e39; metrics.json@919e2068a9df0ade3a6fc3d87855f67fccd2f7df5568304466fd6d0d24dc6b72; selection_manifest.json@c76ac3f1dad38d22012f09973d705f9adafa1e1568eec94466b7495d1014bacf; model-brief.md@9c6bf6befcce0fa38f36ae16fa7a8ff617d596ce1b330a70033c868620395ab6; summary.md@93cc05a20ce5871830a8253906aacb45a666d78d1c4d1c6a6583c9ecffbd26bf; environment-summary.json@dd080037f50feaae27d4cbbcfbfdf2dc20b169d973c452f3de8bf273dda69886; figures/selected-01-1963ff1aa6492929.png@5ad8f6af07e294d57ee6c77d64a70b270e6797808bda35d5fe15610ba5632bcc; figures/selected-02-8e0a4dbe072725a1.png@7e1c3b23339af237034b1cb22f93d7576437157d1edf6a42e04caa2cc8c5d67c; figures/selected-03-ad26bfc3e5c98b18.png@96af2ac3dfd54d22b50005fd3c0d1727cba20f44010b8f598929f2c8acb4ad6a; figures/selected-04-419fec40ac00261f.png@8b19302bcf263f9e5f1c9d70f1cc26e36bb9443dad37db4a16430f0770cd4c3b; figures/selected-05-90e81f32d2d93e17.png@cf4face77e0fb5317df6fb5a9270e746e3b70281ae997457e20a14da99da8db9; figures/selected-06-9e3a7ee5803445cf.png@1bb86de5cbdfa9fee58614d4b481b5ef2edf7bcbab9e0ebe1ec47b893662e227; figures/selected-07-ca90cca47cd2592a.png@9f7ee08645a24c21a2a0ab03d3d1435aa1cac6dd5e7964644795a1442ac39129; figures/selected-08-c70e58b5e6bae0d3.png@5d11df261a0f0164edd68c813dade0fb975df29ee5c3581eb6b8ac9c9a7c4904; figures/selected-09-897716f616762b84.png@6325ed7429b077a920d25fbdbb5cb9e6e480dd98fe4ebf79fd87b3b3f2da6e15; figures/selected-10-0a828eb9e6e71267.png@61c80fbd11e7fe5cd2983318d2181237d1ec496810f0158bf50a3e79baaf1f7b; figures/selected-11-320ad007a4340168.png@1ff374147a679a59a21034b41668c655dc73e8c2a36c93f74e844334c78d7af6; figures/selected-12-551885f3fe5f750a.png@93c9b42f107ae77d18baedc2332047c46c0323e3878215c40d24962454b488cb; evidence-manifest.json@9e13220bf0b63b26a8c1c12d89d551905ad1305c823a37d7635730956ad7b3c2",
+      "expected": "",
+      "observed": "brief=True; artifacts=True; budget=True",
+      "passed": true,
+      "weight": 10
+    }
+  ],
+  "decision_scope": "research_only",
+  "failed_blockers": [],
+  "generated_at": "2026-07-18T06:35:38.681874+00:00",
+  "schema_version": 2,
+  "score": 80.0,
+  "stage_id": "model-evaluation",
+  "stage_name": "Model-dataset evaluation: apgcc-ucf-qnrf-validation-smoke",
+  "status": "PASS_RESEARCH_ONLY",
+  "threshold": 80
+}
