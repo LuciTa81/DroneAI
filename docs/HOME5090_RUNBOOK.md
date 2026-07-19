@@ -466,6 +466,62 @@ Review all raw metrics, category subscores, limitations, input/output SHA-256
 values, and the independent rights/deployment columns before accepting the
 provisional shortlist. Do not advance the queue or start fine-tuning here.
 
+## Round 1 share-report common scenarios
+
+This report-only lane runs the six accepted frozen checkpoints on the same two
+validation samples: `img_0775` and `img_0221`. It does not expose the test split,
+training, or fine-tuning, and it writes only to the new scenario result root.
+First inspect all twelve pinned commands without creating directories:
+
+```bash
+cd /workspace
+/workspace/.venvs/harness/bin/python scripts/run_round1_report_scenarios.py \
+  --config configs/reporting/round1_dual_scenarios.home5090.json \
+  --output-root /workspace/data/results/round1-report-scenarios-v1 \
+  --dry-run
+```
+
+Confirm that the dry-run lists exactly six models by two samples and that every
+checkpoint, rights decision, manifest, model venv, and upstream path exists.
+Then run the matrix in the existing `crowd` tmux session. The runner stops on the
+first failure and never overwrites a non-empty sample directory:
+
+```bash
+cd /workspace
+/workspace/.venvs/harness/bin/python scripts/run_round1_report_scenarios.py \
+  --config configs/reporting/round1_dual_scenarios.home5090.json \
+  --output-root /workspace/data/results/round1-report-scenarios-v1
+```
+
+After all twelve runs finish, recompute the result and panel hashes without
+starting inference:
+
+```bash
+cd /workspace
+/workspace/.venvs/harness/bin/python scripts/run_round1_report_scenarios.py \
+  --config configs/reporting/round1_dual_scenarios.home5090.json \
+  --output-root /workspace/data/results/round1-report-scenarios-v1 \
+  --verify-only
+```
+
+Finally build a compact, atomic report-input package. This re-hashes the source
+image, annotation, checkpoint, rights decision, split manifest, environment,
+result JSON, and panel before copying only the twelve panels and manifest:
+
+```bash
+cd /workspace
+test ! -e /workspace/data/results/round1-report-scenario-package-v1
+/workspace/.venvs/harness/bin/python scripts/build_round1_scenario_inputs.py \
+  --comparison /workspace/data/results/round1-cctv-comparison-34ad450/comparison.json \
+  --results-root /workspace/data/results \
+  --config configs/reporting/round1_dual_scenarios.json \
+  --output-dir /workspace/data/results/round1-report-scenario-package-v1
+```
+
+Pull only `/workspace/data/results/round1-report-scenario-package-v1`; keep raw
+native outputs, datasets, and checkpoints on the SSD. This lane does not change
+the model queue or authorize deployment.
+
 ## Dataset transfer gate
 
 Do not execute this section until Stage 3C records dataset rights, intended

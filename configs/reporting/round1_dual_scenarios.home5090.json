@@ -1,0 +1,120 @@
+{
+  "schema_version": 1,
+  "model_order": [
+    "steerer",
+    "dm-count",
+    "pet",
+    "mpcount",
+    "apgcc",
+    "csrnet"
+  ],
+  "scenarios": [
+    {"scenario_id": "moderate", "sample_id": "img_0775"},
+    {"scenario_id": "high_density", "sample_id": "img_0221"}
+  ],
+  "models": {
+    "steerer": {
+      "python": "/workspace/.venvs/steerer/bin/python",
+      "runner": "scripts/run_steerer_one_sample.py",
+      "arguments": {
+        "config": "configs/evaluation/steerer_ucf_qnrf_smoke.json",
+        "train-root": "/workspace/data/datasets/ucf-qnrf-kaggle-apache/raw/UCF-QNRF_ECCV18/Train",
+        "upstream-dir": "/workspace/upstreams/STEERER",
+        "split-upstream-dir": "/workspace/upstreams/DM-Count",
+        "train-list": "/workspace/upstreams/DM-Count/preprocess/qnrf_train.txt",
+        "validation-list": "/workspace/upstreams/DM-Count/preprocess/qnrf_val.txt",
+        "checkpoint": "/workspace/data/checkpoints/steerer/QNRF_mae_77.8_mse_138.0_85f71763.pth",
+        "checkpoint-sha256": "85f71763595527e419257d459288e4a784766f41687ff0b859dcff65a151bbec",
+        "rights-decision": "/workspace/data/results/steerer/steerer-rights-20260717T170242Z-79f4c350d359/rights-decision.json",
+        "rights-manifest": "configs/candidates/steerer_ucf_qnrf.candidate.json",
+        "device": "cuda",
+        "long-side-cap": 3072
+      }
+    },
+    "dm-count": {
+      "python": "/workspace/.venvs/dm-count/bin/python",
+      "runner": "scripts/run_dm_count_one_sample.py",
+      "arguments": {
+        "config": "configs/evaluation/dm_count_ucf_qnrf_smoke.json",
+        "train-root": "/workspace/data/datasets/ucf-qnrf-kaggle-apache/raw/UCF-QNRF_ECCV18/Train",
+        "upstream-dir": "/workspace/upstreams/DM-Count",
+        "train-list": "/workspace/upstreams/DM-Count/preprocess/qnrf_train.txt",
+        "validation-list": "/workspace/upstreams/DM-Count/preprocess/qnrf_val.txt",
+        "checkpoint": "/workspace/data/checkpoints/dm-count/cc5f2132/model_qnrf.pth",
+        "checkpoint-sha256": "16ef954a2cef40c66ee664f69273559553b735d5e2c9f90e2444f3c25dd45e05",
+        "rights-decision": "/workspace/data/results/stage-3c/dm-count-ucf-qnrf-83879c8/rights-decision.json",
+        "rights-manifest": "configs/candidates/dm_count_ucf_qnrf.candidate.json",
+        "device": "cuda"
+      }
+    },
+    "pet": {
+      "python": "/workspace/.venvs/pet/bin/python",
+      "runner": "scripts/run_pet_one_sample.py",
+      "arguments": {
+        "config": "configs/evaluation/pet_ucf_qnrf_smoke.json",
+        "train-root": "/workspace/data/datasets/ucf-qnrf-kaggle-apache/raw/UCF-QNRF_ECCV18/Train",
+        "upstream-dir": "/workspace/upstreams/PET",
+        "split-upstream-dir": "/workspace/upstreams/DM-Count",
+        "train-list": "/workspace/upstreams/DM-Count/preprocess/qnrf_train.txt",
+        "validation-list": "/workspace/upstreams/DM-Count/preprocess/qnrf_val.txt",
+        "checkpoint": "/workspace/data/checkpoints/pet/UCF_QNRF.pth",
+        "checkpoint-sha256": "58324f86782051591075a923522f33d245ce97f2b50cc43f618313d884b966ad",
+        "rights-decision": "/workspace/data/results/pet/pet-rights-99bfc15/rights-decision.json",
+        "rights-manifest": "configs/candidates/pet_ucf_qnrf.candidate.json",
+        "device": "cuda"
+      }
+    },
+    "mpcount": {
+      "python": "/workspace/.venvs/mpcount/bin/python",
+      "runner": "scripts/run_mpcount_one_sample.py",
+      "arguments": {
+        "config": "configs/evaluation/mpcount_ucf_qnrf_smoke.json",
+        "train-root": "/workspace/data/datasets/ucf-qnrf-kaggle-apache/raw/UCF-QNRF_ECCV18/Train",
+        "upstream-dir": "/workspace/upstreams/MPCount",
+        "split-upstream-dir": "/workspace/upstreams/DM-Count",
+        "train-list": "/workspace/upstreams/DM-Count/preprocess/qnrf_train.txt",
+        "validation-list": "/workspace/upstreams/DM-Count/preprocess/qnrf_val.txt",
+        "checkpoint": "/workspace/data/checkpoints/mpcount/mpcount_sta_deterministic_6eb06772.pth",
+        "checkpoint-sha256": "4a0ba849ace0ef2bc87364ec8551de4a3e9dca74fad27764c9b948ebf7928eb0",
+        "rights-decision": "/workspace/data/results/mpcount/mpcount-rights-3911238/rights-decision.json",
+        "rights-manifest": "configs/candidates/mpcount_sta_to_ucf_qnrf.candidate.json",
+        "device": "cuda",
+        "patch-size": 3584
+      }
+    },
+    "apgcc": {
+      "python": "/workspace/.venvs/apgcc/bin/python",
+      "runner": "scripts/run_apgcc_one_sample.py",
+      "arguments": {
+        "config": "configs/evaluation/apgcc_ucf_qnrf_smoke.json",
+        "train-root": "/workspace/data/datasets/ucf-qnrf-kaggle-apache/raw/UCF-QNRF_ECCV18/Train",
+        "upstream-dir": "/workspace/upstreams/APGCC",
+        "split-upstream-dir": "/workspace/upstreams/DM-Count",
+        "train-list": "/workspace/upstreams/DM-Count/preprocess/qnrf_train.txt",
+        "validation-list": "/workspace/upstreams/DM-Count/preprocess/qnrf_val.txt",
+        "checkpoint": "/workspace/data/checkpoints/apgcc/SHHA_best.pth",
+        "checkpoint-sha256": "cd9aa0f65882c81bb753a4ea8c821e07573b2ae4a31fffd5595fa0a43925cf90",
+        "rights-decision": "/workspace/data/results/apgcc/rights-1bd8ca8/rights-decision.json",
+        "rights-manifest": "configs/candidates/apgcc_shha_to_ucf_qnrf.candidate.json",
+        "device": "cuda"
+      }
+    },
+    "csrnet": {
+      "python": "/workspace/.venvs/harness/bin/python",
+      "runner": "scripts/run_csrnet_one_sample.py",
+      "arguments": {
+        "config": "configs/evaluation/csrnet_ucf_qnrf_smoke.json",
+        "train-root": "/workspace/data/datasets/ucf-qnrf-kaggle-apache/raw/UCF-QNRF_ECCV18/Train",
+        "upstream-dir": "/workspace/upstreams/CSRNet-pytorch",
+        "split-upstream-dir": "/workspace/upstreams/DM-Count",
+        "train-list": "/workspace/upstreams/DM-Count/preprocess/qnrf_train.txt",
+        "validation-list": "/workspace/upstreams/DM-Count/preprocess/qnrf_val.txt",
+        "checkpoint": "/workspace/data/checkpoints/csrnet/safe/csrnet-official-shha-mae66.4-state-dict.pth",
+        "checkpoint-sha256": "7093f29f1469fb4e3a80781fda03665848689ada59c5a13d1b49940b230755e6",
+        "rights-decision": "/workspace/data/results/csrnet/csrnet-rights-e0cebe3/rights-decision.json",
+        "rights-manifest": "configs/candidates/csrnet_shha_to_ucf_qnrf.candidate.json",
+        "device": "cuda"
+      }
+    }
+  }
+}

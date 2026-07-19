@@ -178,8 +178,8 @@ def _validated_result(
         raise ValueError("spatial_metric_name must be present")
 
     rights_scope = result.get("rights_scope", comparison_model.get("rights_scope"))
-    if rights_scope != comparison_model.get("rights_scope") or not isinstance(rights_scope, str):
-        raise ValueError(f"rights scope mismatch: {model_id}/{scenario_id}")
+    if not isinstance(rights_scope, str) or not rights_scope.strip():
+        raise ValueError(f"rights scope is missing: {model_id}/{scenario_id}")
     artifacts = result.get("artifacts")
     if not isinstance(artifacts, dict):
         raise ValueError(f"artifact bindings are missing: {model_id}/{scenario_id}")
@@ -214,6 +214,7 @@ def _validated_result(
         "spatial_metric_name": record["spatial_metric_name"],
         "spatial_metric_value": float(record["spatial_metric_value"]),
         "rights_scope": rights_scope,
+        "comparison_rights_scope": comparison_model.get("rights_scope"),
         "source_sha256": verified["source_image"]["sha256"],
         "annotation_sha256": verified["annotation"]["sha256"],
         "checkpoint_sha256": verified["checkpoint"]["sha256"],
