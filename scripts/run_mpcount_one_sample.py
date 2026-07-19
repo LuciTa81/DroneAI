@@ -21,6 +21,7 @@ from droneai.evaluation_metrics import evaluate_sample
 from droneai.evaluation_panels import render_review_panel
 from droneai.integrity import sha256_file
 from droneai.model_brief import write_model_brief
+from droneai.one_sample_evidence import build_artifact_bindings
 from droneai.mpcount_adapter import MPCountAdapter
 from droneai.mpcount_smoke import (
     load_mpcount_smoke_config,
@@ -192,6 +193,17 @@ def main(argv: Sequence[str] | None = None) -> int:
             zone_critical_count=float(targets["zone_critical_count"]),
             category="one_sample_compatibility",
         )
+    artifacts = None
+    if panel_path is not None:
+        artifacts = build_artifact_bindings(
+            sample=sample,
+            split_manifest_path=split_manifest,
+            checkpoint_path=paths["checkpoint"],
+            checkpoint_sha256=brief.checkpoint_sha256,
+            rights_decision_path=paths["rights"],
+            environment_path=environment_path,
+            panel_path=panel_path,
+        )
     passed = prediction.failure_state is None and technical_score == 100.0
     result = {
         "schema_version": 1,
@@ -230,6 +242,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         "panel": None
         if panel_path is None
         else {"path": panel_path.name, "sha256": sha256_file(panel_path)},
+        "artifacts": artifacts,
     }
     write_json(output / "result.json", result)
     print(

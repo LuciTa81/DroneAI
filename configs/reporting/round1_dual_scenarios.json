@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "dataset_id": "ucf-qnrf-kaggle-apache",
+  "split_id": "dm-count-upstream-qnrf-val-smoke-36-v1",
+  "split_role": "validation",
+  "expected_samples": 36,
+  "model_order": [
+    "steerer",
+    "dm-count",
+    "pet",
+    "mpcount",
+    "apgcc",
+    "csrnet"
+  ],
+  "scenarios": {
+    "moderate": {
+      "sample_id": "img_0775",
+      "ground_truth_count": 195.0,
+      "label": "적정 인원 공통 장면"
+    },
+    "high_density": {
+      "sample_id": "img_0221",
+      "ground_truth_count": 1762.0,
+      "label": "고밀도 공통 장면"
+    }
+  },
+  "result_paths": {
+    "steerer": {
+      "moderate": "round1-report-scenarios-v1/steerer/img_0775",
+      "high_density": "round1-report-scenarios-v1/steerer/img_0221"
+    },
+    "dm-count": {
+      "moderate": "round1-report-scenarios-v1/dm-count/img_0775",
+      "high_density": "round1-report-scenarios-v1/dm-count/img_0221"
+    },
+    "pet": {
+      "moderate": "round1-report-scenarios-v1/pet/img_0775",
+      "high_density": "round1-report-scenarios-v1/pet/img_0221"
+    },
+    "mpcount": {
+      "moderate": "round1-report-scenarios-v1/mpcount/img_0775",
+      "high_density": "round1-report-scenarios-v1/mpcount/img_0221"
+    },
+    "apgcc": {
+      "moderate": "round1-report-scenarios-v1/apgcc/img_0775",
+      "high_density": "round1-report-scenarios-v1/apgcc/img_0221"
+    },
+    "csrnet": {
+      "moderate": "round1-report-scenarios-v1/csrnet/img_0775",
+      "high_density": "round1-report-scenarios-v1/csrnet/img_0221"
+    }
+  }
+}

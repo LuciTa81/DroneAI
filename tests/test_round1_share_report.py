@@ -44,32 +44,17 @@ def test_readability_contract_has_no_small_report_text() -> None:
     assert contract["header_footer_size"] >= 8
 
 
-def test_report_page_contract_has_six_model_detail_pages() -> None:
-    pages = report_page_contract()
-    assert pages == (
-        ("cover",),
-        ("summary",),
-        ("evaluation",),
-        ("steerer",),
-        ("dm-count",),
-        ("pet",),
-        ("mpcount",),
-        ("apgcc",),
-        ("csrnet",),
-        ("performance",),
-        ("rights",),
-        ("conclusion",),
-    )
+def test_report_page_contract_has_two_scenarios_per_model() -> None:
+    expected = [("cover",), ("summary",), ("evaluation",)]
+    for model_id in MODEL_PAGE_ORDER:
+        expected.extend(((model_id, "moderate"), (model_id, "high_density")))
+    expected.extend((("performance",), ("rights",), ("conclusion",)))
+    assert report_page_contract() == tuple(expected)
 
 
 def test_model_page_asset_contract_covers_every_model() -> None:
     assert model_page_asset_contract() == {
-        "steerer": ("points", "steerer"),
-        "dm-count": ("density", "dm-count"),
-        "pet": ("points", "pet"),
-        "mpcount": ("density", "mpcount"),
-        "apgcc": ("points", "apgcc"),
-        "csrnet": ("density", "csrnet"),
+        model_id: ("moderate", "high_density") for model_id in MODEL_PAGE_ORDER
     }
 
 
@@ -101,101 +86,79 @@ def test_every_model_has_a_concise_output_note() -> None:
         assert len(note) <= 115
 
 
-def _panel(
-    model_id: str,
-    role: str,
-    path: str,
-    digest: str,
-    *,
-    sample_id: str,
-) -> dict[str, object]:
-    return {
-        "model_id": model_id,
-        "role": role,
-        "sample_id": sample_id,
-        "category": "failure" if role == "limitation" else "best",
-        "density_band": "low",
-        "ground_truth_count": 254.0,
-        "predicted_count": 250.0,
-        "normalized_error": 0.0157,
-        "spatial_metric_name": "game_l1",
-        "spatial_metric_value": 5.0,
-        "source_path": f"{model_id}/run/{path}",
-        "source_sha256": digest,
-        "packaged_path": path,
-    }
-
-
 def make_assets(tmp_path: Path) -> Path:
     root = tmp_path / "assets"
-    image_dir = root / "images"
-    image_dir.mkdir(parents=True)
+    root.mkdir(parents=True)
     assets: list[dict[str, str]] = []
-    models: dict[str, object] = {}
-    records: dict[tuple[str, str], dict[str, object]] = {}
-    for model_index, model_id in enumerate(MODELS):
-        model_records = {}
-        for role_index, role in enumerate(("lower_error", "limitation")):
-            relative = f"images/{model_id}--{role}.png"
+    scenarios: dict[str, object] = {}
+    scenario_specs = {
+        "moderate": ("img_0775", 195.0, "적정 인원 공통 장면"),
+        "high_density": ("img_0221", 1762.0, "고밀도 공통 장면"),
+    }
+    for scenario_index, (scenario_id, (sample_id, gt, label)) in enumerate(
+        scenario_specs.items()
+    ):
+        model_rows: dict[str, object] = {}
+        for model_index, model_id in enumerate(MODEL_PAGE_ORDER):
+            relative = f"panels/{model_id}/{scenario_id}.png"
             target = root / relative
+            target.parent.mkdir(parents=True, exist_ok=True)
             image = Image.new(
                 "RGB",
-                (1200, 260),
-                (28 + model_index * 22, 70 + role_index * 60, 120),
+                (1200, 520),
+                (28 + model_index * 22, 70 + scenario_index * 60, 120),
             )
             image.save(target)
             digest = sha256_file(target)
-            assets.append(
-                {
-                    "packaged_path": relative,
-                    "packaged_sha256": digest,
-                    "source_path": f"{model_id}/run/{relative}",
-                    "source_sha256": digest,
-                }
-            )
-            record = _panel(
-                model_id,
-                role,
-                relative,
-                digest,
-                sample_id=f"{model_id}_{role}",
-            )
-            model_records[role] = record
-            records[(model_id, role)] = record
-        models[model_id] = {
-            **model_records,
-            "failure_candidates": [model_records["limitation"]],
+            assets.append({"path": relative, "sha256": digest})
+            pred = gt + model_index + scenario_index + 1
+            model_rows[model_id] = {
+                "model_id": model_id,
+                "sample_id": sample_id,
+                "ground_truth_count": gt,
+                "predicted_count": pred,
+                "absolute_error": abs(pred - gt),
+                "normalized_error": abs(pred - gt) / gt,
+                "latency_ms": 10.0 + model_index,
+                "peak_vram_mb": 1000.0 + model_index,
+                "spatial_metric_name": "localization_f1"
+                if model_id in {"pet", "apgcc"}
+                else "game_l1",
+                "spatial_metric_value": 0.75
+                if model_id in {"pet", "apgcc"}
+                else 12.0,
+                "rights_scope": "PASS_RESEARCH_ONLY"
+                if model_id == "pet"
+                else "PASS_COMMERCIAL_CANDIDATE",
+                "comparison_rights_scope": "PASS_RESEARCH_ONLY"
+                if model_id == "pet"
+                else "PASS_COMMERCIAL_CANDIDATE",
+                "source_sha256": "a" * 64,
+                "annotation_sha256": "b" * 64,
+                "checkpoint_sha256": "c" * 64,
+                "rights_decision_sha256": "d" * 64,
+                "split_manifest_sha256": "e" * 64,
+                "environment_sha256": "f" * 64,
+                "panel_sha256": digest,
+                "result_sha256": str(model_index) * 64,
+                "packaged_panel_path": relative,
+            }
+        scenarios[scenario_id] = {
+            "sample_id": sample_id,
+            "ground_truth_count": gt,
+            "label": label,
+            "models": model_rows,
         }
-
-    density = {
-        model_id: {
-            **records[(model_id, "lower_error")],
-            "role": "density_comparison",
-            "sample_id": "img_0097",
-        }
-        for model_id in ("dm-count", "steerer", "mpcount", "csrnet")
-    }
-    points = {
-        model_id: {
-            **records[(model_id, "limitation")],
-            "role": "points_comparison",
-            "sample_id": "img_0062",
-        }
-        for model_id in ("steerer", "pet", "apgcc")
-    }
     manifest = root / "assets-manifest.json"
     manifest.write_text(
         json.dumps(
             {
-                "schema_version": 1,
+                "schema_version": 2,
+                "status": "PASS_RESEARCH_ONLY",
                 "comparison_sha256": sha256_file(COMPARISON_PATH),
-                "models": models,
-                "comparisons": {
-                    "density_sample_id": "img_0097",
-                    "density": density,
-                    "points_sample_id": "img_0062",
-                    "points": points,
-                },
+                "model_order": list(MODEL_PAGE_ORDER),
+                "scenario_order": ["moderate", "high_density"],
+                "scenarios": scenarios,
                 "assets": assets,
             },
             indent=2,
@@ -206,7 +169,7 @@ def make_assets(tmp_path: Path) -> Path:
     return manifest
 
 
-def test_share_report_is_exact_twelve_page_a4_portrait(tmp_path: Path) -> None:
+def test_share_report_is_exact_eighteen_page_a4_portrait(tmp_path: Path) -> None:
     manifest = make_assets(tmp_path)
     output = build_round1_share_pdf(
         COMPARISON_PATH,
@@ -217,14 +180,14 @@ def test_share_report_is_exact_twelve_page_a4_portrait(tmp_path: Path) -> None:
     )
 
     reader = PdfReader(output)
-    assert len(reader.pages) == 12
+    assert len(reader.pages) == 18
     for page in reader.pages:
         assert float(page.mediabox.height) > float(page.mediabox.width)
         assert abs(float(page.mediabox.width) - A4[0]) < 1
         assert abs(float(page.mediabox.height) - A4[1]) < 1
 
 
-def test_each_model_page_has_its_output_image_and_no_5090_cover(
+def test_each_model_scenario_page_has_common_image_metrics_and_no_5090_cover(
     tmp_path: Path,
 ) -> None:
     manifest = make_assets(tmp_path)
@@ -238,18 +201,28 @@ def test_each_model_page_has_its_output_image_and_no_5090_cover(
 
     reader = PdfReader(output)
     assert "5090" not in (reader.pages[0].extract_text() or "")
-    for page, model_id in zip(reader.pages[3:9], MODEL_PAGE_ORDER, strict=True):
+    expected = [
+        (model_id, scenario_id)
+        for model_id in MODEL_PAGE_ORDER
+        for scenario_id in ("moderate", "high_density")
+    ]
+    for page, (model_id, scenario_id) in zip(reader.pages[3:15], expected, strict=True):
         text = page.extract_text() or ""
         normalized = " ".join(text.split())
+        sample_id = "img_0775" if scenario_id == "moderate" else "img_0221"
         assert DISPLAY_NAMES[model_id] in text
+        assert sample_id in text
         assert " ".join(model_output_note(model_id).split()) in normalized
-        assert "MAE" in text
-        assert "RMSE" in text
-        assert "FPS" in text
-        assert "VRAM" in text
+        assert "GT" in text
+        assert "Pred" in text
+        assert "절대오차" in text
+        assert "오차율" in text
         assert "PASS_" in text
         assert "..." not in text
         assert len(page.images) >= 1
+    all_text = "\n".join(page.extract_text() or "" for page in reader.pages)
+    for forbidden in ("강점 사례", "best case", "winner"):
+        assert forbidden not in all_text
 
 
 def test_share_report_contains_required_claim_boundaries(tmp_path: Path) -> None:
@@ -299,7 +272,7 @@ def test_share_report_contains_every_model_output_note(tmp_path: Path) -> None:
 def test_share_report_rejects_changed_asset_hash(tmp_path: Path) -> None:
     manifest = make_assets(tmp_path)
     payload = json.loads(manifest.read_text(encoding="utf-8"))
-    target = manifest.parent / payload["assets"][0]["packaged_path"]
+    target = manifest.parent / payload["assets"][0]["path"]
     target.write_bytes(b"changed")
 
     with pytest.raises(ValueError, match="asset hash mismatch"):
@@ -336,5 +309,5 @@ def test_share_report_cli_returns_structured_result(
     result = json.loads(capsys.readouterr().out)
     assert code == 0
     assert result["status"] == "PASS_RESEARCH_ONLY"
-    assert result["pages"] == 12
+    assert result["pages"] == 18
     assert result["sha256"] == sha256_file(output)
