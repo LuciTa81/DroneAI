@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+import math
 import re
 from pathlib import Path
 from typing import Callable
@@ -19,21 +21,18 @@ from droneai.round1_pdf_report import (
     GREEN,
     INK,
     LINE,
-    MODEL_IDS,
     MUTED,
     NAVY,
     PAPER,
     RED,
     _fmt,
-    _panel_caption,
-    _validate_inputs,
     draw_wrapped,
     register_korean_fonts,
 )
 
 
 PAGE_SIZE = A4
-PAGE_COUNT = 12
+PAGE_COUNT = 18
 WIDTH, HEIGHT = PAGE_SIZE
 MARGIN = 42
 CONTENT_WIDTH = WIDTH - MARGIN * 2
@@ -66,14 +65,7 @@ MODEL_OUTPUT_NOTES = {
     "csrnet": "출력 해석(CSRNet): 비음수 density 합이 count이며 흐린 분포와 zone 오차를 확인한다.",
 }
 MODEL_PAGE_ORDER = ("steerer", "dm-count", "pet", "mpcount", "apgcc", "csrnet")
-MODEL_PAGE_ASSETS = {
-    "steerer": ("points", "steerer"),
-    "dm-count": ("density", "dm-count"),
-    "pet": ("points", "pet"),
-    "mpcount": ("density", "mpcount"),
-    "apgcc": ("points", "apgcc"),
-    "csrnet": ("density", "csrnet"),
-}
+SCENARIO_ORDER = ("moderate", "high_density")
 MODEL_PAGE_SUMMARIES = {
     "steerer": (
         "Density heatmap과 point 후보를 함께 제공해 zone 밀집도와 위치 확인에 활용한다.",
@@ -121,20 +113,11 @@ def readability_contract() -> dict[str, float]:
 
 
 def report_page_contract() -> tuple[tuple[str, ...], ...]:
-    return (
-        ("cover",),
-        ("summary",),
-        ("evaluation",),
-        ("steerer",),
-        ("dm-count",),
-        ("pet",),
-        ("mpcount",),
-        ("apgcc",),
-        ("csrnet",),
-        ("performance",),
-        ("rights",),
-        ("conclusion",),
-    )
+    pages: list[tuple[str, ...]] = [("cover",), ("summary",), ("evaluation",)]
+    for model_id in MODEL_PAGE_ORDER:
+        pages.extend((model_id, scenario_id) for scenario_id in SCENARIO_ORDER)
+    pages.extend((("performance",), ("rights",), ("conclusion",)))
+    return tuple(pages)
 
 
 def model_table_height_contract() -> dict[str, float]:
@@ -149,7 +132,7 @@ def model_output_note(model_id: str) -> str:
 
 
 def model_page_asset_contract() -> dict[str, tuple[str, str]]:
-    return dict(MODEL_PAGE_ASSETS)
+    return {model_id: SCENARIO_ORDER for model_id in MODEL_PAGE_ORDER}
 
 
 def _background(canvas: canvas_module.Canvas) -> None:
@@ -570,90 +553,168 @@ def _draw_model_detail_card(
         ) - 7
 
 
-def _page_model_detail(
+def _sample_spatial_text(panel: dict[str, object]) -> str:
+    name = str(panel["spatial_metric_name"])
+    value = float(panel["spatial_metric_value"])
+    label = {
+        "game_l1": "GAME L1",
+        "zone_mae": "Zone MAE",
+        "localization_f1": "Loc. F1",
+    }.get(name, name)
+    return f"{label} {value:.2f}"
+
+
+def _draw_sample_metrics(
+    c,
+    panel: dict[str, object],
+    *,
+    fonts: tuple[str, str],
+) -> None:
+    regular, bold = fonts
+    metrics = (
+        ("GT", _fmt(panel["ground_truth_count"], 1)),
+        ("Pred", _fmt(panel["predicted_count"], 1)),
+        ("절대오차", _fmt(panel["absolute_error"], 1)),
+        ("오차율", f"{float(panel['normalized_error']) * 100:.2f}%"),
+        ("공간 지표", _sample_spatial_text(panel)),
+        ("지연시간", f"{float(panel['latency_ms']):.1f} ms"),
+    )
+    width = CONTENT_WIDTH / len(metrics)
+    for index, (label, value) in enumerate(metrics):
+        x = MARGIN + index * width
+        c.setFillColor(white if index % 2 == 0 else SOFT_BLUE)
+        c.setStrokeColor(LINE)
+        c.rect(x, 635, width, 54, fill=1, stroke=1)
+        c.setFont(bold, 8.5)
+        c.setFillColor(BLUE)
+        c.drawString(x + 7, 672, label)
+        draw_wrapped(
+            c,
+            value,
+            x + 7,
+            652,
+            width - 14,
+            font=regular,
+            size=9.5,
+            leading=11,
+            max_lines=2,
+        )
+
+
+def _aggregate_line(row: dict[str, object]) -> str:
+    aggregate = row["aggregates"]
+    return (
+        f"36장: MAE {_fmt(aggregate['mae'], 1)} / RMSE {_fmt(aggregate['rmse'], 1)} / "
+        f"FPS {_fmt(aggregate['throughput_fps_batch1'], 1)} / "
+        f"VRAM {float(aggregate['peak_vram_mb']) / 1024:.1f} GB"
+    )
+
+
+def _page_model_scenario(
     c,
     ctx,
     *,
     model_id: str,
+    scenario_id: str,
     number: str,
 ) -> None:
     regular, bold = ctx["fonts"]
     item: ModelContent = ctx["content_by_id"][model_id]
-    row = ctx["comparison_by_id"][model_id]
+    aggregate_row = ctx["comparison_by_id"][model_id]
+    scenario = ctx["assets"]["scenarios"][scenario_id]
+    panel = scenario["models"][model_id]
     draw_section_title(
         c,
         number,
-        f"{DISPLAY_NAMES[model_id]} 모델 상세",
-        f"{item.family} | {item.backbone}",
+        f"{DISPLAY_NAMES[model_id]} | {scenario['label']}",
+        f"공통 입력 {scenario['sample_id']} | 샘플 1장 결과와 36장 집계 결과를 구분해 제시",
         regular_font=regular,
         bold_font=bold,
     )
-    _draw_model_metrics(c, row, fonts=ctx["fonts"])
-
-    family, asset_model_id = MODEL_PAGE_ASSETS[model_id]
-    panel = ctx["assets"]["comparisons"][family][asset_model_id]
+    _draw_sample_metrics(c, panel, fonts=ctx["fonts"])
     caption = (
-        f"그림 {int(number)}-1. {_panel_caption(panel)}\n"
+        f"그림 {int(number)}-1. {scenario['label']} {panel['sample_id']} | "
+        f"GT={float(panel['ground_truth_count']):.0f} | "
+        f"Pred={float(panel['predicted_count']):.1f} | {_sample_spatial_text(panel)}\n"
         f"{model_output_note(model_id)}"
     )
     draw_figure(
         c,
-        ctx["asset_root"] / panel["packaged_path"],
+        ctx["asset_root"] / panel["packaged_panel_path"],
         caption,
         MARGIN,
-        350,
+        310,
         CONTENT_WIDTH,
-        245,
+        292,
         regular_font=regular,
     )
 
     card_gap = 12
     card_width = (CONTENT_WIDTH - card_gap) / 2
+    cctv_summary, strength_summary, limitation_summary = MODEL_PAGE_SUMMARIES[model_id]
+    rights_text = (
+        f"실행 {panel['rights_scope']} | 비교표 {panel['comparison_rights_scope']} | "
+        "배포 권리 별도 확인"
+    )
+    c.setFillColor(SOFT_CYAN)
+    c.setStrokeColor(CYAN)
+    c.roundRect(MARGIN, 282, CONTENT_WIDTH, 22, 3, fill=1, stroke=1)
+    c.setFont(regular, TABLE_BODY_SIZE)
+    c.setFillColor(NAVY)
+    c.drawString(MARGIN + 8, 289, f"권리 범위 | {rights_text}")
+    if scenario_id == "moderate":
+        left_title = "구조·입출력"
+        left_entries = (
+            ("입력", item.input, 3),
+            ("출력", item.native_output, 3),
+            ("Count", item.count_method, 3),
+        )
+        right_title = "36장 집계·관제"
+        right_entries = (
+            ("집계", _aggregate_line(aggregate_row), 3),
+            ("활용", cctv_summary, 3),
+            ("특성", strength_summary, 2),
+        )
+    else:
+        left_title = "고밀도 출력 해석"
+        left_entries = (
+            ("출력", model_output_note(model_id), 5),
+            ("활용", cctv_summary, 3),
+            ("특성", strength_summary, 2),
+        )
+        right_title = "제약·36장 집계"
+        right_entries = (
+            ("제약", limitation_summary, 3),
+            ("집계", _aggregate_line(aggregate_row), 3),
+        )
     _draw_model_detail_card(
         c,
         x=MARGIN,
         y=72,
         width=card_width,
-        height=246,
-        title="구조·입출력",
-        entries=(
-            ("입력", item.input, 3),
-            ("출력", item.native_output, 3),
-            ("Count", item.count_method, 3),
-        ),
+        height=198,
+        title=left_title,
+        entries=left_entries,
         fonts=ctx["fonts"],
     )
-    rights_text = (
-        "PASS_RESEARCH_ONLY / 제품 lane 제외"
-        if model_id == "pet"
-        else f"{row['rights_scope']} / 배포 권리 확인 필요"
-    )
-    cctv_summary, strength_summary, limitation_summary = MODEL_PAGE_SUMMARIES[
-        model_id
-    ]
     _draw_model_detail_card(
         c,
         x=MARGIN + card_width + card_gap,
         y=72,
         width=card_width,
-        height=246,
-        title="관제 활용·제약·권리",
-        entries=(
-            ("활용", cctv_summary, 3),
-            ("장점", strength_summary, 2),
-            ("제약", limitation_summary, 2),
-            ("권리", rights_text, 2),
-        ),
+        height=198,
+        title=right_title,
+        entries=right_entries,
         fonts=ctx["fonts"],
     )
 
 
 def _page_performance(c, ctx) -> None:
     regular, bold = ctx["fonts"]
-    draw_section_title(c, "09", "성능 비교와 해석", "Count 정확도, 공간 출력, 속도와 자원 사용량을 함께 본다.", regular_font=regular, bold_font=bold)
+    draw_section_title(c, "15", "성능 비교와 해석", "Count 정확도, 공간 출력, 속도와 자원 사용량을 함께 본다.", regular_font=regular, bold_font=bold)
     c.setFont(bold, 9)
     c.setFillColor(NAVY)
-    c.drawString(MARGIN, 690, "표 9-1. UCF-QNRF validation 36장 비교 결과")
+    c.drawString(MARGIN, 690, "표 15-1. UCF-QNRF validation 36장 비교 결과")
     rows = [["Model", "기술 점수", "MAE", "RMSE", "공간 지표", "FPS", "VRAM"]]
     ordered = sorted(ctx["comparison"]["models"], key=lambda row: row["technical_order"])
     for row in ordered:
@@ -668,7 +729,7 @@ def _page_performance(c, ctx) -> None:
             f"{float(aggregate['peak_vram_mb']) / 1024:.1f} GB",
         ])
     y = draw_report_table(c, rows, (70, 70, 61, 61, 105, 60, 84), MARGIN, 675, row_height=52, fonts=ctx["fonts"])
-    _section_label(c, "9.1 결과 해석", MARGIN, y - 28, bold_font=bold)
+    _section_label(c, "15.1 결과 해석", MARGIN, y - 28, bold_font=bold)
     analysis = (
         "STEERER는 MAE 71.6, RMSE 98.0, zone MAE 19.8, localization F1 0.80으로 출력 기능과 공간 정확도의 균형이 가장 좋았다.",
         "DM-Count는 MAE 154.3이지만 14.4 FPS와 8.8 GB 수준의 VRAM으로 density 기반 CCTV baseline 후보가 된다.",
@@ -736,10 +797,10 @@ def _status_short(status: str) -> str:
 
 def _page_rights(c, ctx) -> None:
     regular, bold = ctx["fonts"]
-    draw_section_title(c, "10", "상용화 권리 및 CCTV 적용 판단", "기술 성능과 component-level 권리를 독립적으로 판단한다.", regular_font=regular, bold_font=bold)
+    draw_section_title(c, "16", "상용화 권리 및 CCTV 적용 판단", "기술 성능과 component-level 권리를 독립적으로 판단한다.", regular_font=regular, bold_font=bold)
     c.setFont(bold, 9)
     c.setFillColor(NAVY)
-    c.drawString(MARGIN, 690, "표 10-1. 코드·데이터·weight·deployment 권리 상태")
+    c.drawString(MARGIN, 690, "표 16-1. 코드·데이터·weight·deployment 권리 상태")
     rows = [["Model", "Code", "Dataset", "Pretrained", "Derived", "Deploy", "판단"]]
     ordered = sorted(ctx["comparison"]["models"], key=lambda row: row["technical_order"])
     for row in ordered:
@@ -754,7 +815,7 @@ def _page_rights(c, ctx) -> None:
             "연구 비교" if row["model_id"] == "pet" else "후보 / 확인 필요",
         ])
     y = draw_report_table(c, rows, (50, 70, 70, 74, 67, 67, 113), MARGIN, 675, row_height=52, fonts=ctx["fonts"])
-    _section_label(c, "10.1 고정형 CCTV 적용", MARGIN, y - 28, bold_font=bold)
+    _section_label(c, "16.1 고정형 CCTV 적용", MARGIN, y - 28, bold_font=bold)
     guidance = (
         "카메라마다 ROI, perspective, 실제 zone 면적과 density threshold를 사전 calibration한다.",
         "인접 CCTV overlap에는 ownership mask를 고정해 한쪽 카메라만 count하도록 하고, 경계 통과는 시간 기반 보정 규칙으로 검증한다.",
@@ -766,8 +827,8 @@ def _page_rights(c, ctx) -> None:
 
 def _page_conclusion(c, ctx) -> None:
     regular, bold = ctx["fonts"]
-    draw_section_title(c, "11", "최종 추천과 다음 단계", "Fine-tuning보다 먼저 CCTV calibration과 field validation을 진행한다.", regular_font=regular, bold_font=bold)
-    _section_label(c, "11.1 최종 추천", MARGIN, 690, bold_font=bold)
+    draw_section_title(c, "17", "최종 추천과 다음 단계", "Fine-tuning보다 먼저 CCTV calibration과 field validation을 진행한다.", regular_font=regular, bold_font=bold)
+    _section_label(c, "17.1 최종 추천", MARGIN, 690, bold_font=bold)
     recommendation = (
         "제품 검증 1순위: STEERER - 낮은 count/zone 오차와 density+point 출력의 조합.",
         "제품 검증 2순위: DM-Count - 해석 가능한 density heatmap과 비교적 높은 처리 속도.",
@@ -775,7 +836,7 @@ def _page_conclusion(c, ctx) -> None:
         "MPCount, APGCC, CSRNet은 현재 cross-domain 결과에서 보조 비교군으로 유지.",
     )
     y = _bullets(c, recommendation, MARGIN, 660, CONTENT_WIDTH, regular_font=regular, bold_font=bold, leading=19)
-    _section_label(c, "11.2 실행 순서", MARGIN, y - 5, bold_font=bold)
+    _section_label(c, "17.2 실행 순서", MARGIN, y - 5, bold_font=bold)
     roadmap = (
         "고정형 CCTV별 ROI, perspective, zone 면적과 density threshold calibration",
         "여러 CCTV의 overlap ownership과 중복 count 제거 규칙 검증",
@@ -784,7 +845,7 @@ def _page_conclusion(c, ctx) -> None:
         "component-level 권리가 적격인 최종 1개 모델만 마지막 단계에서 fine-tuning 검토",
     )
     y = _bullets(c, roadmap, MARGIN, y - 35, CONTENT_WIDTH, regular_font=regular, bold_font=bold, leading=18)
-    _section_label(c, "11.3 증거와 범위", MARGIN, y - 5, bold_font=bold)
+    _section_label(c, "17.3 증거와 범위", MARGIN, y - 5, bold_font=bold)
     dataset = ctx["comparison"]["dataset"]
     evidence = (
         f"Dataset / split: {dataset['dataset_id']} / {dataset['split_id']} / validation 36장",
@@ -796,19 +857,127 @@ def _page_conclusion(c, ctx) -> None:
         y = draw_wrapped(c, line, MARGIN, y - 20, CONTENT_WIDTH, font=regular, size=BODY_SIZE, leading=BODY_LEADING, color=MUTED, max_lines=2)
 
 
-def _validate_share_scope(comparison: dict[str, object], assets: dict[str, object]) -> None:
-    dataset = comparison["dataset"]
+def _read_object(path: Path, *, label: str) -> dict[str, object]:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ValueError(f"{label} is invalid: {path}") from exc
+    if not isinstance(payload, dict):
+        raise ValueError(f"{label} must be an object")
+    return payload
+
+
+def _finite(value: object, *, label: str) -> float:
+    try:
+        number = float(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{label} must be finite") from exc
+    if not math.isfinite(number):
+        raise ValueError(f"{label} must be finite")
+    return number
+
+
+def _validate_share_inputs(
+    comparison_path: Path,
+    assets_manifest_path: Path,
+) -> tuple[dict[str, object], dict[str, object]]:
+    comparison = _read_object(comparison_path, label="comparison")
+    dataset = comparison.get("dataset")
+    shortlist = comparison.get("shortlist")
+    models = comparison.get("models")
     if (
-        dataset.get("split_id") != SPLIT_ID
+        comparison.get("ranking_eligible") is not False
+        or not isinstance(dataset, dict)
+        or dataset.get("dataset_id") != "ucf-qnrf-kaggle-apache"
+        or dataset.get("split_id") != SPLIT_ID
+        or dataset.get("split_role") != "validation"
+        or dataset.get("expected_samples") != 36
         or dataset.get("canonical_split_sha256") != CANONICAL_SPLIT_SHA256
+        or not isinstance(shortlist, dict)
+        or shortlist.get("label") != "PROVISIONAL_TECHNICAL_SHORTLIST"
+        or not isinstance(models, list)
+        or {row.get("model_id") for row in models if isinstance(row, dict)}
+        != set(MODEL_PAGE_ORDER)
     ):
-        raise ValueError("comparison split identity is invalid for the share report")
-    comparisons = assets["comparisons"]
+        raise ValueError("comparison does not match the frozen Round 1 share report")
+
+    assets = _read_object(assets_manifest_path, label="assets manifest")
     if (
-        comparisons.get("density_sample_id") != "img_0097"
-        or comparisons.get("points_sample_id") != "img_0062"
+        assets.get("schema_version") != 2
+        or assets.get("status") != "PASS_RESEARCH_ONLY"
+        or assets.get("comparison_sha256") != sha256_file(comparison_path)
+        or tuple(assets.get("model_order", ())) != MODEL_PAGE_ORDER
+        or tuple(assets.get("scenario_order", ())) != SCENARIO_ORDER
     ):
-        raise ValueError("share report comparison samples are invalid")
+        raise ValueError("assets manifest comparison or scenario contract mismatch")
+    raw_assets = assets.get("assets")
+    if not isinstance(raw_assets, list) or len(raw_assets) != 12:
+        raise ValueError("assets manifest must contain twelve panels")
+    base = assets_manifest_path.parent.resolve()
+    verified: dict[str, str] = {}
+    for item in raw_assets:
+        if not isinstance(item, dict):
+            raise ValueError("asset reference must be an object")
+        raw_path = item.get("path")
+        expected = item.get("sha256")
+        if not isinstance(raw_path, str) or not isinstance(expected, str):
+            raise ValueError("asset reference path/hash is missing")
+        target = (base / raw_path).resolve()
+        if not target.is_relative_to(base) or not target.is_file():
+            raise ValueError(f"asset is missing: {raw_path}")
+        observed = sha256_file(target)
+        if observed != expected:
+            raise ValueError(f"asset hash mismatch: {raw_path}")
+        verified[raw_path] = observed
+
+    scenarios = assets.get("scenarios")
+    if not isinstance(scenarios, dict) or set(scenarios) != set(SCENARIO_ORDER):
+        raise ValueError("scenario set is invalid")
+    exact = {
+        "moderate": ("img_0775", 195.0, "적정 인원 공통 장면"),
+        "high_density": ("img_0221", 1762.0, "고밀도 공통 장면"),
+    }
+    for scenario_id, (sample_id, gt, label) in exact.items():
+        scenario = scenarios.get(scenario_id)
+        if not isinstance(scenario, dict) or (
+            scenario.get("sample_id"),
+            _finite(scenario.get("ground_truth_count"), label="scenario ground truth"),
+            scenario.get("label"),
+        ) != (sample_id, gt, label):
+            raise ValueError(f"scenario identity is invalid: {scenario_id}")
+        scenario_models = scenario.get("models")
+        if not isinstance(scenario_models, dict) or set(scenario_models) != set(MODEL_PAGE_ORDER):
+            raise ValueError(f"scenario model set is invalid: {scenario_id}")
+        for model_id in MODEL_PAGE_ORDER:
+            panel = scenario_models[model_id]
+            if not isinstance(panel, dict) or (
+                panel.get("model_id"),
+                panel.get("sample_id"),
+                _finite(panel.get("ground_truth_count"), label="panel ground truth"),
+            ) != (model_id, sample_id, gt):
+                raise ValueError(f"scenario panel identity is invalid: {scenario_id}/{model_id}")
+            for field in (
+                "predicted_count",
+                "absolute_error",
+                "normalized_error",
+                "latency_ms",
+                "peak_vram_mb",
+                "spatial_metric_value",
+            ):
+                _finite(panel.get(field), label=f"panel {field}")
+            packaged_path = panel.get("packaged_panel_path")
+            if (
+                not isinstance(packaged_path, str)
+                or packaged_path not in verified
+                or panel.get("panel_sha256") != verified[packaged_path]
+            ):
+                raise ValueError(f"scenario panel asset is invalid: {scenario_id}/{model_id}")
+            if not isinstance(panel.get("spatial_metric_name"), str):
+                raise ValueError(f"scenario spatial metric is missing: {scenario_id}/{model_id}")
+            for field in ("rights_scope", "comparison_rights_scope"):
+                if not isinstance(panel.get(field), str) or not panel[field]:
+                    raise ValueError(f"scenario rights scope is missing: {scenario_id}/{model_id}")
+    return comparison, assets
 
 
 def build_round1_share_pdf(
@@ -829,8 +998,7 @@ def build_round1_share_pdf(
     if output.exists() or temporary.exists():
         raise FileExistsError("PDF output and temporary path must not exist")
 
-    comparison, assets = _validate_inputs(comparison_source, assets_source)
-    _validate_share_scope(comparison, assets)
+    comparison, assets = _validate_share_inputs(comparison_source, assets_source)
     content = load_report_content(content_path)
     fonts = register_korean_fonts()
     ctx = {
@@ -850,34 +1018,32 @@ def build_round1_share_pdf(
         ("표지", _page_cover),
         ("요약 및 핵심 결론", _page_summary),
         ("검증 목적·데이터·조건", _page_evaluation),
-        (
-            "STEERER 모델 상세",
-            lambda c, ctx: _page_model_detail(c, ctx, model_id="steerer", number="03"),
-        ),
-        (
-            "DM-Count 모델 상세",
-            lambda c, ctx: _page_model_detail(c, ctx, model_id="dm-count", number="04"),
-        ),
-        (
-            "PET 모델 상세",
-            lambda c, ctx: _page_model_detail(c, ctx, model_id="pet", number="05"),
-        ),
-        (
-            "MPCount 모델 상세",
-            lambda c, ctx: _page_model_detail(c, ctx, model_id="mpcount", number="06"),
-        ),
-        (
-            "APGCC 모델 상세",
-            lambda c, ctx: _page_model_detail(c, ctx, model_id="apgcc", number="07"),
-        ),
-        (
-            "CSRNet 모델 상세",
-            lambda c, ctx: _page_model_detail(c, ctx, model_id="csrnet", number="08"),
-        ),
-        ("성능 비교와 해석", _page_performance),
-        ("상용화 권리 및 CCTV 적용", _page_rights),
-        ("최종 추천과 다음 단계", _page_conclusion),
     ]
+    section_number = 3
+    for model_id in MODEL_PAGE_ORDER:
+        for scenario_id in SCENARIO_ORDER:
+            number = f"{section_number:02d}"
+            label = assets["scenarios"][scenario_id]["label"]
+            renderers.append(
+                (
+                    f"{DISPLAY_NAMES[model_id]} | {label}",
+                    lambda c, ctx, model_id=model_id, scenario_id=scenario_id, number=number: _page_model_scenario(
+                        c,
+                        ctx,
+                        model_id=model_id,
+                        scenario_id=scenario_id,
+                        number=number,
+                    ),
+                )
+            )
+            section_number += 1
+    renderers.extend(
+        (
+            ("성능 비교와 해석", _page_performance),
+            ("상용화 권리 및 CCTV 적용", _page_rights),
+            ("최종 추천과 다음 단계", _page_conclusion),
+        )
+    )
     try:
         pdf = canvas_module.Canvas(str(temporary), pagesize=PAGE_SIZE, pageCompression=1)
         pdf.setTitle("DroneAI 고정형 CCTV 군중 밀집도 모델 비교 보고서")
