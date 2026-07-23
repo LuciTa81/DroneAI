@@ -531,6 +531,44 @@ model. JHU-CROWD++ and UP-COUNT remain `PASS_RESEARCH_ONLY`; the combined
 comparison is always `PASS_RESEARCH_ONLY` and cannot produce a commercial
 pooled score.
 
+For the reference-only UP-COUNT lane, do not download the complete 28.4 GB
+image archive. Pin the small official labels/split files, create the isolated
+acquisition environment, then fetch only the frozen 166 val/test members over
+verified HTTP Range requests. Completed members are CRC-32/SHA-256 checked and
+reused on resume; an incomplete `.part` is never silently replaced.
+
+```bash
+cd /workspace
+python3 -m venv /workspace/data/tools/remotezip-0.12.3
+/workspace/data/tools/remotezip-0.12.3/bin/pip install \
+  -r requirements/up-count-acquisition.txt
+
+/workspace/data/tools/remotezip-0.12.3/bin/python \
+  scripts/fetch_up_count_selected.py \
+  --images-url 'https://zenodo.org/records/12683104/files/images.zip?download=1' \
+  --labels-zip /workspace/data/acquisition/up-count-v1/labels.zip \
+  --split-dir /workspace/data/acquisition/up-count-v1/splits \
+  --dataset-root /workspace/data/datasets/up-count-v1.partial \
+  --sample-count 166 \
+  --namespace round2-upcount-v1 \
+  --minimum-frame-gap 30 \
+  --archive-size 28413241978 \
+  --archive-md5 40ab4b817093b1b4a98d51424736b38d
+
+PYTHONPATH=src /workspace/.venvs/harness/bin/python \
+  scripts/prepare_up_count.py \
+  --dataset-root /workspace/data/datasets/up-count-v1.partial \
+  --image-root /workspace/data/datasets/up-count-v1.partial/images \
+  --label-root /workspace/data/datasets/up-count-v1.partial/labels \
+  --split-dir /workspace/data/datasets/up-count-v1.partial/splits \
+  --allow-image-subset
+```
+
+Run the UP-COUNT Stage 1 gate against the partial root and require
+`PASS_RESEARCH_ONLY` before atomically renaming it to `up-count-v1`. Never use
+these images or derived artifacts for training, fine-tuning, calibration, or a
+commercial checkpoint.
+
 After the three dataset roots have passed their rights and acquisition gates,
 freeze the one shared 1,000-sample manifest once:
 
