@@ -14,7 +14,7 @@ from droneai.evaluation_contract import OutputType, ScalarEvaluation
 from droneai.integrity import is_sha256, sha256_file
 
 _OUTPUT_TYPES = {"count", "density", "points", "hybrid"}
-_SAFE_SAMPLE_ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]*")
+_UNSAFE_FILENAME_CHARS = re.compile(r"[^A-Za-z0-9._-]+")
 _GIT_COMMIT = re.compile(r"[0-9a-f]{40}")
 
 
@@ -138,13 +138,19 @@ def verify_fresh_record(
 
 
 def panel_filename(sample_id: str) -> str:
+    components = re.split(r"[\\/]", sample_id)
     if (
-        _SAFE_SAMPLE_ID.fullmatch(sample_id) is None
-        or sample_id in {".", ".."}
+        not sample_id
+        or sample_id != sample_id.strip()
+        or any(ord(character) < 32 or ord(character) == 127 for character in sample_id)
+        or any(component in {"", ".", ".."} for component in components)
     ):
         raise ValueError("sample identity is unsafe for a panel path")
+    readable = _UNSAFE_FILENAME_CHARS.sub("_", sample_id)[:160].rstrip(". ")
+    if not readable:
+        readable = "sample"
     digest = hashlib.sha256(sample_id.encode("utf-8")).hexdigest()[:16]
-    return f"{sample_id}-{digest}.png"
+    return f"{readable}-{digest}.png"
 
 
 class PanelProgressLedger:

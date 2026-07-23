@@ -155,10 +155,23 @@ def test_verify_fresh_record_accepts_micro_tolerance() -> None:
     verify_fresh_record(accepted, _record(predicted_count=10.0000005))
 
 
-@pytest.mark.parametrize("sample_id", ("../x", "a/b", "a\\b", "", "."))
+@pytest.mark.parametrize(
+    "sample_id",
+    ("../x", "a/../b", "/absolute", "a//b", "", ".", "a\nb"),
+)
 def test_panel_filename_rejects_unsafe_sample_ids(sample_id: str) -> None:
     with pytest.raises(ValueError, match="sample"):
         panel_filename(sample_id)
+
+
+def test_panel_filename_sanitizes_hierarchical_sample_identity() -> None:
+    name = panel_filename("0001/0001__0020__61.6")
+
+    assert "/" not in name
+    assert "\\" not in name
+    assert name.startswith("0001_0001__0020__61.6-")
+    assert name.endswith(".png")
+    assert name == panel_filename("0001/0001__0020__61.6")
 
 
 def test_panel_filename_is_stable_and_keeps_readable_identity() -> None:
