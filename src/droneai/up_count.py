@@ -3,7 +3,11 @@
 from __future__ import annotations
 
 import json
+import hashlib
+import math
+from collections import defaultdict
 from pathlib import Path
+from typing import Iterable
 
 from PIL import Image
 
@@ -11,6 +15,147 @@ from droneai.stage1 import sha256_file
 
 IMAGE_SUFFIXES = {".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff"}
 NORMALIZATION_POLICY = "up-count-official-loader-a6d3664"
+
+
+def _selection_key(namespace: str, sequence_id: str, frame_id: int) -> str:
+    value = f"{namespace}:{sequence_id}:{frame_id}".encode("utf-8")
+    return hashlib.sha256(value).hexdigest()
+
+
+def _frame_id(row: dict[str, object]) -> int:
+    value = row.get("frame_id")
+    if isinstance(value, int) and not isinstance(value, bool):
+        return value
+    stem = str(row.get("sample_id") or "").rsplit("/", 1)[-1]
+    try:
+        return int(stem.split("__")[1])
+    except (IndexError, ValueError) as exc:
+        raise ValueError(f"cannot parse UP-COUNT frame ID: {stem}") from exc
+
+
+def _sequence_quotas(
+    groups: dict[str, list[dict[str, object]]],
+    *,
+    sample_count: int,
+    namespace: str,
+) -> dict[str, int]:
+    if sample_count <= 0 or sum(len(rows) for rows in groups.values()) < sample_count:
+        raise ValueError("UP-COUNT selection requires enough eligible frames")
+    sequences = sorted(groups)
+    quotas = {sequence: 0 for sequence in sequences}
+    if len(sequences) > sample_count:
+        chosen = sorted(
+            sequences,
+            key=lambda sequence: _selection_key(namespace, sequence, -1),
+        )[:sample_count]
+        return {sequence: int(sequence in chosen) for sequence in sequences}
+    for sequence in sequences:
+        quotas[sequence] = 1
+    remaining = sample_count - len(sequences)
+    while remaining:
+        capacities = {
+            sequence: len(groups[sequence]) - quotas[sequence]
+            for sequence in sequences
+            if len(groups[sequence]) > quotas[sequence]
+        }
+        if not capacities:
+            raise ValueError("UP-COUNT sequence capacity cannot satisfy selection")
+        total_capacity = sum(capacities.values())
+        ideals = {
+            sequence: remaining * capacity / total_capacity
+            for sequence, capacity in capacities.items()
+        }
+        awarded = 0
+        for sequence in capacities:
+            addition = min(math.floor(ideals[sequence]), capacities[sequence])
+            quotas[sequence] += addition
+            awarded += addition
+        remaining -= awarded
+        if not remaining:
+            break
+        order = sorted(
+            capacities,
+            key=lambda sequence: (
+                -(ideals[sequence] - math.floor(ideals[sequence])),
+                _selection_key(namespace, sequence, -2),
+            ),
+        )
+        for sequence in order:
+            if remaining == 0:
+                break
+            if quotas[sequence] < len(groups[sequence]):
+                quotas[sequence] += 1
+                remaining -= 1
+    return quotas
+
+
+def select_up_count_reference(
+    inventory: Iterable[dict[str, object]],
+    *,
+    sample_count: int,
+    namespace: str,
+    minimum_frame_gap: int,
+) -> tuple[dict[str, object], ...]:
+    if not namespace or minimum_frame_gap < 0:
+        raise ValueError("UP-COUNT selection requires a namespace and nonnegative gap")
+    groups: dict[str, list[dict[str, object]]] = defaultdict(list)
+    seen_ids: set[str] = set()
+    for source_row in inventory:
+        row = dict(source_row)
+        if row.get("split") not in {"val", "test"}:
+            continue
+        sample_id = str(row.get("sample_id") or "")
+        sequence = str(row.get("group_id") or "")
+        if not sample_id or not sequence or sample_id in seen_ids:
+            raise ValueError("UP-COUNT inventory requires unique IDs and group IDs")
+        seen_ids.add(sample_id)
+        row["frame_id"] = _frame_id(row)
+        groups[sequence].append(row)
+    if not groups:
+        raise ValueError("UP-COUNT selection found no validation/test frames")
+    quotas = _sequence_quotas(groups, sample_count=sample_count, namespace=namespace)
+    selected: list[dict[str, object]] = []
+    for sequence, rows in sorted(groups.items()):
+        quota = quotas[sequence]
+        ordered = sorted(
+            rows,
+            key=lambda row: _selection_key(
+                namespace, sequence, int(row["frame_id"])
+            ),
+        )
+        accepted: list[dict[str, object]] = []
+        deferred: list[dict[str, object]] = []
+        for row in ordered:
+            frame = int(row["frame_id"])
+            if all(
+                abs(frame - int(existing["frame_id"])) >= minimum_frame_gap
+                for existing in accepted
+            ):
+                accepted.append({**row, "gap_relaxed": False})
+            else:
+                deferred.append(row)
+            if len(accepted) == quota:
+                break
+        if len(accepted) < quota:
+            accepted_ids = {str(row["sample_id"]) for row in accepted}
+            for row in deferred + ordered:
+                if str(row["sample_id"]) in accepted_ids:
+                    continue
+                accepted.append({**row, "gap_relaxed": True})
+                accepted_ids.add(str(row["sample_id"]))
+                if len(accepted) == quota:
+                    break
+        if len(accepted) != quota:
+            raise ValueError(f"UP-COUNT quota shortfall for sequence {sequence}")
+        selected.extend(accepted)
+    return tuple(
+        sorted(
+            selected,
+            key=lambda row: _selection_key(
+                namespace, str(row["group_id"]), int(row["frame_id"])
+            ),
+        )
+    )
 
 
 def _read_split_ids(split_dir: Path) -> dict[str, str]:

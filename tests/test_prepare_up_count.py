@@ -3,7 +3,7 @@ from pathlib import Path
 
 from PIL import Image
 
-from droneai.up_count import prepare_up_count
+from droneai.up_count import prepare_up_count, select_up_count_reference
 
 
 def test_prepare_up_count_builds_normalized_inventory(tmp_path: Path) -> None:
@@ -60,3 +60,38 @@ def test_prepare_up_count_can_use_official_image_subset(tmp_path: Path) -> None:
         allow_image_subset=True,
     )
     assert count == 1
+
+
+def test_up_count_selection_is_deterministic_and_sequence_balanced() -> None:
+    rows: list[dict[str, object]] = []
+    for sequence in ("0001", "0002", "0003"):
+        for frame in range(0, 180, 10):
+            stem = f"{sequence}__{frame:04d}__60.0"
+            rows.append(
+                {
+                    "sample_id": f"{sequence}/{stem}",
+                    "split": "val" if sequence != "0003" else "test",
+                    "group_id": sequence,
+                    "frame_id": frame,
+                }
+            )
+
+    first = select_up_count_reference(
+        rows,
+        sample_count=12,
+        namespace="round2-upcount-v1",
+        minimum_frame_gap=30,
+    )
+    second = select_up_count_reference(
+        tuple(reversed(rows)),
+        sample_count=12,
+        namespace="round2-upcount-v1",
+        minimum_frame_gap=30,
+    )
+
+    assert [row["sample_id"] for row in first] == [
+        row["sample_id"] for row in second
+    ]
+    assert {row["split"] for row in first} == {"val", "test"}
+    assert {row["group_id"] for row in first} == {"0001", "0002", "0003"}
+    assert len(first) == 12

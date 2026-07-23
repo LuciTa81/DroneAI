@@ -11,7 +11,15 @@ from typing import Any, Iterable
 from droneai.scoring import CheckResult, StageReport, score_stage
 
 ALLOWED_SPLITS = {"train", "val", "test"}
-SAFE_SPLIT_UNITS = {"sequence", "camera", "date", "zone", "flight_session", "event_session"}
+SAFE_SPLIT_UNITS = {
+    "image",
+    "sequence",
+    "camera",
+    "date",
+    "zone",
+    "flight_session",
+    "event_session",
+}
 
 
 def _read_json(path: Path) -> dict[str, Any]:
