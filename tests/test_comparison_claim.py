@@ -34,6 +34,16 @@ def test_verified_disjoint_held_out_is_ranking_eligible() -> None:
 
 
 @pytest.mark.parametrize(
+    "status",
+    ["VERIFIED_DISJOINT", "VERIFIED_OVERLAP", "UNKNOWN"],
+)
+def test_research_reference_never_authorizes_ranking(status: str) -> None:
+    validate_comparison_claim(status, "research_reference_only", "pinned evidence")
+
+    assert not is_ranking_eligible(status, "research_reference_only")
+
+
+@pytest.mark.parametrize(
     ("status", "scope", "evidence", "message"),
     [
         ("INVALID", "compatibility_smoke", "evidence", "status"),

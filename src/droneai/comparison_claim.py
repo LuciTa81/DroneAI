@@ -6,7 +6,11 @@ CHECKPOINT_TRAINING_SPLIT_STATUSES = {
     "VERIFIED_OVERLAP",
     "UNKNOWN",
 }
-COMPARISON_SCOPES = {"compatibility_smoke", "held_out_performance"}
+COMPARISON_SCOPES = {
+    "compatibility_smoke",
+    "held_out_performance",
+    "research_reference_only",
+}
 
 
 def validate_comparison_claim(status: str, scope: str, evidence: str) -> None:

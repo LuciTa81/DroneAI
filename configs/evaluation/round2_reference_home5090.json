@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "models": {
+    "steerer": {
+      "model_config": "configs/evaluation/steerer_ucf_qnrf_smoke.json",
+      "upstream_dir": "/workspace/upstreams/STEERER",
+      "upstream_commit": "5b1854dbc2d280f2326d67c65515d8baf9083810",
+      "checkpoint": "/workspace/data/checkpoints/steerer/QNRF_mae_77.8_mse_138.0_85f71763.pth",
+      "checkpoint_sha256": "85f71763595527e419257d459288e4a784766f41687ff0b859dcff65a151bbec",
+      "rights_decision": "/workspace/data/results/steerer/steerer-rights-20260717T170242Z-79f4c350d359/rights-decision.json",
+      "rights_manifest": "configs/candidates/steerer_ucf_qnrf.candidate.json",
+      "device": "cuda",
+      "long_side_cap": 3072
+    },
+    "dm-count": {
+      "model_config": "configs/evaluation/dm_count_ucf_qnrf_smoke.json",
+      "upstream_dir": "/workspace/upstreams/DM-Count",
+      "upstream_commit": "cc5f2132e0d1328909f31b6d665b8e0b15c30467",
+      "checkpoint": "/workspace/data/checkpoints/dm-count/cc5f2132/model_qnrf.pth",
+      "checkpoint_sha256": "16ef954a2cef40c66ee664f69273559553b735d5e2c9f90e2444f3c25dd45e05",
+      "rights_decision": "/workspace/data/results/stage-3c/dm-count-ucf-qnrf-83879c8/rights-decision.json",
+      "rights_manifest": "configs/candidates/dm_count_ucf_qnrf.candidate.json",
+      "device": "cuda"
+    },
+    "mpcount": {
+      "model_config": "configs/evaluation/mpcount_ucf_qnrf_smoke.json",
+      "upstream_dir": "/workspace/upstreams/MPCount",
+      "upstream_commit": "6eb06772bcf7dfb771c43a14d67146fce767f103",
+      "checkpoint": "/workspace/data/checkpoints/mpcount/mpcount_sta_deterministic_6eb06772.pth",
+      "checkpoint_sha256": "4a0ba849ace0ef2bc87364ec8551de4a3e9dca74fad27764c9b948ebf7928eb0",
+      "rights_decision": "/workspace/data/results/mpcount/mpcount-rights-3911238/rights-decision.json",
+      "rights_manifest": "configs/candidates/mpcount_sta_to_ucf_qnrf.candidate.json",
+      "device": "cuda",
+      "patch_size": 3584
+    }
+  }
+}
