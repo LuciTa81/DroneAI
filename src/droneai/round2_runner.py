@@ -142,6 +142,30 @@ def load_and_validate_model_config(runtime: RuntimeModel) -> dict[str, object]:
             manifest_path=runtime.rights_manifest,
             expected_candidate_id=str(config["candidate_id"]),
         )
+    elif runtime.model_id == "pet":
+        from droneai.pet_smoke import (
+            load_pet_smoke_config,
+            validate_pet_rights_decision,
+        )
+
+        config = load_pet_smoke_config(runtime.model_config)
+        validate_pet_rights_decision(
+            runtime.rights_decision,
+            manifest_path=runtime.rights_manifest,
+            expected_candidate_id=str(config["candidate_id"]),
+        )
+    elif runtime.model_id == "apgcc":
+        from droneai.apgcc_smoke import (
+            load_apgcc_smoke_config,
+            validate_apgcc_rights_decision,
+        )
+
+        config = load_apgcc_smoke_config(runtime.model_config)
+        validate_apgcc_rights_decision(
+            runtime.rights_decision,
+            manifest_path=runtime.rights_manifest,
+            expected_candidate_id=str(config["candidate_id"]),
+        )
     else:  # pragma: no cover - RuntimeModel rejects this earlier
         raise ValueError(f"unsupported Round 2 model: {runtime.model_id}")
     if str(config.get("upstream_commit")) != runtime.upstream_commit:
@@ -158,14 +182,18 @@ def build_round2_adapter(
     if model_id != runtime.model_id:
         raise ValueError("requested model differs from runtime model identity")
     if adapter_types is None:
+        from droneai.apgcc_adapter import APGCCAdapter
         from droneai.dm_count_adapter import DMCountAdapter
         from droneai.mpcount_adapter import MPCountAdapter
+        from droneai.pet_adapter import PETAdapter
         from droneai.steerer_adapter import STEERERAdapter
 
         adapter_types = {
             "steerer": STEERERAdapter,
             "dm-count": DMCountAdapter,
             "mpcount": MPCountAdapter,
+            "pet": PETAdapter,
+            "apgcc": APGCCAdapter,
         }
     if model_id not in adapter_types:
         raise ValueError(f"unsupported Round 2 model: {model_id}")
@@ -176,7 +204,7 @@ def build_round2_adapter(
         "checkpoint_sha256": runtime.checkpoint_sha256,
         "device": runtime.device,
     }
-    if model_id == "steerer" and runtime.long_side_cap is not None:
+    if model_id in {"steerer", "pet"} and runtime.long_side_cap is not None:
         kwargs["long_side_cap"] = runtime.long_side_cap
     if model_id == "mpcount" and runtime.patch_size is not None:
         kwargs["patch_size"] = runtime.patch_size
@@ -240,6 +268,18 @@ def _checkpoint_claim(model_id: str, lane: DatasetLane) -> tuple[str, str]:
         return (
             "VERIFIED_DISJOINT",
             "The accepted MPCount checkpoint was trained on ShanghaiTech-A, which "
+            f"is disjoint from {lane.dataset_id}.",
+        )
+    if model_id == "pet":
+        return (
+            "UNKNOWN",
+            "The official PET UCF-QNRF checkpoint does not publish exact training "
+            "membership; this result is descriptive research reference only.",
+        )
+    if model_id == "apgcc":
+        return (
+            "VERIFIED_DISJOINT",
+            "The accepted APGCC checkpoint was trained on ShanghaiTech-A, which "
             f"is disjoint from {lane.dataset_id}.",
         )
     raise ValueError(f"unsupported Round 2 model: {model_id}")
@@ -318,7 +358,10 @@ def write_scoped_rights_decision(
     target = Path(path)
     effective_scope = (
         "PASS_RESEARCH_ONLY"
-        if lane.rights_scope == "PASS_RESEARCH_ONLY" or runtime.model_id == "steerer"
+        if (
+            lane.rights_scope == "PASS_RESEARCH_ONLY"
+            or runtime.model_id in {"steerer", "pet"}
+        )
         else lane.rights_scope
     )
     payload = {

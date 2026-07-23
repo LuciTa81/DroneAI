@@ -10,6 +10,7 @@ from droneai.round2_runner import (
     RuntimeModel,
     build_round2_adapter,
     build_round2_protocol,
+    load_and_validate_model_config,
     load_round2_runtime_config,
     write_scoped_rights_decision,
 )
@@ -60,7 +61,11 @@ def _runtime(tmp_path: Path, model_id: str = "steerer") -> RuntimeModel:
         rights_decision=rights,
         rights_manifest=tmp_path / "rights-manifest.json",
         device="cuda",
-        long_side_cap=3072 if model_id == "steerer" else None,
+        long_side_cap=(
+            3072
+            if model_id == "steerer"
+            else 1536 if model_id == "pet" else None
+        ),
         patch_size=3584 if model_id == "mpcount" else None,
     )
 
@@ -210,3 +215,198 @@ def test_steerer_checkpoint_keeps_ucf_result_research_only(tmp_path: Path) -> No
     assert protocol.leakage_free is True
     assert protocol.checkpoint_training_split_status == "UNKNOWN"
     assert protocol.comparison_scope == "research_reference_only"
+
+
+@pytest.mark.parametrize(
+    ("model_id", "extra_kwargs"),
+    [
+        ("pet", {"long_side_cap": 1536}),
+        ("apgcc", {}),
+    ],
+)
+def test_point_adapter_factory_uses_existing_adapter_contract(
+    tmp_path: Path,
+    model_id: str,
+    extra_kwargs: dict[str, object],
+) -> None:
+    calls: list[dict[str, object]] = []
+
+    class FakeAdapter:
+        def __init__(self, **kwargs: object) -> None:
+            calls.append(kwargs)
+
+    runtime = _runtime(tmp_path, model_id)
+    adapter = build_round2_adapter(
+        model_id,
+        runtime=runtime,
+        adapter_types={model_id: FakeAdapter},
+    )
+
+    assert isinstance(adapter, FakeAdapter)
+    assert calls == [
+        {
+            "upstream_dir": runtime.upstream_dir,
+            "expected_upstream_commit": "a" * 40,
+            "checkpoint_path": runtime.checkpoint,
+            "checkpoint_sha256": "b" * 64,
+            "device": "cuda",
+            **extra_kwargs,
+        }
+    ]
+
+
+@pytest.mark.parametrize(
+    (
+        "model_id",
+        "loader_path",
+        "validator_path",
+    ),
+    [
+        (
+            "pet",
+            "droneai.pet_smoke.load_pet_smoke_config",
+            "droneai.pet_smoke.validate_pet_rights_decision",
+        ),
+        (
+            "apgcc",
+            "droneai.apgcc_smoke.load_apgcc_smoke_config",
+            "droneai.apgcc_smoke.validate_apgcc_rights_decision",
+        ),
+    ],
+)
+def test_point_model_config_uses_accepted_loader_and_rights_validator(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    model_id: str,
+    loader_path: str,
+    validator_path: str,
+) -> None:
+    calls: list[tuple[object, ...]] = []
+    runtime = _runtime(tmp_path, model_id)
+
+    def fake_loader(path: Path) -> dict[str, object]:
+        calls.append(("load", path))
+        return {
+            "candidate_id": f"{model_id}-candidate",
+            "upstream_commit": "a" * 40,
+        }
+
+    def fake_validator(
+        path: Path,
+        *,
+        manifest_path: Path,
+        expected_candidate_id: str,
+    ) -> dict[str, object]:
+        calls.append(
+            (
+                "validate",
+                path,
+                manifest_path,
+                expected_candidate_id,
+            )
+        )
+        return {}
+
+    monkeypatch.setattr(loader_path, fake_loader)
+    monkeypatch.setattr(validator_path, fake_validator)
+
+    config = load_and_validate_model_config(runtime)
+
+    assert config["candidate_id"] == f"{model_id}-candidate"
+    assert calls == [
+        ("load", runtime.model_config),
+        (
+            "validate",
+            runtime.rights_decision,
+            runtime.rights_manifest,
+            f"{model_id}-candidate",
+        ),
+    ]
+
+
+@pytest.mark.parametrize(
+    (
+        "model_id",
+        "dataset_id",
+        "dataset_scope",
+        "expected_checkpoint_status",
+        "expected_rights_scope",
+    ),
+    [
+        (
+            "pet",
+            "ucf-qnrf-kaggle-apache",
+            "PASS_COMMERCIAL_CANDIDATE",
+            "UNKNOWN",
+            "PASS_RESEARCH_ONLY",
+        ),
+        (
+            "apgcc",
+            "ucf-qnrf-kaggle-apache",
+            "PASS_COMMERCIAL_CANDIDATE",
+            "VERIFIED_DISJOINT",
+            "PASS_COMMERCIAL_CANDIDATE",
+        ),
+        (
+            "apgcc",
+            "jhu-crowd-plus-v2",
+            "PASS_RESEARCH_ONLY",
+            "VERIFIED_DISJOINT",
+            "PASS_RESEARCH_ONLY",
+        ),
+        (
+            "apgcc",
+            "up-count-v1",
+            "PASS_RESEARCH_ONLY",
+            "VERIFIED_DISJOINT",
+            "PASS_RESEARCH_ONLY",
+        ),
+    ],
+)
+def test_point_protocol_and_rights_are_model_and_dataset_scoped(
+    tmp_path: Path,
+    model_id: str,
+    dataset_id: str,
+    dataset_scope: str,
+    expected_checkpoint_status: str,
+    expected_rights_scope: str,
+) -> None:
+    manifest = tmp_path / f"{dataset_id}.json"
+    manifest.write_text("{}", encoding="utf-8")
+    lane = DatasetLane(
+        dataset_id=dataset_id,
+        partition=(
+            "test" if dataset_id == "ucf-qnrf-kaggle-apache" else "val"
+        ),
+        samples=1,
+        rights_scope=dataset_scope,
+        manifest_path=manifest,
+    )
+    runtime = _runtime(tmp_path, model_id)
+    point_targets = _targets()
+    targets = point_targets["targets"]
+    assert isinstance(targets, dict)
+    targets["spatial_metric_name"] = "localization_f1"
+    targets["spatial_direction"] = "maximize"
+    targets["spatial_target"] = 0.0
+
+    protocol = build_round2_protocol(
+        model_id,
+        lane,
+        runtime=runtime,
+        model_config=point_targets,
+    )
+    path = write_scoped_rights_decision(
+        tmp_path / f"{model_id}-{dataset_id}-rights.json",
+        runtime=runtime,
+        lane=lane,
+    )
+    payload = json.loads(path.read_text(encoding="utf-8"))
+
+    assert protocol.checkpoint_training_split_status == expected_checkpoint_status
+    assert protocol.spatial_metric_name == "localization_f1"
+    assert protocol.spatial_direction == "maximize"
+    assert payload["rights_scope"] == expected_rights_scope
+    assert payload["training"] is False
+    assert payload["fine_tuning"] is False
+    assert payload["production_approval"] is False
