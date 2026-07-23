@@ -42,6 +42,11 @@ def test_round2_config_resolves_dataset_manifests_from_repository() -> None:
         "PASS_RESEARCH_ONLY",
         "PASS_RESEARCH_ONLY",
     ]
+    up_count = config.datasets[2]
+    assert up_count.manifest_path.name == "up_count.round2_reference.json"
+    manifest = json.loads(up_count.manifest_path.read_text(encoding="utf-8"))
+    assert manifest["split"]["required_splits"] == ["val", "test"]
+    assert manifest["rights"]["commercial_use"] is False
 
 
 def test_round2_config_rejects_training_action(tmp_path: Path) -> None:

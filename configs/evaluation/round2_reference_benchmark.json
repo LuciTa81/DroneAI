@@ -42,7 +42,7 @@
       "partition": "val_test",
       "samples": 166,
       "rights_scope": "PASS_RESEARCH_ONLY",
-      "manifest_path": "configs/datasets/up_count.research.json"
+      "manifest_path": "configs/datasets/up_count.round2_reference.json"
     }
   ]
 }
