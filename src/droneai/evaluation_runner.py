@@ -160,14 +160,19 @@ def _spatial_pass(
     protocol: EvaluationProtocol,
 ) -> tuple[bool, float | None]:
     successful = [row for row in records if row.predicted_count is not None]
+    eligible = [
+        row
+        for row in successful
+        if row.condition_values.get("point_localization_valid") != "false"
+    ]
     values = [
         float(row.spatial_metric_value)
-        for row in successful
+        for row in eligible
         if row.spatial_metric_name == protocol.spatial_metric_name
         and row.spatial_metric_value is not None
         and math.isfinite(row.spatial_metric_value)
     ]
-    if len(values) != len(successful) or not values:
+    if len(values) != len(eligible) or not values:
         return False, None
     mean_value = float(np.mean(values))
     if protocol.spatial_direction == "minimize":

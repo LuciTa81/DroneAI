@@ -9,7 +9,11 @@ import pytest
 from PIL import Image
 
 import droneai.evaluation_runner as evaluation_runner
-from droneai.evaluation_contract import EvaluationSample, NativePrediction
+from droneai.evaluation_contract import (
+    EvaluationSample,
+    NativePrediction,
+    ScalarEvaluation,
+)
 from droneai.evaluation_runner import EvaluationProtocol, run_evaluation
 from droneai.integrity import sha256_file
 from droneai.model_brief import ModelBrief
@@ -288,6 +292,42 @@ def test_protocol_rejects_unproven_held_out_checkpoint(tmp_path: Path) -> None:
 
     with pytest.raises(ValueError, match="held-out"):
         replace(protocol, comparison_scope="held_out_performance")
+
+
+def test_spatial_gate_excludes_explicitly_invalid_official_point_labels(
+    tmp_path: Path,
+) -> None:
+    _, _, protocol = _fixture(tmp_path)
+    valid = ScalarEvaluation(
+        sample_id="valid",
+        ground_truth_count=10.0,
+        predicted_count=10.0,
+        signed_error=0.0,
+        absolute_error=0.0,
+        normalized_error=0.0,
+        density_band="low",
+        latency_ms=1.0,
+        peak_vram_mb=1.0,
+        output_type="density",
+        failure_state=None,
+        spatial_metric_name="game_l1",
+        spatial_metric_value=0.005,
+        condition_values={"point_localization_valid": "true"},
+    )
+    invalid_official_label = replace(
+        valid,
+        sample_id="invalid-label",
+        spatial_metric_name=None,
+        spatial_metric_value=None,
+        condition_values={"point_localization_valid": "false"},
+    )
+
+    passed, mean = evaluation_runner._spatial_pass(
+        [valid, invalid_official_label], protocol
+    )
+
+    assert passed is True
+    assert mean == pytest.approx(0.005)
 
 
 def test_runner_hashes_additional_provenance_inside_output(tmp_path: Path) -> None:
