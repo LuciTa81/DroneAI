@@ -14,9 +14,18 @@
 - Never select an explicit failure or duplicate `sample_id`.
 - Append at most enough representative samples to reach 12.
 - Use category `representative` and reason `global median error backfill`.
-- Do not rerun first-pass inference, train, fine-tune, calibrate, or change the STEERER checkpoint.
-- Preserve the blocked UP-COUNT result before resuming it.
+- Do not train, fine-tune, calibrate, or change the STEERER checkpoint.
+- Preserve the blocked UP-COUNT result before replacing the canonical path.
 - UP-COUNT remains `PASS_RESEARCH_ONLY`.
+
+## Approved Execution Variance
+
+The completed ledger was cryptographically bound to Git commit `07f0bde`.
+Reusing it after the selector fix at `fca7c5a` would have invalidated the
+recorded runtime identity, and the runner correctly rejected that reuse. The
+user approved a fresh 166-sample inference on 2026-07-23. Both blocked bundles
+were preserved under `attempts`, and the clean rerun was written to the
+canonical result path.
 
 ---
 
@@ -162,7 +171,7 @@ python -m pytest -q
 
 Expected: all tests pass with only the repository's two known skips.
 
-- [ ] **Step 5: Commit and push the tested implementation**
+- [x] **Step 5: Commit and push the tested implementation**
 
 ```powershell
 git add tests/test_evaluation_curation.py src/droneai/evaluation_curation.py docs/superpowers/plans/2026-07-23-curated-panel-backfill.md
@@ -185,7 +194,7 @@ Expected: the branch advances without a force push.
   frozen STEERER checkpoint, and corrected curation selector.
 - Produces: a 12-panel, hash-verified `PASS_RESEARCH_ONLY` evaluation bundle.
 
-- [ ] **Step 1: Preserve the blocked result**
+- [x] **Step 1: Preserve the blocked result**
 
 Verify the destination does not exist, then copy the current result directory:
 
@@ -200,7 +209,7 @@ docker exec crowd-jupyter bash -lc '
 
 Expected: the blocked bundle remains available unchanged in `attempts`.
 
-- [ ] **Step 2: Fast-forward the home5090 repository**
+- [x] **Step 2: Fast-forward the home5090 repository**
 
 ```bash
 cd /home/lucita/crowd-counting-lab
@@ -210,7 +219,7 @@ git pull --ff-only
 Expected: the remote repository reaches the new implementation commit and
 remains clean.
 
-- [ ] **Step 3: Resume the existing evaluation ledger**
+- [x] **Step 3: Run a clean evaluation under the corrected Git identity**
 
 Run inside `crowd-jupyter`:
 
@@ -226,20 +235,20 @@ PYTHONPATH=src /workspace/.venvs/steerer/bin/python \
   --up-count-root /workspace/data/datasets/up-count-v1 \
   --model steerer \
   --dataset up-count-v1 \
-  --resume \
   --output-dir /workspace/data/results/round2-reference-v1/steerer/up-count-v1
 ```
 
-Expected: the 166 completed first-pass records are reused and only review
-bundle generation is repeated.
+Expected: all 166 samples are inferred under clean commit `fca7c5a`, without
+training, fine-tuning, calibration, or checkpoint changes.
 
-- [ ] **Step 4: Verify invariants and artifact hashes**
+- [x] **Step 4: Verify invariants and artifact hashes**
 
 Compare the corrected bundle with the preserved blocked bundle and require:
 
 ```text
-predictions.csv SHA-256: unchanged
-metrics.json aggregate values: unchanged
+predicted_count values: exactly unchanged for all 166 samples
+predictions.csv differences: latency_ms only
+count and spatial aggregate values: unchanged
 selected_count: 12
 shortfall: 0
 panel_paths: 12 unique files
@@ -249,7 +258,7 @@ score: 100
 failed_blockers: empty
 ```
 
-- [ ] **Step 5: Record the model gate**
+- [x] **Step 5: Record the model gate**
 
 Report STEERER's UCF-QNRF, JHU-CROWD++, and UP-COUNT results together, including
 dataset scope, MAE, RMSE, signed bias, spatial metric, median latency, peak
