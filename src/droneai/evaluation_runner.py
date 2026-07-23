@@ -31,6 +31,7 @@ from droneai.evaluation_gate import (
 )
 from droneai.evaluation_metrics import evaluate_sample, summarize_records
 from droneai.evaluation_panels import render_review_panel
+from droneai.evaluation_progress import ProgressLedger
 from droneai.integrity import is_sha256, sha256_file, verify_artifact_reference
 from droneai.model_brief import write_model_brief
 from droneai.runtime_probe import collect_environment
@@ -299,6 +300,49 @@ def _native_output_fingerprint(prediction: NativePrediction) -> str:
     return digest.hexdigest()
 
 
+def _progress_identity(
+    *,
+    protocol: EvaluationProtocol,
+    brief: object,
+    samples: Sequence[EvaluationSample],
+    provenance_references: Sequence[dict[str, str]],
+    environment: dict[str, object],
+) -> str:
+    runtime_identity = {
+        key: value
+        for key, value in environment.items()
+        if key != "captured_at"
+    }
+    payload = {
+        "schema_version": 1,
+        "protocol": asdict(protocol),
+        "model": {
+            "model_id": getattr(brief, "model_id"),
+            "upstream_commit": getattr(brief, "upstream_commit"),
+            "checkpoint_sha256": getattr(brief, "checkpoint_sha256"),
+        },
+        "samples": [
+            {
+                "sample_id": sample.sample_id,
+                "dataset_id": sample.dataset_id,
+                "split_id": sample.split_id,
+                "source_sha256": sample.source_sha256,
+                "annotation_sha256": sample.annotation_sha256,
+            }
+            for sample in samples
+        ],
+        "provenance": list(provenance_references),
+        "runtime": runtime_identity,
+    }
+    encoded = json.dumps(
+        payload,
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+
+
 def _panel_filename(panel_index: int, sample_id: str) -> str:
     sample_digest = hashlib.sha256(sample_id.encode("utf-8")).hexdigest()[:16]
     return f"selected-{panel_index:02d}-{sample_digest}.png"
@@ -311,6 +355,7 @@ def run_evaluation(
     protocol: EvaluationProtocol,
     output_dir: str | Path,
     provenance_artifacts: Sequence[str | Path] = (),
+    resume: bool = False,
 ) -> StageReport:
     if protocol.split_role == "test" and not protocol.sealed_test_access_approved:
         raise PermissionError("sealed test evaluation requires explicit approval")
@@ -330,10 +375,17 @@ def run_evaluation(
         "score.json",
         "score.md",
         "figures",
+        "progress.jsonl",
     )
-    if any((output / name).exists() for name in reserved_outputs):
+    existing_reserved = tuple(
+        name
+        for name in reserved_outputs
+        if (output / name).exists() and not (resume and name == "progress.jsonl")
+    )
+    if existing_reserved:
         raise FileExistsError(
-            f"evaluation output already contains report artifacts: {output}"
+            "evaluation output already contains report artifacts: "
+            f"{output} ({', '.join(existing_reserved)})"
         )
     output_root = output.resolve()
     provenance_references: list[dict[str, str]] = []
@@ -398,55 +450,92 @@ def run_evaluation(
     )
 
     output.mkdir(parents=True, exist_ok=True)
+    environment = collect_environment(Path.cwd())
     rights_payload = json.loads(rights_source.read_text(encoding="utf-8"))
-    rights_path = write_json(output / "rights-decision.json", rights_payload)
-    sample_manifest_path = write_json(
-        output / "sample-manifest.json",
-        {
-            "schema_version": 1,
-            "protocol_id": protocol.protocol_id,
-            "dataset_id": protocol.dataset_id,
-            "split_id": protocol.split_id,
-            "split_role": protocol.split_role,
-            "expected_samples": protocol.expected_samples,
-            "checkpoint_training_split_status": (
-                protocol.checkpoint_training_split_status
-            ),
-            "comparison_scope": protocol.comparison_scope,
-            "checkpoint_split_evidence": protocol.checkpoint_split_evidence,
-            "ranking_eligible": is_ranking_eligible(
-                protocol.checkpoint_training_split_status,
-                protocol.comparison_scope,
-            ),
-            "samples": [
-                {
-                    "sample_id": sample.sample_id,
-                    "source_sha256": sample.source_sha256,
-                    "annotation_sha256": sample.annotation_sha256,
-                }
-                for sample in ordered_samples
-            ],
-        },
-    )
+    sample_manifest_payload = {
+        "schema_version": 1,
+        "protocol_id": protocol.protocol_id,
+        "dataset_id": protocol.dataset_id,
+        "split_id": protocol.split_id,
+        "split_role": protocol.split_role,
+        "expected_samples": protocol.expected_samples,
+        "checkpoint_training_split_status": (
+            protocol.checkpoint_training_split_status
+        ),
+        "comparison_scope": protocol.comparison_scope,
+        "checkpoint_split_evidence": protocol.checkpoint_split_evidence,
+        "ranking_eligible": is_ranking_eligible(
+            protocol.checkpoint_training_split_status,
+            protocol.comparison_scope,
+        ),
+        "samples": [
+            {
+                "sample_id": sample.sample_id,
+                "source_sha256": sample.source_sha256,
+                "annotation_sha256": sample.annotation_sha256,
+            }
+            for sample in ordered_samples
+        ],
+    }
 
-    records: list[ScalarEvaluation] = []
-    first_pass_fingerprints: dict[str, str] = {}
-    native_metadata: list[dict[str, object]] = []
-    for sample in ordered_samples:
-        prediction = adapter.predict(sample, retain_native=False)
-        first_pass_fingerprints[sample.sample_id] = _native_output_fingerprint(
-            prediction
+    progress_path: Path | None = None
+    ledger: ProgressLedger | None = None
+    if resume:
+        progress_path = output / "progress.jsonl"
+        identity_sha256 = _progress_identity(
+            protocol=protocol,
+            brief=brief,
+            samples=ordered_samples,
+            provenance_references=provenance_references,
+            environment=environment,
         )
+        ledger = ProgressLedger.open(
+            progress_path,
+            identity_sha256=identity_sha256,
+            ordered_sample_ids=tuple(sample.sample_id for sample in ordered_samples),
+        )
+        completed_entries = ledger.completed_entries()
+        records = [entry.record for entry in completed_entries]
+        first_pass_fingerprints = {
+            entry.record.sample_id: entry.fingerprint
+            for entry in completed_entries
+        }
+        native_metadata = [
+            {
+                "sample_id": entry.record.sample_id,
+                "metadata": entry.native_metadata,
+            }
+            for entry in completed_entries
+        ]
+    else:
+        records = []
+        first_pass_fingerprints = {}
+        native_metadata = []
+
+    for sample in ordered_samples[len(records) :]:
+        prediction = adapter.predict(sample, retain_native=False)
+        fingerprint = _native_output_fingerprint(prediction)
+        first_pass_fingerprints[sample.sample_id] = fingerprint
         native_metadata.append(
             {"sample_id": sample.sample_id, "metadata": prediction.metadata}
         )
-        records.append(
-            evaluate_sample(
-                sample,
-                prediction,
-                localization_radius=protocol.localization_radius,
-            )
+        record = evaluate_sample(
+            sample,
+            prediction,
+            localization_radius=protocol.localization_radius,
         )
+        if ledger is not None:
+            ledger.append(
+                record,
+                native_metadata=dict(prediction.metadata),
+                fingerprint=fingerprint,
+            )
+        records.append(record)
+
+    rights_path = write_json(output / "rights-decision.json", rights_payload)
+    sample_manifest_path = write_json(
+        output / "sample-manifest.json", sample_manifest_payload
+    )
 
     predictions_path = write_predictions_csv(output / "predictions.csv", records)
     native_metadata_path = write_json(
@@ -552,7 +641,6 @@ def run_evaluation(
         ),
         encoding="utf-8",
     )
-    environment = collect_environment(Path.cwd())
     environment_path = write_json(output / "environment-summary.json", environment)
 
     referenced_paths = [
@@ -567,6 +655,8 @@ def run_evaluation(
         environment_path,
         *panel_paths,
     ]
+    if progress_path is not None:
+        referenced_paths.append(progress_path)
     if not all(
         verify_artifact_reference(reference, base_dir=output)[0]
         for reference in provenance_references

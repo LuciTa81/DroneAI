@@ -86,6 +86,25 @@ class SameCountDifferentDensityAdapter(FixtureAdapter):
         return replace(prediction, density=changed_density)
 
 
+class FailAfterAdapter(FixtureAdapter):
+    def __init__(self, brief: ModelBrief, *, successful_calls: int) -> None:
+        super().__init__(brief)
+        self._successful_calls = successful_calls
+        self._first_pass_calls = 0
+
+    def predict(
+        self,
+        sample: EvaluationSample,
+        *,
+        retain_native: bool,
+    ) -> NativePrediction:
+        if not retain_native:
+            if self._first_pass_calls == self._successful_calls:
+                raise RuntimeError("simulated interruption")
+            self._first_pass_calls += 1
+        return super().predict(sample, retain_native=retain_native)
+
+
 def _fixture(tmp_path: Path) -> tuple[FixtureAdapter, list[EvaluationSample], EvaluationProtocol]:
     checkpoint = tmp_path / "fixture-checkpoint.bin"
     checkpoint.write_bytes(b"fixture checkpoint")
@@ -233,6 +252,35 @@ def test_end_to_end_runner_writes_small_review_bundle(tmp_path: Path) -> None:
     assert sample_manifest["checkpoint_training_split_status"] == "UNKNOWN"
     assert sample_manifest["comparison_scope"] == "compatibility_smoke"
     assert sample_manifest["ranking_eligible"] is False
+
+
+def test_runner_resume_skips_hash_verified_completed_prefix(tmp_path: Path) -> None:
+    adapter, samples, protocol = _fixture(tmp_path)
+    interrupted = FailAfterAdapter(adapter.brief(), successful_calls=2)
+    output = tmp_path / "resumable-run"
+
+    with pytest.raises(RuntimeError, match="simulated interruption"):
+        run_evaluation(
+            adapter=interrupted,
+            samples=samples,
+            protocol=protocol,
+            output_dir=output,
+            resume=True,
+        )
+
+    assert (output / "progress.jsonl").is_file()
+    resumed = FixtureAdapter(adapter.brief())
+    report = run_evaluation(
+        adapter=resumed,
+        samples=samples,
+        protocol=protocol,
+        output_dir=output,
+        resume=True,
+    )
+
+    assert report.status == "PASS_RESEARCH_ONLY"
+    assert sum(not retained for _, retained in resumed.calls) == 34
+    assert len((output / "progress.jsonl").read_text().splitlines()) == 37
 
 
 def test_protocol_rejects_unproven_held_out_checkpoint(tmp_path: Path) -> None:
