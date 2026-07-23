@@ -116,6 +116,37 @@ def select_review_samples(
                 )
             )
 
+    if len(selected) < 12 and successful:
+        global_median = float(
+            np.median(
+                np.asarray(
+                    [float(row.absolute_error) for row in successful],
+                    dtype=np.float64,
+                )
+            )
+        )
+        backfill = sorted(
+            successful,
+            key=lambda row: (
+                abs(float(row.absolute_error) - global_median),
+                row.sample_id,
+            ),
+        )
+        for chosen in backfill:
+            if len(selected) >= 12:
+                break
+            if chosen.sample_id in used:
+                continue
+            used.add(chosen.sample_id)
+            selected.append(
+                Selection(
+                    chosen.sample_id,
+                    "representative",
+                    chosen.density_band,
+                    "global median error backfill",
+                )
+            )
+
     return tuple(selected[:12])
 
 
