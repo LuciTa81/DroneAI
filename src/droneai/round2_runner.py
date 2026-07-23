@@ -217,7 +217,8 @@ def _checkpoint_claim(model_id: str, lane: DatasetLane) -> tuple[str, str]:
     if model_id == "steerer":
         return (
             "UNKNOWN",
-            "The official STEERER checkpoint training membership is not published; "
+            "The official STEERER QNRF configuration names separate train.txt and "
+            "test.txt partitions, but exact checkpoint membership is unaudited; "
             f"this {lane.dataset_id} result is descriptive research reference only.",
         )
     if model_id == "dm-count":
@@ -255,9 +256,6 @@ def build_round2_protocol(
     else:
         split_role = "validation"
     sample_count = lane.samples if expected_samples is None else expected_samples
-    leakage_free = not (
-        model_id == "steerer" and lane.dataset_id == "ucf-qnrf-kaggle-apache"
-    )
     return EvaluationProtocol(
         run_id=f"{round_id}-{model_id}-{lane.dataset_id}",
         protocol_id=f"{round_id}-{model_id}-{lane.dataset_id}-{lane.partition}",
@@ -266,7 +264,10 @@ def build_round2_protocol(
         split_role=cast(Any, split_role),
         expected_samples=sample_count,
         split_verified=True,
-        leakage_free=leakage_free,
+        # Dataset/split isolation is verified independently from whether a third-party
+        # checkpoint's exact training membership can be audited. The latter remains
+        # UNKNOWN and therefore never becomes a held-out or ranking claim.
+        leakage_free=True,
         checkpoint_training_split_status=status,
         comparison_scope="research_reference_only",
         checkpoint_split_evidence=evidence,

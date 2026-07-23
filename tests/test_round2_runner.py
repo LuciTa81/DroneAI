@@ -164,6 +164,13 @@ def test_steerer_checkpoint_keeps_ucf_result_research_only(tmp_path: Path) -> No
     )
     runtime = _runtime(tmp_path)
 
+    protocol = build_round2_protocol(
+        "steerer",
+        lane,
+        runtime=runtime,
+        model_config=_targets(),
+    )
+
     path = write_scoped_rights_decision(
         tmp_path / "scoped.json", runtime=runtime, lane=lane
     )
@@ -171,3 +178,7 @@ def test_steerer_checkpoint_keeps_ucf_result_research_only(tmp_path: Path) -> No
 
     assert payload["dataset_rights_scope"] == "PASS_COMMERCIAL_CANDIDATE"
     assert payload["rights_scope"] == "PASS_RESEARCH_ONLY"
+    assert protocol.split_verified is True
+    assert protocol.leakage_free is True
+    assert protocol.checkpoint_training_split_status == "UNKNOWN"
+    assert protocol.comparison_scope == "research_reference_only"
