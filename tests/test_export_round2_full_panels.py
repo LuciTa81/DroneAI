@@ -221,3 +221,23 @@ def test_export_lane_requires_exact_prediction_sample_identity(
             evaluate=lambda *_args, **_kwargs: _record(),
             render_panel=_render,
         )
+
+
+def test_company_share_runbook_uses_point_shortlist_manifest() -> None:
+    project_root = Path(__file__).resolve().parents[1]
+    runbook = (project_root / "docs" / "HOME5090_RUNBOOK.md").read_text(
+        encoding="utf-8"
+    )
+    company_share_section = runbook.split(
+        "## Company-share full-panel export",
+        maxsplit=1,
+    )[1]
+
+    assert (
+        "/workspace/data/results/round2-point-reference-v1/sample-manifest.json"
+        in company_share_section
+    )
+    assert (
+        "/workspace/data/results/round2-reference-v1/sample-manifest.json"
+        not in company_share_section
+    )
