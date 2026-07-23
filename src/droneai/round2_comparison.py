@@ -10,9 +10,18 @@ from pathlib import Path
 from typing import Iterable, Sequence
 
 from droneai.integrity import is_sha256, sha256_file, verify_artifact_reference
+from droneai.round2_config import (
+    LEGACY_MODEL_IDS,
+    POINT_MODEL_IDS,
+    SUPPORTED_MODEL_IDS,
+)
 
 
-MODEL_ORDER = ("steerer", "dm-count", "mpcount")
+LEGACY_MODEL_ORDER = LEGACY_MODEL_IDS
+POINT_MODEL_ORDER = POINT_MODEL_IDS
+APPROVED_MODEL_ORDERS = (LEGACY_MODEL_ORDER, POINT_MODEL_ORDER)
+# Backward-compatible export for the historical Round 2 comparison.
+MODEL_ORDER = LEGACY_MODEL_ORDER
 DATASET_ORDER = (
     "ucf-qnrf-kaggle-apache",
     "jhu-crowd-plus-v2",
@@ -23,16 +32,42 @@ MODEL_NOTES = {
         "family": "density_and_points",
         "native_output": "multi-resolution density maps and localization points",
         "count_derivation": "integral of the highest-resolution valid density map",
+        "native_density_map": True,
     },
     "dm-count": {
         "family": "density",
         "native_output": "non-negative density map",
         "count_derivation": "density-map sum",
+        "native_density_map": True,
     },
     "mpcount": {
         "family": "density_and_domain_generalization",
         "native_output": "non-negative density map",
         "count_derivation": "cropped density-map sum divided by log_para",
+        "native_density_map": True,
+    },
+    "pet": {
+        "family": "points",
+        "native_output": (
+            "point/non-point scores, accepted point coordinates, confidences, "
+            "and quadtree split representation"
+        ),
+        "count_derivation": (
+            "number of accepted point queries above the frozen threshold"
+        ),
+        "native_density_map": False,
+        "visualization_label": "derived point visualization",
+    },
+    "apgcc": {
+        "family": "points",
+        "native_output": (
+            "person logits, point coordinates, confidences, and offsets"
+        ),
+        "count_derivation": (
+            "number of thresholded in-bounds person points"
+        ),
+        "native_density_map": False,
+        "visualization_label": "derived point visualization",
     },
 }
 REQUIRED_FILES = {
@@ -68,7 +103,10 @@ class Round2Run:
     path: Path
 
     def __post_init__(self) -> None:
-        if self.model_id not in MODEL_ORDER or self.dataset_id not in DATASET_ORDER:
+        if (
+            self.model_id not in SUPPORTED_MODEL_IDS
+            or self.dataset_id not in DATASET_ORDER
+        ):
             raise ValueError("Round 2 run identity is invalid")
         if self.expected_samples <= 0:
             raise ValueError("Round 2 run expected_samples must be positive")
@@ -157,6 +195,13 @@ def _verify_run(run: Round2Run) -> tuple[str, dict[str, object]]:
     spatial_name = metrics.get("spatial_metric_name")
     if not isinstance(spatial_name, str) or not spatial_name:
         raise ValueError("Round 2 spatial metric name is unavailable")
+    if run.model_id in {"pet", "apgcc"}:
+        if spatial_name != "localization_f1" or any(
+            field in metrics for field in ("density_psnr", "density_ssim")
+        ):
+            raise ValueError(
+                f"{run.model_id} cannot claim native density accuracy"
+            )
 
     rights = _object(root / "rights-decision.json", label="rights decision")
     declared_dataset_scope = rights.get(
@@ -175,6 +220,8 @@ def _verify_run(run: Round2Run) -> tuple[str, dict[str, object]]:
         and effective_scope != "PASS_RESEARCH_ONLY"
     ):
         raise ValueError("restricted dataset lane was promoted beyond research-only")
+    if run.model_id == "pet" and effective_scope != "PASS_RESEARCH_ONLY":
+        raise ValueError("PET must remain research-only in every dataset lane")
 
     score = _object(root / "score.json", label="score")
     environment = _object(root / "environment-summary.json", label="environment")
@@ -200,45 +247,87 @@ def _verify_run(run: Round2Run) -> tuple[str, dict[str, object]]:
     return shared_hash, row
 
 
-def build_round2_comparison(runs: Sequence[Round2Run]) -> dict[str, object]:
+def _approved_model_order(model_order: Sequence[str]) -> tuple[str, ...]:
+    order = tuple(model_order)
+    if order not in APPROVED_MODEL_ORDERS:
+        raise ValueError("comparison model order is not an approved shortlist")
+    return order
+
+
+def build_round2_comparison(
+    runs: Sequence[Round2Run],
+    *,
+    model_order: Sequence[str] = MODEL_ORDER,
+) -> dict[str, object]:
+    selected_order = _approved_model_order(model_order)
     keyed = {(run.model_id, run.dataset_id): run for run in runs}
-    expected_keys = {(model, dataset) for model in MODEL_ORDER for dataset in DATASET_ORDER}
+    expected_keys = {
+        (model, dataset)
+        for model in selected_order
+        for dataset in DATASET_ORDER
+    }
     if len(runs) != 9 or set(keyed) != expected_keys:
         raise ValueError("Round 2 comparison requires exactly the 3 × 3 run matrix")
     verified = {
         key: _verify_run(keyed[key])
-        for key in ((model, dataset) for model in MODEL_ORDER for dataset in DATASET_ORDER)
+        for key in (
+            (model, dataset)
+            for model in selected_order
+            for dataset in DATASET_ORDER
+        )
     }
     shared_hashes = {value[0] for value in verified.values()}
     if len(shared_hashes) != 1:
         raise ValueError("Round 2 runs do not share one shared manifest")
     datasets: dict[str, object] = {}
     for dataset_id in DATASET_ORDER:
-        descriptor = keyed[(MODEL_ORDER[0], dataset_id)]
+        descriptor = keyed[(selected_order[0], dataset_id)]
         datasets[dataset_id] = {
             "samples_per_model": descriptor.expected_samples,
             "rights_scope": descriptor.dataset_rights_scope,
             "models": {
                 model_id: verified[(model_id, dataset_id)][1]
-                for model_id in MODEL_ORDER
+                for model_id in selected_order
             },
         }
+    limitations = [
+        "Metrics are reported per dataset and are not pooled into a commercial score.",
+        "JHU-CROWD++ and UP-COUNT evidence is non-commercial research reference only.",
+        "Frozen checkpoints use different training domains; this comparison does not authorize production selection.",
+    ]
+    if "steerer" in selected_order:
+        limitations.append(
+            "STEERER checkpoint terms remain research-only pending independent clearance."
+        )
+    if "pet" in selected_order:
+        limitations.append(
+            "PET code and official checkpoint are academic-use only."
+        )
+    if "apgcc" in selected_order:
+        limitations.append(
+            "APGCC code is MIT, but the published checkpoint has no separate commercial terms."
+        )
     return {
         "schema_version": 1,
-        "comparison_id": "round-2-reference-comparison-v1",
+        "comparison_id": (
+            "round-2-point-reference-comparison-v1"
+            if selected_order == POINT_MODEL_ORDER
+            else "round-2-reference-comparison-v1"
+        ),
         "rights_scope": "PASS_RESEARCH_ONLY",
+        "combined_rights_scope": "PASS_RESEARCH_ONLY",
         "comparison_scope": "research_reference_only",
         "ranking_eligible": False,
+        "training": False,
         "fine_tuning": False,
+        "lanes": len(runs),
+        "model_order": list(selected_order),
         "shared_sample_manifest_sha256": next(iter(shared_hashes)),
-        "models": {model_id: MODEL_NOTES[model_id] for model_id in MODEL_ORDER},
+        "models": {
+            model_id: MODEL_NOTES[model_id] for model_id in selected_order
+        },
         "datasets": datasets,
-        "limitations": [
-            "Metrics are reported per dataset and are not pooled into a commercial score.",
-            "JHU-CROWD++ and UP-COUNT evidence is non-commercial research reference only.",
-            "STEERER checkpoint terms remain research-only pending independent clearance.",
-            "Frozen checkpoints use different training domains; this comparison does not authorize production selection.",
-        ],
+        "limitations": limitations,
     }
 
 
@@ -254,6 +343,8 @@ def _markdown(payload: dict[str, object]) -> str:
     ]
     datasets = payload["datasets"]
     assert isinstance(datasets, dict)
+    model_order = payload["model_order"]
+    assert isinstance(model_order, list)
     for dataset_id in DATASET_ORDER:
         dataset = datasets[dataset_id]
         assert isinstance(dataset, dict)
@@ -269,7 +360,7 @@ def _markdown(payload: dict[str, object]) -> str:
                 "|---|---:|---:|---:|---:|---:|---:|---:|---:|---|",
             ]
         )
-        for model_id in MODEL_ORDER:
+        for model_id in model_order:
             row = models[model_id]
             assert isinstance(row, dict)
             metrics = row["metrics"]
@@ -291,7 +382,10 @@ def _markdown(payload: dict[str, object]) -> str:
 
 
 def write_round2_comparison(
-    output_dir: str | Path, runs: Sequence[Round2Run]
+    output_dir: str | Path,
+    runs: Sequence[Round2Run],
+    *,
+    model_order: Sequence[str] = MODEL_ORDER,
 ) -> dict[str, Path]:
     output = Path(output_dir)
     if output.exists():
@@ -299,7 +393,7 @@ def write_round2_comparison(
     staging = output.with_name(output.name + ".tmp")
     if staging.exists():
         raise FileExistsError(f"comparison staging output already exists: {staging}")
-    payload = build_round2_comparison(runs)
+    payload = build_round2_comparison(runs, model_order=model_order)
     staging.mkdir(parents=True)
     (staging / "comparison.json").write_text(
         json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8"
@@ -314,7 +408,9 @@ def write_round2_comparison(
 
 __all__ = [
     "DATASET_ORDER",
+    "LEGACY_MODEL_ORDER",
     "MODEL_ORDER",
+    "POINT_MODEL_ORDER",
     "Round2Run",
     "build_round2_comparison",
     "write_round2_comparison",

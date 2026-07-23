@@ -43,7 +43,12 @@ def main(argv: Sequence[str] | None = None) -> int:
         for model in config.models
         for lane in config.datasets
     )
-    paths = write_round2_comparison(args.output_dir.resolve(), runs)
+    model_order = tuple(model.model_id for model in config.models)
+    paths = write_round2_comparison(
+        args.output_dir.resolve(),
+        runs,
+        model_order=model_order,
+    )
     print(
         json.dumps(
             {
