@@ -218,6 +218,7 @@ git commit -m "Add Round 2 full-panel exporter"
   - `결과해석/패키지_검증정보/files.sha256`;
   - `package-manifest.json`;
   - one `DroneAI_회사공유용_v1.zip`.
+  - one external `DroneAI_회사공유용_v1.zip.sha256` sidecar.
 
 - [ ] **Step 1: Write failing package tests**
 
@@ -230,7 +231,8 @@ Use temporary directories to prove:
 - forbidden path components (`datasets`, `checkpoints`, `.venv`, `attempts`,
   `partial`) are rejected;
 - symlinks and junction-like entries are rejected;
-- every staged file is in `files.sha256`;
+- every staged content file other than `files.sha256` and
+  `package-manifest.json` is in `files.sha256`;
 - ZIP members exactly match staged files;
 - UTF-8 Korean member names survive extraction;
 - a pre-existing staging root or ZIP blocks rather than being overwritten.
@@ -262,9 +264,12 @@ The manifest records:
     "excluded_assets": ["datasets", "checkpoints", "weights", "raw_density"],
     "files": file_count,
     "uncompressed_bytes": total_bytes,
-    "zip_sha256": zip_sha256,
+    "content_manifest_sha256": content_manifest_sha256,
 }
 ```
+
+Write the ZIP SHA-256 to an external `.zip.sha256` sidecar after the ZIP closes;
+never place a ZIP self-hash inside the ZIP.
 
 - [ ] **Step 4: Run focused tests and verify GREEN**
 

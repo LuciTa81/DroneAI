@@ -150,8 +150,11 @@ overwritten.
 
 A separate package builder consumes only completed, hash-verified lane exports.
 It copies approved compact evidence and panels into a new staging directory,
-writes a file-level SHA-256 manifest, verifies the expected 3,000 full panels,
-and creates one UTF-8 ZIP. The ZIP is created outside Git and is not committed.
+writes a file-level SHA-256 manifest for every content file, verifies the
+expected 3,000 full panels, and creates one UTF-8 ZIP. The content manifest and
+package manifest do not hash themselves. The ZIP SHA-256 is stored in a sidecar
+next to the ZIP to avoid a circular self-hash. The ZIP and sidecar are created
+outside Git and are not committed.
 
 ## Execution and storage
 
@@ -184,8 +187,10 @@ Before delivery:
   36-image results and curated panels;
 - no dataset image, checkpoint, virtual environment, cache, or raw density array
   is present;
-- every package file appears in the SHA-256 manifest;
+- every content file other than the content/package manifests appears in the
+  SHA-256 manifest;
 - ZIP extraction reproduces the staged file count and hashes;
+- the external ZIP sidecar matches a fresh SHA-256 of the ZIP;
 - the full relevant test suite passes;
 - Windows and home5090 repositories remain clean and identify the same commit.
 
