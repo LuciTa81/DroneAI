@@ -1,0 +1,91 @@
+{
+  "schema_version": 1,
+  "staging_root": "/workspace/data/exports/DroneAI-company-share-v1/package/DroneAI_회사공유용_v1",
+  "zip_path": "/workspace/data/exports/DroneAI-company-share-v1/package/DroneAI_회사공유용_v1.zip",
+  "report_pdf": "/workspace/data/exports/DroneAI-company-share-v1/intake/report.pdf",
+  "full_panels_root": "/workspace/data/exports/DroneAI-company-share-v1/full-panels",
+  "round2_results_root": "/workspace/data/results/round2-reference-v1",
+  "round2_expected": {
+    "steerer": {
+      "ucf-qnrf-kaggle-apache": 334,
+      "jhu-crowd-plus-v2": 500,
+      "up-count-v1": 166
+    },
+    "pet": {
+      "ucf-qnrf-kaggle-apache": 334,
+      "jhu-crowd-plus-v2": 500,
+      "up-count-v1": 166
+    },
+    "apgcc": {
+      "ucf-qnrf-kaggle-apache": 334,
+      "jhu-crowd-plus-v2": 500,
+      "up-count-v1": 166
+    }
+  },
+  "round1_result_roots": {
+    "MPCount": "/workspace/results/mpcount",
+    "DMCount": "/workspace/results/dm-count",
+    "CSRNet": "/workspace/results/csrnet"
+  },
+  "model_code_files": {
+    "STEERER": [
+      "/workspace/docs/models/STEERER.md",
+      "/workspace/configs/models/steerer.official.json",
+      "/workspace/requirements/models/steerer-home5090.txt",
+      "/workspace/src/droneai/steerer_adapter.py",
+      "/workspace/src/droneai/steerer_smoke.py",
+      "/workspace/scripts/run_steerer_ucf_qnrf_smoke.py"
+    ],
+    "PET": [
+      "/workspace/docs/models/PET.md",
+      "/workspace/configs/models/pet.official.json",
+      "/workspace/requirements/models/pet-home5090.txt",
+      "/workspace/src/droneai/pet_adapter.py",
+      "/workspace/src/droneai/pet_smoke.py",
+      "/workspace/scripts/run_pet_ucf_qnrf_smoke.py"
+    ],
+    "APGCC": [
+      "/workspace/configs/models/apgcc.official.json",
+      "/workspace/requirements/models/apgcc-home5090.txt",
+      "/workspace/src/droneai/apgcc_adapter.py",
+      "/workspace/src/droneai/apgcc_smoke.py",
+      "/workspace/scripts/run_apgcc_ucf_qnrf_smoke.py"
+    ],
+    "MPCount": [
+      "/workspace/docs/models/MPCOUNT.md",
+      "/workspace/configs/models/mpcount.official.json",
+      "/workspace/requirements/models/mpcount-home5090.txt",
+      "/workspace/src/droneai/mpcount_adapter.py",
+      "/workspace/src/droneai/mpcount_smoke.py",
+      "/workspace/scripts/run_mpcount_ucf_qnrf_smoke.py"
+    ],
+    "DMCount": [
+      "/workspace/configs/models/dm_count.official.json",
+      "/workspace/requirements/models/dm_count-home5090.lock.txt",
+      "/workspace/src/droneai/dm_count_adapter.py",
+      "/workspace/src/droneai/dm_count_smoke.py",
+      "/workspace/scripts/run_dm_count_ucf_qnrf_smoke.py"
+    ],
+    "CSRNet": [
+      "/workspace/docs/models/CSRNET.md",
+      "/workspace/configs/models/csrnet.json",
+      "/workspace/src/droneai/csrnet_adapter.py",
+      "/workspace/src/droneai/csrnet_smoke.py",
+      "/workspace/scripts/run_csrnet_ucf_qnrf_smoke.py"
+    ]
+  },
+  "interpretation_files": [
+    "/workspace/results/round1-cctv-comparison-34ad450/comparison.md",
+    "/workspace/results/round1-cctv-comparison-34ad450/comparison.json",
+    "/workspace/results/round2-point-reference-v1/README.md",
+    "/workspace/results/round2-point-reference-v1/comparison.md",
+    "/workspace/results/round2-point-reference-v1/comparison.json"
+  ],
+  "extra_result_roots": {
+    "STEERER": [
+      "/workspace/data/exports/DroneAI-company-share-v1/intake/steerer-field-photos-5x5-20260719-d8fb26-4c18f3-70f987",
+      "/workspace/data/exports/DroneAI-company-share-v1/intake/steerer-extreme-density-4953-10273-v1",
+      "/workspace/data/exports/DroneAI-company-share-v1/intake/steerer-official-test-4535-v1"
+    ]
+  }
+}
