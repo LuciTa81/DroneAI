@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "round_id": "round-2-reference-benchmark-v1",
+  "action": "frozen_internal_reference_evaluation",
+  "total_samples_per_model": 1000,
+  "combined_rights_scope": "PASS_RESEARCH_ONLY",
+  "training": false,
+  "fine_tuning": false,
+  "models": [
+    {
+      "model_id": "steerer",
+      "family": "density_and_points",
+      "rights_scope": "PASS_COMMERCIAL_CANDIDATE"
+    },
+    {
+      "model_id": "pet",
+      "family": "points",
+      "rights_scope": "PASS_RESEARCH_ONLY"
+    },
+    {
+      "model_id": "apgcc",
+      "family": "points",
+      "rights_scope": "PASS_COMMERCIAL_CANDIDATE"
+    }
+  ],
+  "datasets": [
+    {
+      "dataset_id": "ucf-qnrf-kaggle-apache",
+      "partition": "test",
+      "samples": 334,
+      "rights_scope": "PASS_COMMERCIAL_CANDIDATE",
+      "manifest_path": "configs/datasets/ucf_qnrf.kaggle_apache.json"
+    },
+    {
+      "dataset_id": "jhu-crowd-plus-v2",
+      "partition": "val",
+      "samples": 500,
+      "rights_scope": "PASS_RESEARCH_ONLY",
+      "manifest_path": "configs/datasets/jhu_crowd_plus.research.json"
+    },
+    {
+      "dataset_id": "up-count-v1",
+      "partition": "val_test",
+      "samples": 166,
+      "rights_scope": "PASS_RESEARCH_ONLY",
+      "manifest_path": "configs/datasets/up_count.round2_reference.json"
+    }
+  ]
+}

@@ -8,7 +8,15 @@ from pathlib import Path
 from typing import Any
 
 
-APPROVED_MODEL_IDS = ("steerer", "dm-count", "mpcount")
+LEGACY_MODEL_IDS = ("steerer", "dm-count", "mpcount")
+POINT_MODEL_IDS = ("steerer", "pet", "apgcc")
+APPROVED_MODEL_MATRICES = (LEGACY_MODEL_IDS, POINT_MODEL_IDS)
+SUPPORTED_MODEL_IDS = tuple(
+    dict.fromkeys(LEGACY_MODEL_IDS + POINT_MODEL_IDS)
+)
+# Backward-compatible alias for historical callers that verify the legacy
+# Round 2 evidence.
+APPROVED_MODEL_IDS = LEGACY_MODEL_IDS
 APPROVED_DATASET_MATRIX = (
     ("ucf-qnrf-kaggle-apache", "test", 334),
     ("jhu-crowd-plus-v2", "val", 500),
@@ -109,8 +117,11 @@ def load_round2_config(path: str | Path) -> Round2Config:
         )
         for row in payload.get("models", ())
     )
-    if tuple(model.model_id for model in models) != APPROVED_MODEL_IDS:
-        raise ValueError("model order differs from the approved Round 2 shortlist")
+    model_ids = tuple(model.model_id for model in models)
+    if model_ids not in APPROVED_MODEL_MATRICES:
+        raise ValueError(
+            "model order differs from an approved ordered model shortlist"
+        )
     repository_root = _repository_root(config_path)
     datasets = tuple(
         _load_dataset_lane(row, repository_root=repository_root)

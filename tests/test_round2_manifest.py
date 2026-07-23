@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from dataclasses import replace
 from pathlib import Path
 
 import numpy as np
@@ -150,6 +151,34 @@ def test_manifest_contains_exact_counts_and_aggregate_hash(
     assert len(payload["samples"]) == 6
     assert len({row["global_sample_id"] for row in payload["samples"]}) == 6
     assert len({row["split_id"] for row in payload["samples"]}) == 3
+
+
+def test_point_shortlist_changes_config_identity_not_sample_identity(
+    round2_fixture: tuple[Round2Config, dict[str, Path]],
+) -> None:
+    legacy_config, roots = round2_fixture
+    point_config = replace(
+        legacy_config,
+        models=(
+            ModelLane(
+                "steerer",
+                "density_and_points",
+                "PASS_COMMERCIAL_CANDIDATE",
+            ),
+            ModelLane("pet", "points", "PASS_RESEARCH_ONLY"),
+            ModelLane(
+                "apgcc",
+                "points",
+                "PASS_COMMERCIAL_CANDIDATE",
+            ),
+        ),
+    )
+
+    legacy = build_round2_manifest(legacy_config, roots)
+    point = build_round2_manifest(point_config, roots)
+
+    assert point["config_identity_sha256"] != legacy["config_identity_sha256"]
+    assert point["sample_manifest_sha256"] == legacy["sample_manifest_sha256"]
 
 
 def test_verify_manifest_rejects_changed_annotation(
