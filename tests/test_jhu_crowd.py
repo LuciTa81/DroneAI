@@ -5,7 +5,9 @@ from pathlib import Path
 import pytest
 from PIL import Image
 
-from droneai.jhu_crowd import index_jhu_validation
+import json
+
+from droneai.jhu_crowd import index_jhu_validation, prepare_jhu_validation
 
 
 def _write_jhu_sample(
@@ -72,3 +74,44 @@ def test_index_jhu_validation_requires_exact_frozen_count(tmp_path: Path) -> Non
 
     with pytest.raises(ValueError, match="expected 500"):
         index_jhu_validation(val, expected_samples=500)
+
+
+def test_prepare_jhu_validation_writes_stage1_inventory_without_editing_source(
+    tmp_path: Path,
+) -> None:
+    val = tmp_path / "val"
+    _write_jhu_sample(val, "0001", points=((10, 11), (20, 21)))
+    source_annotation = (val / "gt/0001.txt").read_bytes()
+
+    count = prepare_jhu_validation(
+        dataset_root=tmp_path,
+        validation_root=val,
+        expected_samples=1,
+    )
+
+    assert count == 1
+    rows = [
+        json.loads(line)
+        for line in (tmp_path / "inventory.jsonl").read_text(encoding="utf-8").splitlines()
+    ]
+    assert rows[0]["split"] == "val"
+    assert rows[0]["group_id"] == "0001"
+    assert rows[0]["condition_tags"]["scene"] == "stadium"
+    normalized = json.loads(
+        (tmp_path / rows[0]["annotation_path"]).read_text(encoding="utf-8")
+    )
+    assert normalized["points"] == [[10.0, 11.0], [20.0, 21.0]]
+    assert (val / "gt/0001.txt").read_bytes() == source_annotation
+
+
+def test_prepare_jhu_validation_refuses_to_replace_inventory(tmp_path: Path) -> None:
+    val = tmp_path / "val"
+    _write_jhu_sample(val, "0001", points=((10, 11),))
+    (tmp_path / "inventory.jsonl").write_text("existing\n", encoding="utf-8")
+
+    with pytest.raises(FileExistsError, match="inventory"):
+        prepare_jhu_validation(
+            dataset_root=tmp_path,
+            validation_root=val,
+            expected_samples=1,
+        )

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -144,3 +145,82 @@ def index_jhu_validation(
     if set(labels) != {record.sample_id for record in records}:
         raise ValueError("JHU image_labels.txt differs from validation images")
     return tuple(records)
+
+
+def prepare_jhu_validation(
+    *,
+    dataset_root: str | Path,
+    validation_root: str | Path,
+    expected_samples: int = 500,
+) -> int:
+    """Write Stage 1 inventory/JSON labels without changing official JHU files."""
+
+    root = Path(dataset_root).resolve()
+    validation = Path(validation_root).resolve()
+    try:
+        validation.relative_to(root)
+    except ValueError as exc:
+        raise ValueError("JHU validation root must stay inside dataset root") from exc
+    inventory_path = root / "inventory.jsonl"
+    normalized_root = root / "normalized_annotations"
+    staging_root = root / "normalized_annotations.tmp"
+    inventory_staging = root / "inventory.jsonl.tmp"
+    if inventory_path.exists():
+        raise FileExistsError(f"JHU inventory already exists: {inventory_path}")
+    if normalized_root.exists() or staging_root.exists() or inventory_staging.exists():
+        raise FileExistsError("JHU normalized output or staging path already exists")
+
+    records = index_jhu_validation(
+        validation,
+        expected_samples=expected_samples,
+    )
+    staging_root.mkdir(parents=True)
+    rows: list[dict[str, object]] = []
+    for record in records:
+        normalized_path = staging_root / "val" / f"{record.sample_id}.json"
+        normalized_path.parent.mkdir(parents=True, exist_ok=True)
+        normalized_path.write_text(
+            json.dumps(
+                {
+                    "points": [[x, y] for x, y in record.points],
+                    "normalization": {
+                        "policy": "official_head_centers_preserved",
+                        "corrected_count": 0,
+                        "source_annotation": record.annotation_path.relative_to(
+                            root
+                        ).as_posix(),
+                        "source_annotation_sha256": record.annotation_sha256,
+                    },
+                },
+                ensure_ascii=False,
+                separators=(",", ":"),
+            ),
+            encoding="utf-8",
+        )
+        final_annotation = normalized_root / "val" / normalized_path.name
+        rows.append(
+            {
+                "sample_id": record.sample_id,
+                "split": "val",
+                "group_id": record.sample_id,
+                "image_path": record.image_path.relative_to(root).as_posix(),
+                "annotation_path": final_annotation.relative_to(root).as_posix(),
+                "image_sha256": record.image_sha256,
+                "annotation_sha256": sha256_file(normalized_path),
+                "width": record.width,
+                "height": record.height,
+                "point_count": record.count,
+                "normalization_corrections": 0,
+                "condition_tags": dict(sorted(record.condition_tags.items())),
+            }
+        )
+    inventory_staging.write_text(
+        "\n".join(
+            json.dumps(row, ensure_ascii=False, sort_keys=True) for row in rows
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    staging_root.replace(normalized_root)
+    inventory_staging.replace(inventory_path)
+    return len(rows)
