@@ -66,6 +66,7 @@ def evaluation_samples_from_jhu(
 ) -> tuple[EvaluationSample, ...]:
     samples: list[EvaluationSample] = []
     for record in records:
+        point_localization_valid = record.point_localization_valid
         samples.append(
             EvaluationSample(
                 sample_id=record.sample_id,
@@ -77,16 +78,23 @@ def evaluation_samples_from_jhu(
                 height=record.height,
                 ground_truth_count=float(record.count),
                 annotation_sha256=record.annotation_sha256,
-                ground_truth_points=record.points,
-                ground_truth_density=_point_density(
-                    record.points, width=record.width, height=record.height
+                ground_truth_points=(record.points if point_localization_valid else ()),
+                ground_truth_density=(
+                    _point_density(
+                        record.points, width=record.width, height=record.height
+                    )
+                    if point_localization_valid
+                    else None
                 ),
                 condition_tags={
                     **record.condition_tags,
                     "source_partition": "official_validation",
+                    "point_localization_valid": str(
+                        point_localization_valid
+                    ).lower(),
                 },
                 zones=_quadrant_zones(record.width, record.height),
-                has_point_annotations=True,
+                has_point_annotations=point_localization_valid,
             )
         )
     return tuple(samples)

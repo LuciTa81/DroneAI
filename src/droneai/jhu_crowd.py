@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import math
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -27,6 +28,8 @@ class JHUCrowdRecord:
     height: int
     points: tuple[Point, ...]
     condition_tags: dict[str, str]
+    normalization_corrections: int = 0
+    point_localization_valid: bool = True
 
     @property
     def count(self) -> int:
@@ -66,8 +69,13 @@ def _image_labels(path: Path) -> dict[str, tuple[int, str, str, str]]:
     return labels
 
 
-def _head_points(path: Path, *, width: int, height: int) -> tuple[Point, ...]:
+def _head_points(
+    path: Path, *, width: int, height: int
+) -> tuple[tuple[Point, ...], int]:
     points: list[Point] = []
+    corrections = 0
+    max_x = math.nextafter(float(width), 0.0)
+    max_y = math.nextafter(float(height), 0.0)
     for line_number, line in enumerate(
         path.read_text(encoding="utf-8").splitlines(), start=1
     ):
@@ -84,10 +92,13 @@ def _head_points(path: Path, *, width: int, height: int) -> tuple[Point, ...]:
             raise ValueError(f"{path}:{line_number}: invalid integer row") from exc
         if box_width < 0 or box_height < 0 or occlusion not in {1, 2, 3} or blur not in {0, 1}:
             raise ValueError(f"{path}:{line_number}: invalid JHU head metadata")
-        if not 0 <= center_x < width or not 0 <= center_y < height:
-            raise ValueError(f"{path}:{line_number}: head center is out of bounds")
-        points.append((float(center_x), float(center_y)))
-    return tuple(points)
+        normalized = (
+            min(max(float(center_x), 0.0), max_x),
+            min(max(float(center_y), 0.0), max_y),
+        )
+        corrections += normalized != (float(center_x), float(center_y))
+        points.append(normalized)
+    return tuple(points), corrections
 
 
 def index_jhu_validation(
@@ -117,7 +128,9 @@ def index_jhu_validation(
             raise FileNotFoundError(f"JHU annotation or image label missing: {sample_id}")
         with Image.open(image_path) as image:
             width, height = image.size
-        points = _head_points(annotation_path, width=width, height=height)
+        points, corrections = _head_points(
+            annotation_path, width=width, height=height
+        )
         declared_count, scene, weather, distractor = labels[sample_id]
         if declared_count != len(points):
             raise ValueError(
@@ -140,6 +153,8 @@ def index_jhu_validation(
                     "distractor": distractor,
                     "density_band": _density_band(len(points)),
                 },
+                normalization_corrections=corrections,
+                point_localization_valid=corrections == 0,
             )
         )
     if set(labels) != {record.sample_id for record in records}:
@@ -184,8 +199,9 @@ def prepare_jhu_validation(
                 {
                     "points": [[x, y] for x, y in record.points],
                     "normalization": {
-                        "policy": "official_head_centers_preserved",
-                        "corrected_count": 0,
+                        "policy": "clip_official_head_centers_to_image_bounds",
+                        "corrected_count": record.normalization_corrections,
+                        "point_localization_valid": record.point_localization_valid,
                         "source_annotation": record.annotation_path.relative_to(
                             root
                         ).as_posix(),
@@ -210,8 +226,17 @@ def prepare_jhu_validation(
                 "width": record.width,
                 "height": record.height,
                 "point_count": record.count,
-                "normalization_corrections": 0,
-                "condition_tags": dict(sorted(record.condition_tags.items())),
+                "normalization_corrections": record.normalization_corrections,
+                "condition_tags": dict(
+                    sorted(
+                        {
+                            **record.condition_tags,
+                            "point_localization_valid": str(
+                                record.point_localization_valid
+                            ).lower(),
+                        }.items()
+                    )
+                ),
             }
         )
     inventory_staging.write_text(

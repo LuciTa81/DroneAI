@@ -8,6 +8,7 @@ from PIL import Image
 import json
 
 from droneai.jhu_crowd import index_jhu_validation, prepare_jhu_validation
+from droneai.round2_samples import evaluation_samples_from_jhu
 
 
 def _write_jhu_sample(
@@ -76,6 +77,27 @@ def test_index_jhu_validation_requires_exact_frozen_count(tmp_path: Path) -> Non
         index_jhu_validation(val, expected_samples=500)
 
 
+def test_jhu_out_of_bounds_points_are_count_preserved_but_not_localization_truth(
+    tmp_path: Path,
+) -> None:
+    val = tmp_path / "val"
+    _write_jhu_sample(val, "0001", points=((100, 79), (130, 90)))
+
+    rows = index_jhu_validation(val, expected_samples=1)
+
+    assert rows[0].count == 2
+    assert rows[0].normalization_corrections == 2
+    assert rows[0].point_localization_valid is False
+    assert all(0 <= x < 100 and 0 <= y < 80 for x, y in rows[0].points)
+
+    sample = evaluation_samples_from_jhu(rows, split_id="fixture-jhu")
+    assert sample[0].ground_truth_count == 2.0
+    assert sample[0].has_point_annotations is False
+    assert sample[0].ground_truth_points == ()
+    assert sample[0].ground_truth_density is None
+    assert sample[0].condition_tags["point_localization_valid"] == "false"
+
+
 def test_prepare_jhu_validation_writes_stage1_inventory_without_editing_source(
     tmp_path: Path,
 ) -> None:
@@ -102,6 +124,31 @@ def test_prepare_jhu_validation_writes_stage1_inventory_without_editing_source(
     )
     assert normalized["points"] == [[10.0, 11.0], [20.0, 21.0]]
     assert (val / "gt/0001.txt").read_bytes() == source_annotation
+
+
+def test_prepare_jhu_validation_records_official_label_corrections(
+    tmp_path: Path,
+) -> None:
+    val = tmp_path / "val"
+    _write_jhu_sample(val, "0001", points=((100, 80),))
+
+    prepare_jhu_validation(
+        dataset_root=tmp_path,
+        validation_root=val,
+        expected_samples=1,
+    )
+
+    row = json.loads((tmp_path / "inventory.jsonl").read_text(encoding="utf-8"))
+    normalized = json.loads(
+        (tmp_path / row["annotation_path"]).read_text(encoding="utf-8")
+    )
+    assert row["point_count"] == 1
+    assert row["normalization_corrections"] == 1
+    assert row["condition_tags"]["point_localization_valid"] == "false"
+    assert normalized["normalization"]["corrected_count"] == 1
+    assert normalized["normalization"]["point_localization_valid"] is False
+    assert normalized["points"][0][0] < 100
+    assert normalized["points"][0][1] < 80
 
 
 def test_prepare_jhu_validation_refuses_to_replace_inventory(tmp_path: Path) -> None:
