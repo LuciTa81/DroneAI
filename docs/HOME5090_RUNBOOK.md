@@ -522,6 +522,110 @@ Pull only `/workspace/data/results/round1-report-scenario-package-v1`; keep raw
 native outputs, datasets, and checkpoints on the SSD. This lane does not change
 the model queue or authorize deployment.
 
+## Round 2 1,000-image reference benchmark
+
+This lane runs frozen inference only. It never trains, fine-tunes, adapts,
+calibrates, or writes a checkpoint. The shared matrix is 334 UCF-QNRF Test,
+500 JHU-CROWD++ Validation, and 166 selected UP-COUNT validation/test frames per
+model. JHU-CROWD++ and UP-COUNT remain `PASS_RESEARCH_ONLY`; the combined
+comparison is always `PASS_RESEARCH_ONLY` and cannot produce a commercial
+pooled score.
+
+After the three dataset roots have passed their rights and acquisition gates,
+freeze the one shared 1,000-sample manifest once:
+
+```bash
+cd /workspace
+mkdir -p /workspace/data/results/round2-reference-v1
+/workspace/.venvs/harness/bin/python scripts/build_round2_reference_manifest.py \
+  --config configs/evaluation/round2_reference_benchmark.json \
+  --ucf-root /workspace/data/datasets/ucf-qnrf-kaggle-apache \
+  --jhu-root /workspace/data/datasets/jhu-crowd-plus-v2 \
+  --up-count-root /workspace/data/datasets/up-count-v1 \
+  --output /workspace/data/results/round2-reference-v1/sample-manifest.json
+```
+
+Inspect the exact 3 × 3 plan without loading a model or starting inference:
+
+```bash
+cd /workspace
+/workspace/.venvs/harness/bin/python scripts/run_round2_reference.py \
+  --config configs/evaluation/round2_reference_benchmark.json \
+  --manifest /workspace/data/results/round2-reference-v1/sample-manifest.json \
+  --dry-run
+```
+
+For each model, run the three one-sample gates first. Set `MODEL` and `PYTHON`
+to one of the three accepted pairs, run the loop, then stop and inspect the
+three JSON results, panels, model briefs, rights files, and hashes before moving
+to the next model:
+
+```bash
+MODEL=steerer
+PYTHON=/workspace/.venvs/steerer/bin/python
+# MODEL=dm-count; PYTHON=/workspace/.venvs/dm-count/bin/python
+# MODEL=mpcount; PYTHON=/workspace/.venvs/mpcount/bin/python
+
+for DATASET in ucf-qnrf-kaggle-apache jhu-crowd-plus-v2 up-count-v1; do
+  "$PYTHON" scripts/run_round2_reference.py \
+    --config configs/evaluation/round2_reference_benchmark.json \
+    --runtime-config configs/evaluation/round2_reference_home5090.json \
+    --manifest /workspace/data/results/round2-reference-v1/sample-manifest.json \
+    --ucf-root /workspace/data/datasets/ucf-qnrf-kaggle-apache \
+    --jhu-root /workspace/data/datasets/jhu-crowd-plus-v2 \
+    --up-count-root /workspace/data/datasets/up-count-v1 \
+    --model "$MODEL" \
+    --dataset "$DATASET" \
+    --one-sample \
+    --output-dir "/workspace/data/results/round2-reference-v1/preflight/$MODEL/$DATASET"
+done
+```
+
+After the one-sample gates for one model are accepted, run its three full lanes
+inside the existing `crowd` tmux session. `--resume` creates an append-only,
+hash-bound progress ledger on the first run and resumes only its verified prefix
+after an SSH interruption or reboot. Reissue the identical command to resume;
+never delete or edit `progress.jsonl`.
+
+```bash
+MODEL=steerer
+PYTHON=/workspace/.venvs/steerer/bin/python
+# Change these two values only after the prior model's 1,000 rows are reviewed.
+
+for DATASET in ucf-qnrf-kaggle-apache jhu-crowd-plus-v2 up-count-v1; do
+  "$PYTHON" scripts/run_round2_reference.py \
+    --config configs/evaluation/round2_reference_benchmark.json \
+    --runtime-config configs/evaluation/round2_reference_home5090.json \
+    --manifest /workspace/data/results/round2-reference-v1/sample-manifest.json \
+    --ucf-root /workspace/data/datasets/ucf-qnrf-kaggle-apache \
+    --jhu-root /workspace/data/datasets/jhu-crowd-plus-v2 \
+    --up-count-root /workspace/data/datasets/up-count-v1 \
+    --model "$MODEL" \
+    --dataset "$DATASET" \
+    --resume \
+    --output-dir "/workspace/data/results/round2-reference-v1/$MODEL/$DATASET"
+done
+```
+
+Repeat the full loop only in this fixed order: `steerer`, `dm-count`, then
+`mpcount`. A technical `REVIEW` or `BLOCKED` result is evidence to inspect, not
+permission to skip to the next model. Once all nine directories contain the
+expected 334/500/166 successful rows, build the dataset-wise comparison:
+
+```bash
+cd /workspace
+/workspace/.venvs/harness/bin/python scripts/build_round2_comparison.py \
+  --config configs/evaluation/round2_reference_benchmark.json \
+  --results-root /workspace/data/results/round2-reference-v1 \
+  --output-dir /workspace/data/results/round2-reference-comparison-v1
+```
+
+The comparison command re-hashes every referenced result artifact, requires one
+shared sample-manifest identity across all nine runs, and refuses missing rows,
+explicit failures, mixed manifests, or a restricted dataset promoted beyond
+research-only. Keep full predictions and restricted panels on the SSD. Pull only
+the compact comparison files and separately cleared panels for Git or Drive.
+
 ## Dataset transfer gate
 
 Do not execute this section until Stage 3C records dataset rights, intended
