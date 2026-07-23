@@ -22,7 +22,11 @@ from droneai.evaluation_panels import render_review_panel
 from droneai.evaluation_runner import run_evaluation
 from droneai.integrity import is_sha256, sha256_file
 from droneai.model_brief import write_model_brief
-from droneai.round2_config import DatasetLane, load_round2_config
+from droneai.round2_config import (
+    SUPPORTED_MODEL_IDS,
+    DatasetLane,
+    load_round2_config,
+)
 from droneai.round2_manifest import verify_round2_manifest
 from droneai.round2_runner import (
     build_round2_adapter,
@@ -48,7 +52,7 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--ucf-root", type=Path)
     parser.add_argument("--jhu-root", type=Path)
     parser.add_argument("--up-count-root", type=Path)
-    parser.add_argument("--model", choices=("steerer", "dm-count", "mpcount"))
+    parser.add_argument("--model", choices=SUPPORTED_MODEL_IDS)
     parser.add_argument(
         "--dataset",
         choices=("ucf-qnrf-kaggle-apache", "jhu-crowd-plus-v2", "up-count-v1"),
@@ -209,6 +213,14 @@ def _run_one_sample(*, adapter, sample, protocol, output_dir: Path, provenance) 
 def main(argv: Sequence[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     config = load_round2_config(args.config)
+    runtimes = load_round2_runtime_config(args.runtime_config)
+    expected_models = tuple(model.model_id for model in config.models)
+    runtime_models = tuple(runtimes)
+    if runtime_models != expected_models:
+        raise ValueError(
+            "runtime models must exactly match benchmark models: "
+            f"expected={expected_models!r}, actual={runtime_models!r}"
+        )
     manifest_path = args.manifest.resolve()
     manifest = _load_manifest(manifest_path, expected_round_id=config.round_id)
     if args.dry_run:
@@ -227,7 +239,6 @@ def main(argv: Sequence[str] | None = None) -> int:
     if len(lane_samples) != lane.samples:
         raise ValueError("verified manifest lane count differs from config")
 
-    runtimes = load_round2_runtime_config(args.runtime_config)
     runtime = runtimes[model_id]
     model_config = load_and_validate_model_config(runtime)
     output_dir.mkdir(parents=True, exist_ok=True)

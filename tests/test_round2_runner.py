@@ -14,6 +14,11 @@ from droneai.round2_runner import (
     write_scoped_rights_decision,
 )
 
+REPO_ROOT = Path(__file__).resolve().parents[1]
+POINT_RUNTIME = (
+    REPO_ROOT / "configs/evaluation/round2_point_reference_home5090.json"
+)
+
 
 def _targets() -> dict[str, object]:
     return {
@@ -149,6 +154,29 @@ def test_runtime_config_rejects_non_round2_model(tmp_path: Path) -> None:
     )
 
     with pytest.raises(ValueError, match="exactly"):
+        load_round2_runtime_config(path)
+
+
+def test_point_runtime_config_freezes_exact_model_order() -> None:
+    runtimes = load_round2_runtime_config(POINT_RUNTIME)
+
+    assert tuple(runtimes) == ("steerer", "pet", "apgcc")
+    assert runtimes["pet"].long_side_cap == 1536
+    assert runtimes["apgcc"].long_side_cap is None
+
+
+def test_runtime_config_rejects_mixed_approved_shortlist(tmp_path: Path) -> None:
+    payload = json.loads(
+        (
+            REPO_ROOT
+            / "configs/evaluation/round2_reference_home5090.json"
+        ).read_text(encoding="utf-8")
+    )
+    payload["models"]["pet"] = payload["models"].pop("dm-count")
+    path = tmp_path / "mixed-runtime.json"
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="approved ordered model shortlist"):
         load_round2_runtime_config(path)
 
 

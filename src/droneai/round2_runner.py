@@ -11,7 +11,11 @@ from typing import Any, Mapping, cast
 from droneai.evaluation_contract import ModelAdapter
 from droneai.evaluation_runner import EvaluationProtocol
 from droneai.integrity import is_sha256, sha256_file
-from droneai.round2_config import APPROVED_MODEL_IDS, DatasetLane
+from droneai.round2_config import (
+    APPROVED_MODEL_MATRICES,
+    SUPPORTED_MODEL_IDS,
+    DatasetLane,
+)
 
 
 @dataclass(frozen=True)
@@ -29,7 +33,7 @@ class RuntimeModel:
     patch_size: int | None = None
 
     def __post_init__(self) -> None:
-        if self.model_id not in APPROVED_MODEL_IDS:
+        if self.model_id not in SUPPORTED_MODEL_IDS:
             raise ValueError(f"unsupported Round 2 model: {self.model_id}")
         if re.fullmatch(r"[0-9a-f]{40}", self.upstream_commit) is None:
             raise ValueError("runtime model requires a pinned upstream commit")
@@ -62,8 +66,13 @@ def load_round2_runtime_config(path: str | Path) -> dict[str, RuntimeModel]:
     if not isinstance(payload, dict) or payload.get("schema_version") != 1:
         raise ValueError("Round 2 runtime config requires schema_version=1")
     raw_models = payload.get("models")
-    if not isinstance(raw_models, dict) or tuple(raw_models) != APPROVED_MODEL_IDS:
-        raise ValueError("runtime config must contain exactly the approved Round 2 models")
+    if (
+        not isinstance(raw_models, dict)
+        or tuple(raw_models) not in APPROVED_MODEL_MATRICES
+    ):
+        raise ValueError(
+            "runtime config must contain exactly an approved ordered model shortlist"
+        )
     root = _repository_root(config_path)
     result: dict[str, RuntimeModel] = {}
     required = {

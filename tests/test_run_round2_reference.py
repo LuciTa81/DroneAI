@@ -3,10 +3,18 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 from scripts.run_round2_reference import _parser, main
 
 
 CONFIG = Path("configs/evaluation/round2_reference_benchmark.json")
+POINT_CONFIG = Path(
+    "configs/evaluation/round2_point_reference_benchmark.json"
+)
+LEGACY_RUNTIME = Path(
+    "configs/evaluation/round2_reference_home5090.json"
+)
 
 
 def test_dry_run_lists_nine_dataset_runs_without_inference(
@@ -45,3 +53,52 @@ def test_cli_exposes_one_sample_resume_and_dataset_roots() -> None:
     assert "--ucf-root" in help_text
     assert "--jhu-root" in help_text
     assert "--up-count-root" in help_text
+
+
+@pytest.mark.parametrize("model_id", ["pet", "apgcc"])
+def test_cli_accepts_point_model_choices(model_id: str) -> None:
+    args = _parser().parse_args(
+        [
+            "--config",
+            str(POINT_CONFIG),
+            "--manifest",
+            "manifest.json",
+            "--model",
+            model_id,
+            "--dry-run",
+        ]
+    )
+
+    assert args.model == model_id
+
+
+def test_cli_rejects_runtime_config_that_differs_from_benchmark(
+    tmp_path: Path,
+) -> None:
+    manifest = tmp_path / "manifest.json"
+    manifest.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "round_id": "round-2-reference-benchmark-v1",
+                "fine_tuning": False,
+                "expected_samples_per_model": 1000,
+                "sample_manifest_sha256": "a" * 64,
+                "samples": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="runtime models must exactly match"):
+        main(
+            [
+                "--config",
+                str(POINT_CONFIG),
+                "--runtime-config",
+                str(LEGACY_RUNTIME),
+                "--manifest",
+                str(manifest),
+                "--dry-run",
+            ]
+        )
