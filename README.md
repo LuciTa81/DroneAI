@@ -1,108 +1,102 @@
-# DroneAI
+# Drone AI: 군중 계수 모델 비교
 
-Reproducible crowd-counting experiments for CCTV and drone safety monitoring.
+**CCTV 및 드론 영상 기반 인원 밀집도 분석**을 위해 여러 군중 계수(Crowd Counting) 모델을 비교하고 정리한 저장소입니다.
 
-## Project goals
+모델별 코드 정보, 데이터셋별 검증 결과, 예측 결과, 시각화 자료와 종합 비교 보고서를 포함합니다.
 
-1. Reproduce published crowd-counting baselines with pinned code and environments.
-2. Measure generalization to festival CCTV and drone imagery.
-3. Evaluate whether count, density, latency, and failure behavior are useful for operators.
+---
 
-## Runtime and storage policy
+## 1. 프로젝트 개요
 
-- GitHub stores code, notebooks, configuration, small reports, and dataset manifests.
-- The home RTX 5090 SSD is the default for new datasets, checkpoints, and large run artifacts.
-- Google Drive remains the Colab fallback and preserves prior experiment provenance.
-- Raw videos, model weights, credentials, and mounted Drive contents must never be committed.
+- `APGCC`
+- `CSRNet`
+- `DMCount`
+- `MPCount`
+- `PET`
+- `STEERER`
 
-Default container paths:
+주요 검증 데이터셋은 다음과 같습니다.
+
+- **UCF-QNRF:** 334개 샘플
+- **JHU-CROWD++:** 500개 샘플
+- **UP-COUNT:** 166개 샘플
+
+`APGCC`, `PET`, `STEERER`는 세 데이터셋의 검증 결과를 포함하며, `CSRNet`, `DMCount`, `MPCount`는 모델별 검증 패키지를 포함합니다.
+
+---
+
+## 📂 2. 폴더 구조
 
 ```text
-/workspace/
-├── source and harness
-└── data/
-    ├── datasets/
-    ├── checkpoints/
-    └── results/
+.
+├── 결과해석/
+│   ├── 비교자료/
+│   │   ├── model_comparison.md
+│   │   ├── dataset_comparison.md
+│   │   └── Run_enviorment.md
+│   ├── 라이선스_사용범위.md
+│   └── 모델비교_공유용.pdf
+├── APGCC/
+├── CSRNet/
+├── DMCount/
+├── MPCount/
+├── PET/
+├── STEERER/
+└── README.md
 ```
 
-Legacy/fallback Drive root:
+모델 폴더에는 다음 자료가 포함되어 있습니다.
 
-```text
-MyDrive/DroneAI/
-├── datasets/
-├── checkpoints/
-└── runs/
-```
+- `모델코드/`: 모델 코드 출처와 재현 관련 정보
+- `Dataset/`: 검증에 사용된 샘플 이미지
+- `검증자료/`: 평가 요약, 지표, 예측값과 시각화 결과
+- `추가실험결과/`: 추가 평가 및 스트레스 테스트 결과
 
-See `docs/HOME5090_RUNBOOK.md` for safe SSH, sync, smoke, resume, and result-pull commands.
+---
 
-## Stage gates
+## 3. 모델 비교 결과
 
-Every stage produces both `score.json` and `score.md`. A high average cannot
-hide a failed integrity or safety blocker.
+아래 순위는 [모델 종합 비교 자료](결과해석/비교자료/model_comparison.md)의 기술평가 순서를 기준으로 정리했습니다. `MAE`와 `RMSE`는 낮을수록 예측 오차가 작습니다.
 
-| Stage | Question | Gate |
-|---|---|---:|
-| 0 | Can the selected backend, Git and persistent storage produce a reproducible CUDA run? | 85 |
-| 1 | Is the selected dataset legal, intact and leakage-free? | 85 |
-| 2 | Does the CSRNet smoke pipeline preserve counts and learn a tiny subset? | 80 |
-| 3 | Does each official model reproduce its published result? | 85 |
-| 3C | Are code, dataset, pretrained weight, derived weight and deployment rights safe for the requested scope? | 80 |
-| 4 | Does the model generalize to drone and held-out camera conditions? | 80 |
-| 5 | Does it pass a controlled field trial? | 85 |
-| 6 | Does it help operators in shadow mode? | 85 |
+| 순위 | 모델 | MAE | RMSE |
+|---:|---|---:|---:|
+| **1** | **STEERER** | **71.588** | **97.965** |
+| **2** | **DMCount** | **154.286** | **229.806** |
+| **3** | **PET** | **76.444** | **129.802** |
+| **4** | **MPCount** | **213.624** | **333.553** |
+| **5** | **APGCC** | **266.194** | **431.296** |
+| **6** | **CSRNet** | **332.329** | **522.031** |
 
-See `docs/ROADMAP.md` for the complete review sequence.
+### 결과 요약
 
-## Current experiment
+- **STEERER**가 종합 기술평가 1위를 기록했으며, MAE와 RMSE도 가장 낮았습니다.
+- **DMCount**는 종합 2위, **PET**는 종합 3위를 기록했습니다.
+- 모델별 세부 지표와 데이터셋별 결과는 각 모델 폴더의 `검증자료/`에서 확인할 수 있습니다.
 
-Stages 0, 1 and 2 passed on Colab. Stage 3 now reproduces the official
-DM-Count implementation on ShanghaiTech Part A in two lanes: a faithful
-paper-number check and a test-isolated clean protocol. See `docs/STAGE_3.md`
-for the scored contract.
+---
 
-The Stage 3 official-checkpoint preflight passed on 2026-07-13 with MAE 60.03
-and RMSE 96.00 on all 182 Part A test images. Stage 3 itself remains in progress
-until the three-seed training and clean-lane gates are complete.
+## 4. 세부 결과 자료
 
-The seed-2026 faithful-training pilot reached epoch 140 on 2026-07-14. Its
-test-selected checkpoint recorded MAE 71.28 and RMSE 113.21 on all 182 images,
-and the separate pilot harness passed 100/100. The full 1000-epoch run is
-deferred to a suitable GPU server; this pilot is not a Stage 3 pass.
+- [모델 종합 비교](결과해석/비교자료/model_comparison.md)
+- [데이터셋별 비교](결과해석/비교자료/dataset_comparison.md)
+- [실행 환경 정리](결과해석/비교자료/Run_enviorment.md)
+- [공유용 모델 비교 보고서](결과해석/모델비교_공유용.pdf)
 
-Every new model-dataset run uses the
-[common evaluation harness](docs/COMMON_EVALUATION_HARNESS.md): architecture
-review first, complete labeled evaluation second, then a 100-point gate and 12
-deterministic review panels.
+각 모델의 `검증자료/`에는 다음 파일이 포함됩니다.
 
-The first model sequence is:
+| 파일 | 내용 |
+|---|---|
+| `summary.md` | 평가 조건과 핵심 결과 요약 |
+| `metrics.json` | MAE, RMSE, Bias 등 상세 지표 |
+| `predictions.csv` | 샘플별 실제값과 예측값 |
+| `figures/` | 선택된 샘플의 시각화 결과 |
 
-1. CSRNet pipeline smoke test
-2. DM-Count official reproduction
-3. P2PNet compatibility and reproduction
-4. Drone-view fine-tuning and field evaluation
+---
 
-TensorFlow/Keras ports are kept separate until the official PyTorch baselines are reproduced.
+## 5. 라이선스 및 사용 범위
 
-New execution defaults to the `home5090_docker` profile. Colab notebooks and
-their recorded Drive paths remain unchanged as legacy reproduction/fallback
-assets. A home5090 foundation smoke is always `research_only` and never grants
-commercial or production approval.
+전체 패키지의 현재 사용 범위는 **연구 및 기술 검토 목적**입니다.
 
-Public datasets are research benchmarks, not automatic production-training
-assets. Rights-sensitive gates never emit an unscoped `PASS`:
+모델 코드, 데이터셋, 사전학습 가중치와 배포 권한은 각각 별도로 확인해야 합니다. 자세한 내용은 [라이선스 및 사용 범위](결과해석/라이선스_사용범위.md)를 참고하세요.
 
-- `PASS_RESEARCH_ONLY`: the declared research lane is permitted, not commercial use;
-- `PASS_COMMERCIAL_CANDIDATE`: no explicit prohibition is recorded but required permission is absent or unverified;
-- `PRODUCTION_APPROVED`: every required code/data/weight/deployment component has verified commercial evidence;
-- `BLOCKED`: an explicit prohibition, contradiction, missing identity, or integrity blocker exists.
-
-Candidate status permits cataloging and rights due diligence. A synthetic-only
-compatibility smoke is added only when the code component itself is already
-verified for that action; it never opens ambiguous data or weights. Candidate
-status does not permit ambiguous asset download, training,
-weight reuse, or deployment. UP-COUNT is non-commercial; DroneCrowd currently
-lacks explicit license terms in its official repository and remains candidate
-inventory only. Production fine-tuning requires project-owned or separately
-granted rights. This harness is an engineering control, not legal advice.
+검증에 사용된 샘플 이미지는 각 모델의 `Dataset/` 폴더에 포함되어 있습니다. 원본 전체 데이터셋, 체크포인트와 파생 가중치는 포함하지 않습니다.
