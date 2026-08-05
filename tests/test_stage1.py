@@ -157,3 +157,15 @@ def test_stage1_commercial_claim_requires_explicit_verified_terms(tmp_path: Path
         manifest=manifest, inventory=rows, dataset_root=tmp_path
     )
     assert next(c for c in approved_checks if c.check_id == "access.intended_use").passed
+
+
+def test_stage1_accepts_independent_image_as_split_unit(tmp_path: Path) -> None:
+    manifest, rows = _fixture(tmp_path)
+    manifest["split"]["unit"] = "image"
+    checks = build_stage1_checks(
+        manifest=manifest,
+        inventory=rows,
+        dataset_root=tmp_path,
+    )
+
+    assert next(check for check in checks if check.check_id == "split.unit").passed

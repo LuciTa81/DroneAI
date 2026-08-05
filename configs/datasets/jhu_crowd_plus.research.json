@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "dataset_id": "jhu-crowd-plus-v2",
+  "display_name": "JHU-CROWD++",
+  "role": "research_benchmark_only",
+  "intended_use": "noncommercial_research",
+  "inventory_path": "inventory.jsonl",
+  "source": {
+    "official_url": "https://www.crowd-counting.com/",
+    "download_url": "https://drive.google.com/open?id=1FkdvHyAom1B2aVj6_jZpZPW01sQNiI7n",
+    "citation": "Sindagi, Yasarla, and Patel, JHU-CROWD++: Large-Scale Crowd Counting Dataset and A Benchmark Method, TPAMI 2022"
+  },
+  "rights": {
+    "status": "verified",
+    "license_id": "JHU-CROWD-PLUS-NONCOMMERCIAL-TERMS",
+    "evidence_url": "https://www.crowd-counting.com/terms-of-use.html",
+    "allowed_uses": [
+      "noncommercial_research"
+    ],
+    "commercial_use": false,
+    "research_use": true,
+    "restriction_basis": "explicit_terms",
+    "decision_date": "2026-07-23",
+    "decision_authority": "official_dataset_terms",
+    "notes": "Frozen inference evaluation only. The official terms prohibit commercial use and commercial derivative work. Do not train, fine-tune, calibrate, create production weights, deploy, or broadly redistribute source or derived imagery under this manifest."
+  },
+  "annotation": {
+    "format": "JHU-CROWD++ six-integer head rows plus image_labels.txt",
+    "point_semantics": "person_head_center",
+    "coordinate_system": "source-image zero-based xy after bounds verification"
+  },
+  "split": {
+    "unit": "image",
+    "group_key": "sample_id",
+    "required_splits": [
+      "val"
+    ],
+    "evaluation_partition": "official validation only"
+  },
+  "coverage": {
+    "required_condition_tags": [
+      "density_band",
+      "scene",
+      "weather",
+      "distractor"
+    ]
+  }
+}

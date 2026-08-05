@@ -3,11 +3,13 @@ from __future__ import annotations
 from pathlib import Path
 
 import numpy as np
+import pytest
 from PIL import Image
 from scipy.io import savemat
 
 from droneai.ucf_qnrf import (
     apply_official_train_validation_split,
+    index_ucf_qnrf_partition,
     index_ucf_qnrf_train,
     prepare_evaluation_sample,
     read_ucf_qnrf_points,
@@ -27,6 +29,26 @@ def _write_sample(root: Path, index: int, count: int) -> None:
         dtype=np.float32,
     ).reshape((-1, 2))
     savemat(root / f"img_{index:04d}_ann.mat", {"annPoints": points})
+
+
+def test_index_ucf_test_requires_exact_frozen_count(tmp_path: Path) -> None:
+    _write_sample(tmp_path, 1, 3)
+    _write_sample(tmp_path, 2, 4)
+
+    records = index_ucf_qnrf_partition(
+        tmp_path,
+        partition="test",
+        expected_samples=2,
+    )
+
+    assert [record.sample_id for record in records] == ["img_0001", "img_0002"]
+    assert [record.count for record in records] == [3, 4]
+    with pytest.raises(ValueError, match="expected 334"):
+        index_ucf_qnrf_partition(
+            tmp_path,
+            partition="test",
+            expected_samples=334,
+        )
 
 
 def test_read_ucf_qnrf_points_reads_annpoints(tmp_path: Path) -> None:

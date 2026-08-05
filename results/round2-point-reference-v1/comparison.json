@@ -1,0 +1,352 @@
+{
+  "combined_rights_scope": "PASS_RESEARCH_ONLY",
+  "comparison_id": "round-2-point-reference-comparison-v1",
+  "comparison_scope": "research_reference_only",
+  "datasets": {
+    "jhu-crowd-plus-v2": {
+      "models": {
+        "apgcc": {
+          "comparison_scope": "research_reference_only",
+          "count_derivation": "number of thresholded in-bounds person points",
+          "dataset_id": "jhu-crowd-plus-v2",
+          "dataset_rights_scope": "PASS_RESEARCH_ONLY",
+          "effective_rights_scope": "PASS_RESEARCH_ONLY",
+          "evidence": {
+            "path": "/workspace/data/results/round2-reference-v1/apgcc/jhu-crowd-plus-v2/evidence-manifest.json",
+            "sha256": "a1650906044a9e6d4bd875dc12ea2a30c0bdd7b9de3034c276bffdcdec910904"
+          },
+          "expected_samples": 500,
+          "family": "points",
+          "git_commit": "14e786e6a79f7104ddc8e91f731b630b9d19ffcc",
+          "metrics": {
+            "mae": 89.464,
+            "mape_reference": 46.488628272150315,
+            "median_latency_ms": 9.829141999944113,
+            "peak_vram_mb": 5614.81103515625,
+            "rmse": 259.2912108036059,
+            "signed_bias": 25.176,
+            "spatial_mean": 0.6402309478317012,
+            "throughput_fps_batch1": 101.7382799033411
+          },
+          "model_id": "apgcc",
+          "native_density_map": false,
+          "native_output": "person logits, point coordinates, confidences, and offsets",
+          "ranking_eligible": false,
+          "spatial_metric_name": "localization_f1",
+          "technical_gate_score": 100,
+          "technical_gate_status": "PASS_RESEARCH_ONLY",
+          "visualization_label": "derived point visualization"
+        },
+        "pet": {
+          "comparison_scope": "research_reference_only",
+          "count_derivation": "number of accepted point queries above the frozen threshold",
+          "dataset_id": "jhu-crowd-plus-v2",
+          "dataset_rights_scope": "PASS_RESEARCH_ONLY",
+          "effective_rights_scope": "PASS_RESEARCH_ONLY",
+          "evidence": {
+            "path": "/workspace/data/results/round2-reference-v1/pet/jhu-crowd-plus-v2/evidence-manifest.json",
+            "sha256": "1857d7aab078440a8023f2666bf65a9bb37bf3fa5bac7c7d41b18716135b5b07"
+          },
+          "expected_samples": 500,
+          "family": "points",
+          "git_commit": "14e786e6a79f7104ddc8e91f731b630b9d19ffcc",
+          "metrics": {
+            "mae": 89.04,
+            "mape_reference": 44.180797171312584,
+            "median_latency_ms": 31.65549049299443,
+            "peak_vram_mb": 5133.13916015625,
+            "rmse": 229.25353650489234,
+            "signed_bias": 48.664,
+            "spatial_mean": 0.2815816822535024,
+            "throughput_fps_batch1": 31.5900965180529
+          },
+          "model_id": "pet",
+          "native_density_map": false,
+          "native_output": "point/non-point scores, accepted point coordinates, confidences, and quadtree split representation",
+          "ranking_eligible": false,
+          "spatial_metric_name": "localization_f1",
+          "technical_gate_score": 100,
+          "technical_gate_status": "PASS_RESEARCH_ONLY",
+          "visualization_label": "derived point visualization"
+        },
+        "steerer": {
+          "comparison_scope": "research_reference_only",
+          "count_derivation": "integral of the highest-resolution valid density map",
+          "dataset_id": "jhu-crowd-plus-v2",
+          "dataset_rights_scope": "PASS_RESEARCH_ONLY",
+          "effective_rights_scope": "PASS_RESEARCH_ONLY",
+          "evidence": {
+            "path": "/workspace/data/results/round2-reference-v1/steerer/jhu-crowd-plus-v2/evidence-manifest.json",
+            "sha256": "397b80414ea8d60b40c05ed4435483875710f0a04d69280de9d5938279db0ddd"
+          },
+          "expected_samples": 500,
+          "family": "density_and_points",
+          "git_commit": "07f0bde8e6d77931fea6bd7241eb47a5a6fad675",
+          "metrics": {
+            "mae": 94.99080375046513,
+            "mape_reference": 40.70331641298941,
+            "median_latency_ms": 21.981787998811342,
+            "peak_vram_mb": 3366.30078125,
+            "rmse": 243.78338711859638,
+            "signed_bias": 67.75533752015416,
+            "spatial_mean": 95.01723490212089,
+            "throughput_fps_batch1": 45.49220473121088
+          },
+          "model_id": "steerer",
+          "native_density_map": true,
+          "native_output": "multi-resolution density maps and localization points",
+          "ranking_eligible": false,
+          "spatial_metric_name": "game_l1",
+          "technical_gate_score": 100,
+          "technical_gate_status": "PASS_RESEARCH_ONLY"
+        }
+      },
+      "rights_scope": "PASS_RESEARCH_ONLY",
+      "samples_per_model": 500
+    },
+    "ucf-qnrf-kaggle-apache": {
+      "models": {
+        "apgcc": {
+          "comparison_scope": "research_reference_only",
+          "count_derivation": "number of thresholded in-bounds person points",
+          "dataset_id": "ucf-qnrf-kaggle-apache",
+          "dataset_rights_scope": "PASS_COMMERCIAL_CANDIDATE",
+          "effective_rights_scope": "PASS_COMMERCIAL_CANDIDATE",
+          "evidence": {
+            "path": "/workspace/data/results/round2-reference-v1/apgcc/ucf-qnrf-kaggle-apache/evidence-manifest.json",
+            "sha256": "95fc3e812cbc5d6ff8eb91f130a24a34639951bc8d5ad1f27ea39de68b6cac2a"
+          },
+          "expected_samples": 334,
+          "family": "points",
+          "git_commit": "14e786e6a79f7104ddc8e91f731b630b9d19ffcc",
+          "metrics": {
+            "mae": 125.8622754491018,
+            "mape_reference": 19.727271430638897,
+            "median_latency_ms": 67.75082350213779,
+            "peak_vram_mb": 6229.93603515625,
+            "rmse": 228.0546998151637,
+            "signed_bias": -62.395209580838326,
+            "spatial_mean": 0.6496634710634562,
+            "throughput_fps_batch1": 14.759968193869204
+          },
+          "model_id": "apgcc",
+          "native_density_map": false,
+          "native_output": "person logits, point coordinates, confidences, and offsets",
+          "ranking_eligible": false,
+          "spatial_metric_name": "localization_f1",
+          "technical_gate_score": 100,
+          "technical_gate_status": "PASS_RESEARCH_ONLY",
+          "visualization_label": "derived point visualization"
+        },
+        "pet": {
+          "comparison_scope": "research_reference_only",
+          "count_derivation": "number of accepted point queries above the frozen threshold",
+          "dataset_id": "ucf-qnrf-kaggle-apache",
+          "dataset_rights_scope": "PASS_COMMERCIAL_CANDIDATE",
+          "effective_rights_scope": "PASS_RESEARCH_ONLY",
+          "evidence": {
+            "path": "/workspace/data/results/round2-reference-v1/pet/ucf-qnrf-kaggle-apache/evidence-manifest.json",
+            "sha256": "e09b2b9d077e9a6ed8dc84e6e226aa000a272792f48e8c6efa4ccce93446fdbb"
+          },
+          "expected_samples": 334,
+          "family": "points",
+          "git_commit": "14e786e6a79f7104ddc8e91f731b630b9d19ffcc",
+          "metrics": {
+            "mae": 82.28443113772455,
+            "mape_reference": 11.45854652024742,
+            "median_latency_ms": 57.48524850059766,
+            "peak_vram_mb": 5132.43603515625,
+            "rmse": 152.90826375885806,
+            "signed_bias": -10.709580838323353,
+            "spatial_mean": 0.4478761525335433,
+            "throughput_fps_batch1": 17.395767193901982
+          },
+          "model_id": "pet",
+          "native_density_map": false,
+          "native_output": "point/non-point scores, accepted point coordinates, confidences, and quadtree split representation",
+          "ranking_eligible": false,
+          "spatial_metric_name": "localization_f1",
+          "technical_gate_score": 100,
+          "technical_gate_status": "PASS_RESEARCH_ONLY",
+          "visualization_label": "derived point visualization"
+        },
+        "steerer": {
+          "comparison_scope": "research_reference_only",
+          "count_derivation": "integral of the highest-resolution valid density map",
+          "dataset_id": "ucf-qnrf-kaggle-apache",
+          "dataset_rights_scope": "PASS_COMMERCIAL_CANDIDATE",
+          "effective_rights_scope": "PASS_RESEARCH_ONLY",
+          "evidence": {
+            "path": "/workspace/data/results/round2-reference-v1/steerer/ucf-qnrf-kaggle-apache/evidence-manifest.json",
+            "sha256": "3e1d17b6df735526de3db02f173c2a64a8b28c8685e42d3daf0265dbbd7bb1b2"
+          },
+          "expected_samples": 334,
+          "family": "density_and_points",
+          "git_commit": "d80a785b1928ae844a76c5df80d0b78a08fc3861",
+          "metrics": {
+            "mae": 86.6722841842121,
+            "mape_reference": 11.612209127990226,
+            "median_latency_ms": 141.14759550284361,
+            "peak_vram_mb": 4014.919921875,
+            "rmse": 152.57214178502878,
+            "signed_bias": 17.186671602242505,
+            "spatial_mean": 95.99434637618636,
+            "throughput_fps_batch1": 7.084782397018259
+          },
+          "model_id": "steerer",
+          "native_density_map": true,
+          "native_output": "multi-resolution density maps and localization points",
+          "ranking_eligible": false,
+          "spatial_metric_name": "game_l1",
+          "technical_gate_score": 100,
+          "technical_gate_status": "PASS_RESEARCH_ONLY"
+        }
+      },
+      "rights_scope": "PASS_COMMERCIAL_CANDIDATE",
+      "samples_per_model": 334
+    },
+    "up-count-v1": {
+      "models": {
+        "apgcc": {
+          "comparison_scope": "research_reference_only",
+          "count_derivation": "number of thresholded in-bounds person points",
+          "dataset_id": "up-count-v1",
+          "dataset_rights_scope": "PASS_RESEARCH_ONLY",
+          "effective_rights_scope": "PASS_RESEARCH_ONLY",
+          "evidence": {
+            "path": "/workspace/data/results/round2-reference-v1/apgcc/up-count-v1/evidence-manifest.json",
+            "sha256": "83865fa3db7fc0b996afb6c936a74daeca4c35668fd472f02a077c0201c8ee3d"
+          },
+          "expected_samples": 166,
+          "family": "points",
+          "git_commit": "14e786e6a79f7104ddc8e91f731b630b9d19ffcc",
+          "metrics": {
+            "mae": 69.65060240963855,
+            "mape_reference": 1214.4062024324114,
+            "median_latency_ms": 57.90457499824697,
+            "peak_vram_mb": 3963.68603515625,
+            "rmse": 207.5424183671539,
+            "signed_bias": 53.36144578313253,
+            "spatial_mean": 0.25809570071652044,
+            "throughput_fps_batch1": 17.269792585996434
+          },
+          "model_id": "apgcc",
+          "native_density_map": false,
+          "native_output": "person logits, point coordinates, confidences, and offsets",
+          "ranking_eligible": false,
+          "spatial_metric_name": "localization_f1",
+          "technical_gate_score": 100,
+          "technical_gate_status": "PASS_RESEARCH_ONLY",
+          "visualization_label": "derived point visualization"
+        },
+        "pet": {
+          "comparison_scope": "research_reference_only",
+          "count_derivation": "number of accepted point queries above the frozen threshold",
+          "dataset_id": "up-count-v1",
+          "dataset_rights_scope": "PASS_RESEARCH_ONLY",
+          "effective_rights_scope": "PASS_RESEARCH_ONLY",
+          "evidence": {
+            "path": "/workspace/data/results/round2-reference-v1/pet/up-count-v1/evidence-manifest.json",
+            "sha256": "08eeddd2e4579f1f92292bcdd9d14e066e68ed9b7a04819a5cfa532160fcd6fd"
+          },
+          "expected_samples": 166,
+          "family": "points",
+          "git_commit": "14e786e6a79f7104ddc8e91f731b630b9d19ffcc",
+          "metrics": {
+            "mae": 19.22289156626506,
+            "mape_reference": 68.53211187046145,
+            "median_latency_ms": 55.00705500890035,
+            "peak_vram_mb": 3451.92431640625,
+            "rmse": 46.82143726918053,
+            "signed_bias": -17.813253012048193,
+            "spatial_mean": 0.04698205231940255,
+            "throughput_fps_batch1": 18.179486246595026
+          },
+          "model_id": "pet",
+          "native_density_map": false,
+          "native_output": "point/non-point scores, accepted point coordinates, confidences, and quadtree split representation",
+          "ranking_eligible": false,
+          "spatial_metric_name": "localization_f1",
+          "technical_gate_score": 100,
+          "technical_gate_status": "PASS_RESEARCH_ONLY",
+          "visualization_label": "derived point visualization"
+        },
+        "steerer": {
+          "comparison_scope": "research_reference_only",
+          "count_derivation": "integral of the highest-resolution valid density map",
+          "dataset_id": "up-count-v1",
+          "dataset_rights_scope": "PASS_RESEARCH_ONLY",
+          "effective_rights_scope": "PASS_RESEARCH_ONLY",
+          "evidence": {
+            "path": "/workspace/data/results/round2-reference-v1/steerer/up-count-v1/evidence-manifest.json",
+            "sha256": "23f12ff26c8ef7d6651d1d3c73d521507ca25fadf6485ed0eb90f23643ffcd93"
+          },
+          "expected_samples": 166,
+          "family": "density_and_points",
+          "git_commit": "fca7c5a587b91ceb90f146e51e84fce77c303117",
+          "metrics": {
+            "mae": 17.71728185034665,
+            "mape_reference": 58.39778007671323,
+            "median_latency_ms": 119.73652149754344,
+            "peak_vram_mb": 2585.2734375,
+            "rmse": 43.76182375226939,
+            "signed_bias": -17.290961614691334,
+            "spatial_mean": 19.486640612775286,
+            "throughput_fps_batch1": 8.351670714106358
+          },
+          "model_id": "steerer",
+          "native_density_map": true,
+          "native_output": "multi-resolution density maps and localization points",
+          "ranking_eligible": false,
+          "spatial_metric_name": "game_l1",
+          "technical_gate_score": 100,
+          "technical_gate_status": "PASS_RESEARCH_ONLY"
+        }
+      },
+      "rights_scope": "PASS_RESEARCH_ONLY",
+      "samples_per_model": 166
+    }
+  },
+  "fine_tuning": false,
+  "lanes": 9,
+  "limitations": [
+    "Metrics are reported per dataset and are not pooled into a commercial score.",
+    "JHU-CROWD++ and UP-COUNT evidence is non-commercial research reference only.",
+    "Frozen checkpoints use different training domains; this comparison does not authorize production selection.",
+    "STEERER checkpoint terms remain research-only pending independent clearance.",
+    "PET code and official checkpoint are academic-use only.",
+    "APGCC code is MIT, but the published checkpoint has no separate commercial terms."
+  ],
+  "model_order": [
+    "steerer",
+    "pet",
+    "apgcc"
+  ],
+  "models": {
+    "apgcc": {
+      "count_derivation": "number of thresholded in-bounds person points",
+      "family": "points",
+      "native_density_map": false,
+      "native_output": "person logits, point coordinates, confidences, and offsets",
+      "visualization_label": "derived point visualization"
+    },
+    "pet": {
+      "count_derivation": "number of accepted point queries above the frozen threshold",
+      "family": "points",
+      "native_density_map": false,
+      "native_output": "point/non-point scores, accepted point coordinates, confidences, and quadtree split representation",
+      "visualization_label": "derived point visualization"
+    },
+    "steerer": {
+      "count_derivation": "integral of the highest-resolution valid density map",
+      "family": "density_and_points",
+      "native_density_map": true,
+      "native_output": "multi-resolution density maps and localization points"
+    }
+  },
+  "ranking_eligible": false,
+  "rights_scope": "PASS_RESEARCH_ONLY",
+  "schema_version": 1,
+  "shared_sample_manifest_sha256": "37adb8e058611de79d6f97c3181106f6606f5d1bc1a9b611720e4a699395cc04",
+  "training": false
+}

@@ -9,7 +9,11 @@ import pytest
 from PIL import Image
 
 import droneai.evaluation_runner as evaluation_runner
-from droneai.evaluation_contract import EvaluationSample, NativePrediction
+from droneai.evaluation_contract import (
+    EvaluationSample,
+    NativePrediction,
+    ScalarEvaluation,
+)
 from droneai.evaluation_runner import EvaluationProtocol, run_evaluation
 from droneai.integrity import sha256_file
 from droneai.model_brief import ModelBrief
@@ -84,6 +88,25 @@ class SameCountDifferentDensityAdapter(FixtureAdapter):
         changed_density[0, 0] -= delta
         changed_density[0, 1] += delta
         return replace(prediction, density=changed_density)
+
+
+class FailAfterAdapter(FixtureAdapter):
+    def __init__(self, brief: ModelBrief, *, successful_calls: int) -> None:
+        super().__init__(brief)
+        self._successful_calls = successful_calls
+        self._first_pass_calls = 0
+
+    def predict(
+        self,
+        sample: EvaluationSample,
+        *,
+        retain_native: bool,
+    ) -> NativePrediction:
+        if not retain_native:
+            if self._first_pass_calls == self._successful_calls:
+                raise RuntimeError("simulated interruption")
+            self._first_pass_calls += 1
+        return super().predict(sample, retain_native=retain_native)
 
 
 def _fixture(tmp_path: Path) -> tuple[FixtureAdapter, list[EvaluationSample], EvaluationProtocol]:
@@ -235,11 +258,76 @@ def test_end_to_end_runner_writes_small_review_bundle(tmp_path: Path) -> None:
     assert sample_manifest["ranking_eligible"] is False
 
 
+def test_runner_resume_skips_hash_verified_completed_prefix(tmp_path: Path) -> None:
+    adapter, samples, protocol = _fixture(tmp_path)
+    interrupted = FailAfterAdapter(adapter.brief(), successful_calls=2)
+    output = tmp_path / "resumable-run"
+
+    with pytest.raises(RuntimeError, match="simulated interruption"):
+        run_evaluation(
+            adapter=interrupted,
+            samples=samples,
+            protocol=protocol,
+            output_dir=output,
+            resume=True,
+        )
+
+    assert (output / "progress.jsonl").is_file()
+    resumed = FixtureAdapter(adapter.brief())
+    report = run_evaluation(
+        adapter=resumed,
+        samples=samples,
+        protocol=protocol,
+        output_dir=output,
+        resume=True,
+    )
+
+    assert report.status == "PASS_RESEARCH_ONLY"
+    assert sum(not retained for _, retained in resumed.calls) == 34
+    assert len((output / "progress.jsonl").read_text().splitlines()) == 37
+
+
 def test_protocol_rejects_unproven_held_out_checkpoint(tmp_path: Path) -> None:
     _, _, protocol = _fixture(tmp_path)
 
     with pytest.raises(ValueError, match="held-out"):
         replace(protocol, comparison_scope="held_out_performance")
+
+
+def test_spatial_gate_excludes_explicitly_invalid_official_point_labels(
+    tmp_path: Path,
+) -> None:
+    _, _, protocol = _fixture(tmp_path)
+    valid = ScalarEvaluation(
+        sample_id="valid",
+        ground_truth_count=10.0,
+        predicted_count=10.0,
+        signed_error=0.0,
+        absolute_error=0.0,
+        normalized_error=0.0,
+        density_band="low",
+        latency_ms=1.0,
+        peak_vram_mb=1.0,
+        output_type="density",
+        failure_state=None,
+        spatial_metric_name="game_l1",
+        spatial_metric_value=0.005,
+        condition_values={"point_localization_valid": "true"},
+    )
+    invalid_official_label = replace(
+        valid,
+        sample_id="invalid-label",
+        spatial_metric_name=None,
+        spatial_metric_value=None,
+        condition_values={"point_localization_valid": "false"},
+    )
+
+    passed, mean = evaluation_runner._spatial_pass(
+        [valid, invalid_official_label], protocol
+    )
+
+    assert passed is True
+    assert mean == pytest.approx(0.005)
 
 
 def test_runner_hashes_additional_provenance_inside_output(tmp_path: Path) -> None:

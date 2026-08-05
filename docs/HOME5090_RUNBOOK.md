@@ -522,6 +522,148 @@ Pull only `/workspace/data/results/round1-report-scenario-package-v1`; keep raw
 native outputs, datasets, and checkpoints on the SSD. This lane does not change
 the model queue or authorize deployment.
 
+## Round 2 1,000-image reference benchmark
+
+This lane runs frozen inference only. It never trains, fine-tunes, adapts,
+calibrates, or writes a checkpoint. The shared matrix is 334 UCF-QNRF Test,
+500 JHU-CROWD++ Validation, and 166 selected UP-COUNT validation/test frames per
+model. JHU-CROWD++ and UP-COUNT remain `PASS_RESEARCH_ONLY`; the combined
+comparison is always `PASS_RESEARCH_ONLY` and cannot produce a commercial
+pooled score.
+
+For the reference-only UP-COUNT lane, do not download the complete 28.4 GB
+image archive. Pin the small official labels/split files, create the isolated
+acquisition environment, then fetch only the frozen 166 val/test members over
+verified HTTP Range requests. Completed members are CRC-32/SHA-256 checked and
+reused on resume; an incomplete `.part` is never silently replaced.
+
+```bash
+cd /workspace
+python3 -m venv /workspace/data/tools/remotezip-0.12.3
+/workspace/data/tools/remotezip-0.12.3/bin/pip install \
+  -r requirements/up-count-acquisition.txt
+
+/workspace/data/tools/remotezip-0.12.3/bin/python \
+  scripts/fetch_up_count_selected.py \
+  --images-url 'https://zenodo.org/records/12683104/files/images.zip?download=1' \
+  --labels-zip /workspace/data/acquisition/up-count-v1/labels.zip \
+  --split-dir /workspace/data/acquisition/up-count-v1/splits \
+  --dataset-root /workspace/data/datasets/up-count-v1.partial \
+  --sample-count 166 \
+  --namespace round2-upcount-v1 \
+  --minimum-frame-gap 30 \
+  --archive-size 28413241978 \
+  --archive-md5 40ab4b817093b1b4a98d51424736b38d
+
+PYTHONPATH=src /workspace/.venvs/harness/bin/python \
+  scripts/prepare_up_count.py \
+  --dataset-root /workspace/data/datasets/up-count-v1.partial \
+  --image-root /workspace/data/datasets/up-count-v1.partial/images \
+  --label-root /workspace/data/datasets/up-count-v1.partial/labels \
+  --split-dir /workspace/data/datasets/up-count-v1.partial/splits \
+  --allow-image-subset
+```
+
+Run the UP-COUNT Stage 1 gate against the partial root and require
+`PASS_RESEARCH_ONLY` before atomically renaming it to `up-count-v1`. Never use
+these images or derived artifacts for training, fine-tuning, calibration, or a
+commercial checkpoint.
+
+After the three dataset roots have passed their rights and acquisition gates,
+freeze the one shared 1,000-sample manifest once:
+
+```bash
+cd /workspace
+mkdir -p /workspace/data/results/round2-reference-v1
+/workspace/.venvs/harness/bin/python scripts/build_round2_reference_manifest.py \
+  --config configs/evaluation/round2_reference_benchmark.json \
+  --ucf-root /workspace/data/datasets/ucf-qnrf-kaggle-apache \
+  --jhu-root /workspace/data/datasets/jhu-crowd-plus-v2 \
+  --up-count-root /workspace/data/datasets/up-count-v1 \
+  --output /workspace/data/results/round2-reference-v1/sample-manifest.json
+```
+
+Inspect the exact 3 × 3 plan without loading a model or starting inference:
+
+```bash
+cd /workspace
+/workspace/.venvs/harness/bin/python scripts/run_round2_reference.py \
+  --config configs/evaluation/round2_reference_benchmark.json \
+  --manifest /workspace/data/results/round2-reference-v1/sample-manifest.json \
+  --dry-run
+```
+
+For each model, run the three one-sample gates first. Set `MODEL` and `PYTHON`
+to one of the three accepted pairs, run the loop, then stop and inspect the
+three JSON results, panels, model briefs, rights files, and hashes before moving
+to the next model:
+
+```bash
+MODEL=steerer
+PYTHON=/workspace/.venvs/steerer/bin/python
+# MODEL=dm-count; PYTHON=/workspace/.venvs/dm-count/bin/python
+# MODEL=mpcount; PYTHON=/workspace/.venvs/mpcount/bin/python
+
+for DATASET in ucf-qnrf-kaggle-apache jhu-crowd-plus-v2 up-count-v1; do
+  "$PYTHON" scripts/run_round2_reference.py \
+    --config configs/evaluation/round2_reference_benchmark.json \
+    --runtime-config configs/evaluation/round2_reference_home5090.json \
+    --manifest /workspace/data/results/round2-reference-v1/sample-manifest.json \
+    --ucf-root /workspace/data/datasets/ucf-qnrf-kaggle-apache \
+    --jhu-root /workspace/data/datasets/jhu-crowd-plus-v2 \
+    --up-count-root /workspace/data/datasets/up-count-v1 \
+    --model "$MODEL" \
+    --dataset "$DATASET" \
+    --one-sample \
+    --output-dir "/workspace/data/results/round2-reference-v1/preflight/$MODEL/$DATASET"
+done
+```
+
+After the one-sample gates for one model are accepted, run its three full lanes
+inside the existing `crowd` tmux session. `--resume` creates an append-only,
+hash-bound progress ledger on the first run and resumes only its verified prefix
+after an SSH interruption or reboot. Reissue the identical command to resume;
+never delete or edit `progress.jsonl`.
+
+```bash
+MODEL=steerer
+PYTHON=/workspace/.venvs/steerer/bin/python
+# Change these two values only after the prior model's 1,000 rows are reviewed.
+
+for DATASET in ucf-qnrf-kaggle-apache jhu-crowd-plus-v2 up-count-v1; do
+  "$PYTHON" scripts/run_round2_reference.py \
+    --config configs/evaluation/round2_reference_benchmark.json \
+    --runtime-config configs/evaluation/round2_reference_home5090.json \
+    --manifest /workspace/data/results/round2-reference-v1/sample-manifest.json \
+    --ucf-root /workspace/data/datasets/ucf-qnrf-kaggle-apache \
+    --jhu-root /workspace/data/datasets/jhu-crowd-plus-v2 \
+    --up-count-root /workspace/data/datasets/up-count-v1 \
+    --model "$MODEL" \
+    --dataset "$DATASET" \
+    --resume \
+    --output-dir "/workspace/data/results/round2-reference-v1/$MODEL/$DATASET"
+done
+```
+
+Repeat the full loop only in this fixed order: `steerer`, `dm-count`, then
+`mpcount`. A technical `REVIEW` or `BLOCKED` result is evidence to inspect, not
+permission to skip to the next model. Once all nine directories contain the
+expected 334/500/166 successful rows, build the dataset-wise comparison:
+
+```bash
+cd /workspace
+/workspace/.venvs/harness/bin/python scripts/build_round2_comparison.py \
+  --config configs/evaluation/round2_reference_benchmark.json \
+  --results-root /workspace/data/results/round2-reference-v1 \
+  --output-dir /workspace/data/results/round2-reference-comparison-v1
+```
+
+The comparison command re-hashes every referenced result artifact, requires one
+shared sample-manifest identity across all nine runs, and refuses missing rows,
+explicit failures, mixed manifests, or a restricted dataset promoted beyond
+research-only. Keep full predictions and restricted panels on the SSD. Pull only
+the compact comparison files and separately cleared panels for Git or Drive.
+
 ## Dataset transfer gate
 
 Do not execute this section until Stage 3C records dataset rights, intended
@@ -595,3 +737,45 @@ ssh home5090-pop "docker exec crowd-jupyter bash -lc 'cd /workspace && . .venvs/
 
 The second command must end with Stage 0 `PASS`, a 100/100 score, and fresh
 hash-verified artifacts under `/workspace/data/results/stage-0/`.
+
+## Company-share full-panel export
+
+This export re-runs inference only. It never trains, fine-tunes, calibrates, or
+changes the accepted Round 2 result lanes. Run one model/dataset lane per
+command with the model-specific environment:
+
+| Model | Python |
+|---|---|
+| STEERER | `/workspace/.venvs/steerer/bin/python` |
+| PET | `/workspace/.venvs/pet/bin/python` |
+| APGCC | `/workspace/.venvs/apgcc/bin/python` |
+
+Use these immutable common paths:
+
+```text
+config=/workspace/configs/evaluation/round2_point_reference_benchmark.json
+runtime=/workspace/configs/evaluation/round2_point_reference_home5090.json
+manifest=/workspace/data/results/round2-point-reference-v1/sample-manifest.json
+ucf=/workspace/data/datasets/ucf-qnrf-kaggle-apache
+jhu=/workspace/data/datasets/jhu-crowd-plus-v2
+up=/workspace/data/datasets/up-count-v1
+export=/workspace/data/exports/DroneAI-company-share-v1/full-panels
+```
+
+The nine loop-free invocations are:
+
+```bash
+/workspace/.venvs/steerer/bin/python scripts/export_round2_full_panels.py --config configs/evaluation/round2_point_reference_benchmark.json --runtime-config configs/evaluation/round2_point_reference_home5090.json --manifest /workspace/data/results/round2-point-reference-v1/sample-manifest.json --ucf-root /workspace/data/datasets/ucf-qnrf-kaggle-apache --jhu-root /workspace/data/datasets/jhu-crowd-plus-v2 --up-count-root /workspace/data/datasets/up-count-v1 --model steerer --dataset ucf-qnrf-kaggle-apache --result-lane /workspace/data/results/round2-reference-v1/steerer/ucf-qnrf-kaggle-apache --output-dir /workspace/data/exports/DroneAI-company-share-v1/full-panels/steerer/ucf-qnrf-kaggle-apache
+/workspace/.venvs/steerer/bin/python scripts/export_round2_full_panels.py --config configs/evaluation/round2_point_reference_benchmark.json --runtime-config configs/evaluation/round2_point_reference_home5090.json --manifest /workspace/data/results/round2-point-reference-v1/sample-manifest.json --ucf-root /workspace/data/datasets/ucf-qnrf-kaggle-apache --jhu-root /workspace/data/datasets/jhu-crowd-plus-v2 --up-count-root /workspace/data/datasets/up-count-v1 --model steerer --dataset jhu-crowd-plus-v2 --result-lane /workspace/data/results/round2-reference-v1/steerer/jhu-crowd-plus-v2 --output-dir /workspace/data/exports/DroneAI-company-share-v1/full-panels/steerer/jhu-crowd-plus-v2
+/workspace/.venvs/steerer/bin/python scripts/export_round2_full_panels.py --config configs/evaluation/round2_point_reference_benchmark.json --runtime-config configs/evaluation/round2_point_reference_home5090.json --manifest /workspace/data/results/round2-point-reference-v1/sample-manifest.json --ucf-root /workspace/data/datasets/ucf-qnrf-kaggle-apache --jhu-root /workspace/data/datasets/jhu-crowd-plus-v2 --up-count-root /workspace/data/datasets/up-count-v1 --model steerer --dataset up-count-v1 --result-lane /workspace/data/results/round2-reference-v1/steerer/up-count-v1 --output-dir /workspace/data/exports/DroneAI-company-share-v1/full-panels/steerer/up-count-v1
+/workspace/.venvs/pet/bin/python scripts/export_round2_full_panels.py --config configs/evaluation/round2_point_reference_benchmark.json --runtime-config configs/evaluation/round2_point_reference_home5090.json --manifest /workspace/data/results/round2-point-reference-v1/sample-manifest.json --ucf-root /workspace/data/datasets/ucf-qnrf-kaggle-apache --jhu-root /workspace/data/datasets/jhu-crowd-plus-v2 --up-count-root /workspace/data/datasets/up-count-v1 --model pet --dataset ucf-qnrf-kaggle-apache --result-lane /workspace/data/results/round2-reference-v1/pet/ucf-qnrf-kaggle-apache --output-dir /workspace/data/exports/DroneAI-company-share-v1/full-panels/pet/ucf-qnrf-kaggle-apache
+/workspace/.venvs/pet/bin/python scripts/export_round2_full_panels.py --config configs/evaluation/round2_point_reference_benchmark.json --runtime-config configs/evaluation/round2_point_reference_home5090.json --manifest /workspace/data/results/round2-point-reference-v1/sample-manifest.json --ucf-root /workspace/data/datasets/ucf-qnrf-kaggle-apache --jhu-root /workspace/data/datasets/jhu-crowd-plus-v2 --up-count-root /workspace/data/datasets/up-count-v1 --model pet --dataset jhu-crowd-plus-v2 --result-lane /workspace/data/results/round2-reference-v1/pet/jhu-crowd-plus-v2 --output-dir /workspace/data/exports/DroneAI-company-share-v1/full-panels/pet/jhu-crowd-plus-v2
+/workspace/.venvs/pet/bin/python scripts/export_round2_full_panels.py --config configs/evaluation/round2_point_reference_benchmark.json --runtime-config configs/evaluation/round2_point_reference_home5090.json --manifest /workspace/data/results/round2-point-reference-v1/sample-manifest.json --ucf-root /workspace/data/datasets/ucf-qnrf-kaggle-apache --jhu-root /workspace/data/datasets/jhu-crowd-plus-v2 --up-count-root /workspace/data/datasets/up-count-v1 --model pet --dataset up-count-v1 --result-lane /workspace/data/results/round2-reference-v1/pet/up-count-v1 --output-dir /workspace/data/exports/DroneAI-company-share-v1/full-panels/pet/up-count-v1
+/workspace/.venvs/apgcc/bin/python scripts/export_round2_full_panels.py --config configs/evaluation/round2_point_reference_benchmark.json --runtime-config configs/evaluation/round2_point_reference_home5090.json --manifest /workspace/data/results/round2-point-reference-v1/sample-manifest.json --ucf-root /workspace/data/datasets/ucf-qnrf-kaggle-apache --jhu-root /workspace/data/datasets/jhu-crowd-plus-v2 --up-count-root /workspace/data/datasets/up-count-v1 --model apgcc --dataset ucf-qnrf-kaggle-apache --result-lane /workspace/data/results/round2-reference-v1/apgcc/ucf-qnrf-kaggle-apache --output-dir /workspace/data/exports/DroneAI-company-share-v1/full-panels/apgcc/ucf-qnrf-kaggle-apache
+/workspace/.venvs/apgcc/bin/python scripts/export_round2_full_panels.py --config configs/evaluation/round2_point_reference_benchmark.json --runtime-config configs/evaluation/round2_point_reference_home5090.json --manifest /workspace/data/results/round2-point-reference-v1/sample-manifest.json --ucf-root /workspace/data/datasets/ucf-qnrf-kaggle-apache --jhu-root /workspace/data/datasets/jhu-crowd-plus-v2 --up-count-root /workspace/data/datasets/up-count-v1 --model apgcc --dataset jhu-crowd-plus-v2 --result-lane /workspace/data/results/round2-reference-v1/apgcc/jhu-crowd-plus-v2 --output-dir /workspace/data/exports/DroneAI-company-share-v1/full-panels/apgcc/jhu-crowd-plus-v2
+/workspace/.venvs/apgcc/bin/python scripts/export_round2_full_panels.py --config configs/evaluation/round2_point_reference_benchmark.json --runtime-config configs/evaluation/round2_point_reference_home5090.json --manifest /workspace/data/results/round2-point-reference-v1/sample-manifest.json --ucf-root /workspace/data/datasets/ucf-qnrf-kaggle-apache --jhu-root /workspace/data/datasets/jhu-crowd-plus-v2 --up-count-root /workspace/data/datasets/up-count-v1 --model apgcc --dataset up-count-v1 --result-lane /workspace/data/results/round2-reference-v1/apgcc/up-count-v1 --output-dir /workspace/data/exports/DroneAI-company-share-v1/full-panels/apgcc/up-count-v1
+```
+
+Add `--max-samples 10` only for a separately rooted pilot. Reissuing an
+identical command resumes from `progress.jsonl`; identity, source, count, and
+panel hash mismatches fail closed.

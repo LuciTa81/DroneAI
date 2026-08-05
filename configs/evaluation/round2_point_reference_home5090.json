@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "models": {
+    "steerer": {
+      "model_config": "configs/evaluation/steerer_ucf_qnrf_smoke.json",
+      "upstream_dir": "/workspace/upstreams/STEERER",
+      "upstream_commit": "5b1854dbc2d280f2326d67c65515d8baf9083810",
+      "checkpoint": "/workspace/data/checkpoints/steerer/QNRF_mae_77.8_mse_138.0_85f71763.pth",
+      "checkpoint_sha256": "85f71763595527e419257d459288e4a784766f41687ff0b859dcff65a151bbec",
+      "rights_decision": "/workspace/data/results/steerer/steerer-rights-20260717T170242Z-79f4c350d359/rights-decision.json",
+      "rights_manifest": "configs/candidates/steerer_ucf_qnrf.candidate.json",
+      "device": "cuda",
+      "long_side_cap": 3072
+    },
+    "pet": {
+      "model_config": "configs/evaluation/pet_ucf_qnrf_smoke.json",
+      "upstream_dir": "/workspace/upstreams/PET",
+      "upstream_commit": "5b4dd7da8b11568a3305a88bb7c99a7fc831a998",
+      "checkpoint": "/workspace/data/checkpoints/pet/UCF_QNRF.pth",
+      "checkpoint_sha256": "58324f86782051591075a923522f33d245ce97f2b50cc43f618313d884b966ad",
+      "rights_decision": "/workspace/data/results/pet/pet-rights-99bfc15/rights-decision.json",
+      "rights_manifest": "configs/candidates/pet_ucf_qnrf.candidate.json",
+      "device": "cuda",
+      "long_side_cap": 1536
+    },
+    "apgcc": {
+      "model_config": "configs/evaluation/apgcc_ucf_qnrf_smoke.json",
+      "upstream_dir": "/workspace/upstreams/APGCC",
+      "upstream_commit": "e3e997bf592a70fd34233a432a974200d8c0c847",
+      "checkpoint": "/workspace/data/checkpoints/apgcc/SHHA_best.pth",
+      "checkpoint_sha256": "cd9aa0f65882c81bb753a4ea8c821e07573b2ae4a31fffd5595fa0a43925cf90",
+      "rights_decision": "/workspace/data/results/apgcc/rights-1bd8ca8/rights-decision.json",
+      "rights_manifest": "configs/candidates/apgcc_shha_to_ucf_qnrf.candidate.json",
+      "device": "cuda"
+    }
+  }
+}

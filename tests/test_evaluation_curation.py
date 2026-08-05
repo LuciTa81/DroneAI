@@ -69,6 +69,31 @@ def test_selector_returns_twelve_unique_reasoned_samples() -> None:
     assert all(item.reason for item in selected)
 
 
+def test_selector_backfills_sparse_density_band_to_twelve() -> None:
+    rows = []
+    for band, count in (("low", 12), ("medium", 12), ("high", 2)):
+        rows.extend(
+            _row(
+                f"{band}-{index:02d}",
+                band,
+                float(index - 5),
+                float(index),
+            )
+            for index in range(count)
+        )
+
+    selected = select_review_samples(rows, spatial_direction="minimize")
+
+    assert len(selected) == 12
+    assert len({item.sample_id for item in selected}) == 12
+    assert selected[-1].category == "representative"
+    assert selected[-1].reason == "global median error backfill"
+    assert selected == select_review_samples(
+        list(reversed(rows)),
+        spatial_direction="minimize",
+    )
+
+
 def test_selector_ties_are_resolved_by_sample_id_independent_of_input_order() -> None:
     rows = [
         _row("b", "low", 0.0, 0.0),
@@ -204,9 +229,10 @@ def test_positive_only_errors_do_not_create_false_undercount_failure() -> None:
     )
 
     assert [(item.sample_id, item.reason) for item in selected] == [
-        ("positive-large", "severe overcount")
+        ("positive-large", "severe overcount"),
+        ("positive-small", "global median error backfill"),
     ]
-    assert manifest["shortfall"] == 1
+    assert manifest["shortfall"] == 0
 
 
 def test_negative_only_errors_do_not_create_false_overcount_failure() -> None:
@@ -225,9 +251,10 @@ def test_negative_only_errors_do_not_create_false_overcount_failure() -> None:
     )
 
     assert [(item.sample_id, item.reason) for item in selected] == [
-        ("negative-large", "severe undercount")
+        ("negative-large", "severe undercount"),
+        ("negative-small", "global median error backfill"),
     ]
-    assert manifest["shortfall"] == 1
+    assert manifest["shortfall"] == 0
 
 
 def test_quantile_rows_are_not_preempted_by_failure_case_selection() -> None:
@@ -246,7 +273,7 @@ def test_quantile_rows_are_not_preempted_by_failure_case_selection() -> None:
     assert by_sample_id["typical-row"].category == "typical"
 
 
-def test_unavailable_spatial_metric_produces_shortfall_without_fabrication() -> None:
+def test_unavailable_spatial_metric_uses_representative_backfill() -> None:
     rows = []
     for band in ("low", "medium", "high"):
         rows.extend(
@@ -262,11 +289,13 @@ def test_unavailable_spatial_metric_produces_shortfall_without_fabrication() -> 
         density_band_rules=("low", "medium", "high"),
     )
 
-    assert len(selected) == 11
+    assert len(selected) == 12
+    assert len({item.sample_id for item in selected}) == 12
     assert Counter(item.category for item in selected)["failure"] == 2
+    assert Counter(item.category for item in selected)["representative"] == 1
     assert all(item.reason != "worst spatial quality" for item in selected)
-    assert manifest["shortfall"] == 1
-    assert manifest["shortfall_reason"] == "insufficient unique eligible samples"
+    assert manifest["shortfall"] == 0
+    assert manifest["shortfall_reason"] == ""
 
 
 def test_explicit_failures_are_never_ranked_as_zero_count_successes() -> None:

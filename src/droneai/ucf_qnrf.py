@@ -95,29 +95,31 @@ def _normalized_points(
     return tuple(normalized), corrections
 
 
-def index_ucf_qnrf_train(
-    train_root: str | Path,
+def index_ucf_qnrf_partition(
+    image_root: str | Path,
     *,
     annotation_root: str | Path | None = None,
     thresholds: tuple[int, int] = DEFAULT_DENSITY_THRESHOLDS,
+    partition: str,
+    expected_samples: int | None = None,
 ) -> tuple[UCFQNRFRecord, ...]:
-    """Index only the explicitly supplied training directory.
+    """Index one explicitly supplied UCF-QNRF partition directory."""
 
-    The function deliberately has no dataset-root or test-root argument, which
-    prevents validation preparation from discovering the official test tree.
-    """
-
-    image_root = Path(train_root)
-    annotations = Path(annotation_root) if annotation_root is not None else image_root
-    if not image_root.is_dir() or not annotations.is_dir():
-        raise FileNotFoundError("explicit UCF-QNRF train and annotation roots are required")
+    if partition not in {"train", "validation", "test"}:
+        raise ValueError("partition must be train, validation, or test")
+    root = Path(image_root)
+    annotations = Path(annotation_root) if annotation_root is not None else root
+    if not root.is_dir() or not annotations.is_dir():
+        raise FileNotFoundError(
+            f"explicit UCF-QNRF {partition} image and annotation roots are required"
+        )
     images = sorted(
         path
-        for path in image_root.iterdir()
+        for path in root.iterdir()
         if path.is_file() and path.suffix.lower() in {".jpg", ".jpeg", ".png"}
     )
     if not images:
-        raise ValueError(f"no UCF-QNRF training images found under {image_root}")
+        raise ValueError(f"no UCF-QNRF {partition} images found under {root}")
     records: list[UCFQNRFRecord] = []
     for image_path in images:
         annotation_path = _annotation_path(image_path, annotations)
@@ -142,7 +144,33 @@ def index_ucf_qnrf_train(
     sample_ids = [record.sample_id for record in records]
     if len(sample_ids) != len(set(sample_ids)):
         raise ValueError("duplicate UCF-QNRF sample identity")
+    if expected_samples is not None and len(records) != expected_samples:
+        raise ValueError(
+            f"UCF-QNRF {partition} expected {expected_samples} samples, "
+            f"observed {len(records)}"
+        )
     return tuple(records)
+
+
+def index_ucf_qnrf_train(
+    train_root: str | Path,
+    *,
+    annotation_root: str | Path | None = None,
+    thresholds: tuple[int, int] = DEFAULT_DENSITY_THRESHOLDS,
+) -> tuple[UCFQNRFRecord, ...]:
+    """Index only the explicitly supplied training directory.
+
+    This compatibility entry point still has no dataset-root or test-root
+    argument, so Round 1 validation preparation cannot discover the official
+    test tree.
+    """
+
+    return index_ucf_qnrf_partition(
+        train_root,
+        annotation_root=annotation_root,
+        thresholds=thresholds,
+        partition="train",
+    )
 
 
 def _stable_key(sample_id: str, seed: int, namespace: str) -> tuple[str, str]:
