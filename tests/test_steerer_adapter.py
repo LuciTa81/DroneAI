@@ -15,6 +15,7 @@ from droneai.integrity import sha256_file
 from droneai.steerer_adapter import (
     STEERERAdapter,
     _load_official_components,
+    _nearest_point_distances,
     _unwrap_steerer_checkpoint,
     calculate_steerer_size,
     extract_steerer_points,
@@ -289,6 +290,19 @@ def test_extract_points_merges_scales_and_clips_original_coordinates() -> None:
     assert points[2][0] == pytest.approx(0.0)
     assert 0.0 <= points[2][1] < 300.0
     assert points[2][1] == pytest.approx(300.0)
+
+
+def test_nearest_point_distances_scale_to_5000_sparse_points() -> None:
+    """Multiscale merging must not allocate every reference/candidate pair."""
+
+    reference = np.column_stack(
+        (np.arange(5_000, dtype=np.float64) * 100.0, np.zeros(5_000))
+    )
+    candidates = reference + np.asarray((1.0, 0.0))
+
+    assert _nearest_point_distances(reference, candidates) == pytest.approx(
+        np.ones(5_000)
+    )
 
 
 def test_rgb_imagenet_normalization_and_zero_padding(tmp_path: Path) -> None:

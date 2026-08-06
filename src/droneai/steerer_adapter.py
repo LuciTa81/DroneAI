@@ -157,6 +157,60 @@ def _local_maximum_points_numpy(
     return points * density_scale
 
 
+def _nearest_point_distances(
+    reference_points: np.ndarray, candidate_points: np.ndarray
+) -> np.ndarray:
+    """Return exact nearest distances without a full pairwise distance matrix."""
+
+    reference = np.asarray(reference_points, dtype=np.float64)
+    candidates = np.asarray(candidate_points, dtype=np.float64)
+    if reference.size == 0:
+        reference = np.empty((0, 2), dtype=np.float64)
+    if candidates.size == 0:
+        candidates = np.empty((0, 2), dtype=np.float64)
+    if (
+        reference.ndim != 2
+        or candidates.ndim != 2
+        or reference.shape[1] != 2
+        or candidates.shape[1] != 2
+        or not np.isfinite(reference).all()
+        or not np.isfinite(candidates).all()
+    ):
+        raise ValueError("point sets must contain finite 2D coordinates")
+    if not len(candidates):
+        return np.empty(0, dtype=np.float64)
+    if not len(reference):
+        return np.full(len(candidates), np.inf, dtype=np.float64)
+
+    try:
+        from scipy.spatial import cKDTree
+    except ImportError:  # pragma: no cover - training/evaluation installs SciPy
+        nearest_squared = np.full(len(candidates), np.inf, dtype=np.float64)
+        block_size = 1_024
+        for candidate_start in range(0, len(candidates), block_size):
+            candidate_block = candidates[
+                candidate_start : candidate_start + block_size
+            ]
+            block_minimum = np.full(len(candidate_block), np.inf, dtype=np.float64)
+            for reference_start in range(0, len(reference), block_size):
+                reference_block = reference[
+                    reference_start : reference_start + block_size
+                ]
+                delta = (
+                    reference_block[:, np.newaxis, :]
+                    - candidate_block[np.newaxis, :, :]
+                )
+                squared = np.einsum("ijk,ijk->ij", delta, delta)
+                np.minimum(block_minimum, squared.min(axis=0), out=block_minimum)
+            nearest_squared[
+                candidate_start : candidate_start + len(candidate_block)
+            ] = block_minimum
+        return np.sqrt(nearest_squared)
+
+    distances, _ = cKDTree(reference).query(candidates, k=1, workers=1)
+    return np.asarray(distances, dtype=np.float64)
+
+
 def _merge_multiscale_points(point_sets: Sequence[np.ndarray]) -> np.ndarray:
     if len(point_sets) != 3:
         raise ValueError("STEERER point merging requires x1, x4, and x8 outputs")
@@ -168,11 +222,9 @@ def _merge_multiscale_points(point_sets: Sequence[np.ndarray]) -> np.ndarray:
             continue
         if additions.size == 0:
             continue
-        distances = np.linalg.norm(
-            merged[:, np.newaxis, :] - additions[np.newaxis, :, :], axis=2
-        )
+        distances = _nearest_point_distances(merged, additions)
         merged = np.concatenate(
-            (merged, additions[distances.min(axis=0) > distance_threshold]), axis=0
+            (merged, additions[distances > distance_threshold]), axis=0
         )
     return merged
 
