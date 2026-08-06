@@ -11,4 +11,7 @@ best-metric state are restored; only the AMP scaler state is discarded. The
 original failed log remains immutable and the recovery writes
 `run-result-t800-fp32.jsonl`.
 
-The diagnosis remains provisional until the real FP32 run crosses epoch 10.
+The real FP32 recovery completed epochs 10 and 11 with finite losses, crossing
+the exact failure boundary. This confirms AMP gradient overflow as the cause of
+the first stop. The FP32 T800 run remains authoritative and continues toward
+epoch 800.

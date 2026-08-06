@@ -22,5 +22,13 @@
     "restore_amp_scaler": false,
     "recovery_log": "/workspace/data/results/steerer-ucf-training/steerer-qnrf-imagenet-20260806-t1-e/run-result-t800-fp32.jsonl"
   },
-  "diagnosis": "pending_real_epoch_10_crossing"
+  "recovery_verification": {
+    "epoch_10_completed": true,
+    "epoch_10_global_step": 1200,
+    "epoch_10_recent_loss": 0.027263397350907326,
+    "epoch_11_completed": true,
+    "epoch_11_global_step": 1320,
+    "epoch_11_recent_loss": 0.02513902634382248
+  },
+  "diagnosis": "confirmed_amp_gradient_overflow; explicit_fp32_crossed_failure_boundary"
 }
