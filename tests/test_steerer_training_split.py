@@ -133,24 +133,39 @@ def test_prepare_cli_rejects_incomplete_population_before_creating_output(
     monkeypatch.setattr(module, "index_ucf_qnrf_train", lambda _: records[:-1])
     output = tmp_path / "prepared"
 
-    with pytest.raises(ValueError, match=r"expected=1201 observed=1200"):
-        module.main(
-            [
-                "--config", str(PROFILE_PATH),
-                "--train-root", str(tmp_path / "Train"),
-                "--output-root", str(output),
-            ]
-        )
+    assert module.main(
+        [
+            "--config", str(PROFILE_PATH),
+            "--train-root", str(tmp_path / "Train"),
+            "--output-root", str(output),
+        ]
+    ) == 2
 
     assert not output.exists()
 
 
 def test_prepare_cli_writes_exact_approved_split_counts(
-    tmp_path: Path, records: tuple[UCFQNRFRecord, ...], monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path,
+    records: tuple[UCFQNRFRecord, ...],
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     module = _prepare_module()
     monkeypatch.setattr(module, "index_ucf_qnrf_train", lambda _: records)
     output = tmp_path / "prepared"
+    calls: dict[str, object] = {}
+
+    def fake_prepare(
+        actual_records: tuple[UCFQNRFRecord, ...], split: object, *, output_root: Path
+    ) -> Path:
+        calls["records"] = actual_records
+        calls["split"] = split
+        manifest = output_root / "manifests" / "training-manifest.json"
+        manifest.parent.mkdir(parents=True)
+        manifest.write_text("{}\n", encoding="utf-8")
+        return manifest
+
+    monkeypatch.setattr(module, "prepare_training_dataset", fake_prepare, raising=False)
 
     assert module.main(
         [
@@ -159,5 +174,9 @@ def test_prepare_cli_writes_exact_approved_split_counts(
             "--output-root", str(output),
         ]
     ) == 0
-    assert len((output / "train.txt").read_text(encoding="utf-8").splitlines()) == 961
-    assert len((output / "val.txt").read_text(encoding="utf-8").splitlines()) == 240
+    result = json.loads(capsys.readouterr().out)
+    assert calls["records"] == records
+    assert result["status"] == "prepared"
+    assert (result["train_count"], result["validation_count"]) == (961, 240)
+    assert result["manifest_path"] == str(output / "manifests" / "training-manifest.json")
+    assert len(result["manifest_sha256"]) == 64
