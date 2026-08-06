@@ -229,8 +229,12 @@ files or any individual artifact above 25 MiB in Git.
 
 This section is the authoritative T800 launch procedure for run
 `steerer-qnrf-imagenet-20260806-t1-e`. Do not access the official UCF-QNRF Test.
-T800 continues the existing optimizer, scheduler, scaler, RNG, and best-metric
-lineage; it is not a fresh training run.
+T800 continues the existing model, optimizer, scheduler, RNG, and best-metric
+lineage; it is not a fresh training run. The original AMP attempt stopped at
+epoch 10 before checkpoint promotion because the gradient norm became
+non-finite. Preserve `run-result-t800.jsonl` as the failed-attempt log. The
+approved recovery uses explicit FP32, restores every checkpoint state except
+the AMP scaler, and writes a separate log.
 
 Set the exact paths and verify the immutable epoch-5 predecessor before any GPU
 work:
@@ -278,8 +282,8 @@ $PY scripts/run_steerer_ucf_training.py \
   --upstream-dir "$UPSTREAM" --backbone "$BACKBONE" \
   --backbone-sha256 "$BACKBONE_SHA" \
   --container-image-digest "$CONTAINER_IMAGE_DIGEST" --device cuda:0 \
-  --resume "$RESUME" \
-  2>&1 | tee "$RESULT_ROOT/run-result-t800.jsonl"
+  --resume "$RESUME" --precision fp32 \
+  2>&1 | tee "$RESULT_ROOT/run-result-t800-fp32.jsonl"
 ```
 
 Detach with `Ctrl-b d`. Monitor without changing training parameters:
@@ -290,7 +294,7 @@ cat "$RESULT_ROOT/run.lock"
 tmux capture-pane -pt crowd -S -80
 nvidia-smi
 df -h /workspace/data
-tail -n 80 "$RESULT_ROOT/run-result-t800.jsonl"
+tail -n 80 "$RESULT_ROOT/run-result-t800-fp32.jsonl"
 ```
 
 `status.json` is atomically updated every epoch and validation boundary. Full
@@ -302,7 +306,7 @@ at epochs 100, 200, ..., 800.
 
 After a restart, first verify that no T800 process owns `run.lock`, then compare
 `last.pth` with its unique `checkpoint-manifest.json` entry. Use the identical
-command above, changing only the resume argument to:
+FP32 command above, changing only the resume argument to:
 
 ```bash
 --resume "$CHECKPOINT_ROOT/last.pth"
@@ -332,7 +336,7 @@ Read the final content-addressed environment path from the last JSON result and
 score the final epoch-800 checkpoint:
 
 ```bash
-ENVIRONMENT_PATH=$($PY -c 'import json,sys; rows=[json.loads(x) for x in open(sys.argv[1]) if x.startswith("{")]; print(rows[-1]["environment_path"])' "$RESULT_ROOT/run-result-t800.jsonl")
+ENVIRONMENT_PATH=$($PY -c 'import json,sys; rows=[json.loads(x) for x in open(sys.argv[1]) if x.startswith("{")]; print(rows[-1]["environment_path"])' "$RESULT_ROOT/run-result-t800-fp32.jsonl")
 $PY scripts/score_steerer_ucf_training.py \
   --stage T800 --run-id "$RUN_ID" \
   --profile "$WT/configs/training/steerer_ucf_qnrf_imagenet.home5090.json" \

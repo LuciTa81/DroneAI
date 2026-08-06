@@ -40,10 +40,18 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--container-image-digest", required=True)
     parser.add_argument("--resume", type=Path)
     parser.add_argument("--device", default="cuda:0")
+    parser.add_argument(
+        "--precision",
+        choices=("auto", "fp32"),
+        default="auto",
+        help="Use fp32 only for an explicitly approved resumed T800 recovery.",
+    )
     return parser
 
 
 def _validate_stage_ceiling(args: argparse.Namespace) -> None:
+    if args.precision == "fp32" and args.stage != "T800":
+        raise ValueError("FP32 recovery is reserved for an approved resumed T800")
     if args.stage in {"T0", "T1"}:
         if args.resume is not None:
             raise ValueError("T0 and T1 cannot use --resume")
@@ -101,6 +109,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 stage=args.stage,
                 run_id=args.run_id,
                 resume=args.resume,
+                force_fp32=args.precision == "fp32",
                 device=args.device,
                 container_image_digest=args.container_image_digest,
                 engine=engine,

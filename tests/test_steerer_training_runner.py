@@ -1104,6 +1104,50 @@ def test_t800_cuda_oom_stops_instead_of_changing_the_approved_batch(
     assert t800_engine.batch_plans == [(8, 1)]
 
 
+def test_t800_explicit_fp32_recovery_discards_only_the_amp_scaler_state(
+    profile, tmp_path: Path
+) -> None:
+    """Removing this override would repeat the deterministic epoch-10 AMP overflow."""
+
+    t1_engine = FakeTrainingEngine(tmp_path)
+    run_training_stage(profile, stage="T1", run_id="run-3035", engine=t1_engine)
+    t5_engine = FakeTrainingEngine(tmp_path)
+    run_training_stage(
+        profile,
+        stage="T5",
+        run_id="run-3035",
+        resume=t1_engine.checkpoint_dir / "last.pth",
+        engine=t5_engine,
+    )
+    recovery = FakeTrainingEngine(tmp_path)
+    recovery.fail_epoch = 7
+
+    with pytest.raises(RuntimeError, match="injected epoch failure"):
+        run_training_stage(
+            profile,
+            stage="T800",
+            run_id="run-3035",
+            resume=t5_engine.checkpoint_dir / "last.pth",
+            force_fp32=True,
+            engine=recovery,
+        )
+
+    assert recovery.restored_scaler_modes == [False]
+    assert recovery.amp_flags == [False, False]
+    assert recovery.global_step == 12
+
+
+def test_fp32_recovery_is_reserved_for_resumed_t800(profile, fake_engine) -> None:
+    with pytest.raises(ValueError, match="FP32 recovery.*T800"):
+        run_training_stage(
+            profile,
+            stage="T1",
+            run_id="run-3035",
+            force_fp32=True,
+            engine=fake_engine,
+        )
+
+
 def test_resume_is_restored_before_amp_comparison(profile, tmp_path: Path) -> None:
     """AMP eligibility must be measured on resumed weights, not fresh ImageNet weights."""
 
@@ -1538,6 +1582,27 @@ def test_cli_requires_matching_t800_approval_and_resume() -> None:
     )
     with pytest.raises(ValueError, match="T800.*resume"):
         training_cli._validate_stage_ceiling(without_resume)
+
+
+def test_cli_fp32_precision_requires_t800_resume_approval() -> None:
+    parser = training_cli._parser()
+    required = [
+        "--config", str(PROFILE_PATH),
+        "--stage", "T5",
+        "--run-id", "run-3035",
+        "--processed-root", "/workspace/data/processed",
+        "--upstream-dir", "/workspace/upstream",
+        "--backbone", "/workspace/data/backbone.pth",
+        "--backbone-sha256", "a" * 64,
+        "--container-image-digest", CONTAINER_DIGEST,
+        "--resume", "/workspace/data/checkpoints/last.pth",
+        "--approved-stage", "T5",
+        "--precision", "fp32",
+    ]
+    args = parser.parse_args(required)
+
+    with pytest.raises(ValueError, match="FP32.*T800"):
+        training_cli._validate_stage_ceiling(args)
 
 
 def test_cli_backbone_hash_is_only_confirmation_of_profile_authority() -> None:

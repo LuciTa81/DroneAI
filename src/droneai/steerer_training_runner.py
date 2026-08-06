@@ -1832,6 +1832,7 @@ def run_training_stage(
     stage: Stage,
     run_id: str,
     resume: Path | None = None,
+    force_fp32: bool = False,
     device: str = "cuda:0",
     container_image_digest: str | None = None,
     engine: TrainingEngine,
@@ -1856,6 +1857,10 @@ def run_training_stage(
         raise ValueError("T0 and T1 cannot use a resume checkpoint")
     if stage in {"T5", "T50", "T800"} and resume is None:
         raise ValueError(f"{stage} requires a verified resume checkpoint")
+    if not isinstance(force_fp32, bool):
+        raise TypeError("force_fp32 must be a boolean")
+    if force_fp32 and stage != "T800":
+        raise ValueError("FP32 recovery is reserved for resumed T800")
     container_digest = container_image_digest or getattr(
         engine, "container_image_digest", None
     )
@@ -1895,9 +1900,12 @@ def run_training_stage(
     amp_comparison = engine.compare_amp_to_fp32()
     _finite_values((amp_comparison.fp32_loss,), name="FP32 comparison loss")
     _finite_values((amp_comparison.fp32_count,), name="FP32 comparison count")
-    amp_enabled = amp_comparison.accepted
+    amp_enabled = False if force_fp32 else amp_comparison.accepted
     if resume is not None:
-        engine.restore_scaler_state(resumed_scaler_state, enabled=amp_enabled)
+        engine.restore_scaler_state(
+            {} if force_fp32 else resumed_scaler_state,
+            enabled=amp_enabled,
+        )
 
     optimizer_steps = 0
     validation_samples = 0

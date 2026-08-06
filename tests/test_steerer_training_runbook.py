@@ -46,8 +46,11 @@ def test_runbook_contains_exact_t800_launch_recovery_and_score_controls() -> Non
         "checkpoint-manifest.json",
         "sha256sum",
         "tmux",
+        "--precision fp32",
+        "run-result-t800-fp32.jsonl",
     ):
         assert token in text
+    assert "Preserve `run-result-t800.jsonl` as the failed-attempt log" in text
     assert "After a restart" in text
     assert "--resume \"$CHECKPOINT_ROOT/last.pth\"" in text
     assert "Do not access the official UCF-QNRF Test" in text
