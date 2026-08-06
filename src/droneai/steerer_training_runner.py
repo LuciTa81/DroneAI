@@ -263,6 +263,12 @@ def _validate_prepared_split(
         raise ValueError("prepared split must be complete for the approved inventory")
 
 
+def _upstream_backbone_argument(pretrained_backbone: Path | None) -> str:
+    """Translate the audit sentinel into the path-like value STEERER expects."""
+
+    return "" if pretrained_backbone is None else str(pretrained_backbone)
+
+
 class PinnedUpstreamTrainingEngine:
     """Lazy boundary around the audited, pinned official STEERER primitives."""
 
@@ -507,8 +513,8 @@ class _TorchPinnedRuntime:
 
             def model_factory(*, pretrained_backbone: Path | None) -> object:
                 candidate = Config(copy.deepcopy(self._config_mapping))
-                candidate.network.pretrained_backbone = (
-                    str(pretrained_backbone) if pretrained_backbone is not None else None
+                candidate.network.pretrained_backbone = _upstream_backbone_argument(
+                    pretrained_backbone
                 )
                 model = Baseline_Counter(
                     candidate.network,

@@ -12,6 +12,7 @@ import numpy as np
 import pytest
 
 import scripts.run_steerer_ucf_training as training_cli
+import droneai.steerer_training_runner as training_runner
 
 from droneai.steerer_training_profile import load_training_profile
 from droneai.steerer_training_runner import (
@@ -30,6 +31,11 @@ from droneai.steerer_training_runner import (
 
 
 PROFILE_PATH = Path("configs/training/steerer_ucf_qnrf_imagenet.home5090.json")
+
+
+def test_random_reference_uses_an_upstream_safe_empty_backbone_path() -> None:
+    assert training_runner._upstream_backbone_argument(None) == ""
+    assert training_runner._upstream_backbone_argument(Path("backbone.pth")) == "backbone.pth"
 
 
 class FakeTrainingEngine:
