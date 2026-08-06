@@ -6,7 +6,7 @@ import json
 import pickle
 import random
 from pathlib import Path
-from types import MethodType
+from types import MethodType, SimpleNamespace
 
 import numpy as np
 import pytest
@@ -504,6 +504,33 @@ def test_validation_annotation_requires_exact_count_and_original_bounds(
     annotation.write_text(json.dumps(payload), encoding="utf-8")
     with pytest.raises(ValueError, match="count"):
         _load_validation_annotation(tmp_path, "sample-a")
+
+
+def test_torch_runtime_uses_validation_dataset_root_for_prepared_annotation(
+    tmp_path: Path,
+) -> None:
+    """Validation must use the root owned by the constructed QNRF dataset."""
+
+    annotation_dir = tmp_path / "jsons"
+    annotation_dir.mkdir()
+    (annotation_dir / "sample-a.json").write_text(
+        json.dumps(
+            {
+                "human_num": 1,
+                "points": [[1.0, 2.0]],
+                "source_width": 10,
+                "source_height": 8,
+            }
+        ),
+        encoding="utf-8",
+    )
+    runtime = object.__new__(_TorchPinnedRuntime)
+    runtime._validation_dataset = SimpleNamespace(root=str(tmp_path))
+
+    loaded = runtime._prepared_validation_annotation("sample-a")
+
+    assert loaded.sample_id == "sample-a"
+    assert loaded.count == 1
 
 
 def test_validation_spatial_observation_matches_density_and_point_contract() -> None:

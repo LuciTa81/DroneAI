@@ -149,8 +149,12 @@ Stop if scoring reports `BLOCKED` or if required evidence is absent.
 T1 starts a clean one-epoch run from the same ImageNet backbone; it does not
 resume the T0 probe.
 
+Run ID `steerer-qnrf-imagenet-20260806-t1-b` is reserved for the preserved
+failed integration attempt that stopped before validation evidence and did not
+promote a checkpoint. Do not reuse it.
+
 ```bash
-RUN_ID=steerer-qnrf-imagenet-20260806-t1-b
+RUN_ID=steerer-qnrf-imagenet-20260806-t1-c
 $PY scripts/run_steerer_ucf_training.py \
   --config configs/training/steerer_ucf_qnrf_imagenet.home5090.json \
   --stage T1 --run-id "$RUN_ID" --processed-root "$PROCESSED" \

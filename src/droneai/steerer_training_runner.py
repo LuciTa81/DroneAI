@@ -872,6 +872,13 @@ class _TorchPinnedRuntime:
     def _official_scope(self):
         return self._scope(self._upstream_dir)
 
+    def _prepared_validation_annotation(
+        self, sample_id: str
+    ) -> PreparedValidationAnnotation:
+        return _load_validation_annotation(
+            Path(getattr(self._validation_dataset, "root")), sample_id
+        )
+
     def set_seed(self, seed: int) -> None:
         random.seed(seed)
         np.random.seed(seed)
@@ -1169,9 +1176,7 @@ class _TorchPinnedRuntime:
                 if not isinstance(name_metadata, (list, tuple)) or len(name_metadata) != 1:
                     raise ValueError("validation loader must provide exactly one sample name")
                 sample_id = str(name_metadata[0])
-                annotation = _load_validation_annotation(
-                    self.processed_root, sample_id
-                )
+                annotation = self._prepared_validation_annotation(sample_id)
                 images, labels = self._prepared_batch(batch)
                 torch.cuda.reset_peak_memory_stats(self._device)
                 torch.cuda.synchronize(self._device)
