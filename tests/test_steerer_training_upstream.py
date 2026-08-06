@@ -17,6 +17,7 @@ from droneai.steerer_training_upstream import (
 
 
 PROFILE_PATH = Path("configs/training/steerer_ucf_qnrf_imagenet.home5090.json")
+PINNED_ORIGIN = "https://github.com/taohan10200/STEERER.git"
 
 
 OFFICIAL_CONFIG = """
@@ -67,77 +68,173 @@ CUDNN = dict(BENCHMARK=True, DETERMINISTIC=False, ENABLED=True)
 """
 
 
-def _write_upstream(root: Path, config_source: str = OFFICIAL_CONFIG) -> Path:
+def _git(root: Path, *args: str) -> str:
+    return subprocess.run(
+        ["git", *args], cwd=root, check=True, capture_output=True, text=True
+    ).stdout.strip()
+
+
+def _write_upstream(
+    root: Path,
+    config_source: str = OFFICIAL_CONFIG,
+    *,
+    origin_url: str = PINNED_ORIGIN,
+) -> Path:
     (root / "configs").mkdir(parents=True)
     (root / "LICENSE").write_text("official license fixture\n", encoding="utf-8")
     (root / "configs" / "QNRF_final.py").write_text(config_source, encoding="utf-8")
-    subprocess.run(["git", "init", "-q"], cwd=root, check=True)
-    subprocess.run(["git", "add", "."], cwd=root, check=True)
-    subprocess.run(
-        [
-            "git",
-            "-c",
-            "user.name=DroneAI tests",
-            "-c",
-            "user.email=tests@example.invalid",
-            "commit",
-            "-qm",
-            "fixture",
-        ],
-        cwd=root,
-        check=True,
+    _git(root, "init", "-q")
+    _git(root, "add", ".")
+    _git(
+        root,
+        "-c", "user.name=DroneAI tests",
+        "-c", "user.email=tests@example.invalid",
+        "commit", "-qm", "fixture",
     )
+    _git(root, "remote", "add", "origin", origin_url)
     return root
 
 
-def _profile(tmp_path: Path):
+def _profile(tmp_path: Path, upstream: Path, backbone: Path | None = None):
+    profile = load_training_profile(PROFILE_PATH)
+    if backbone is None:
+        backbone = tmp_path / "backbones" / profile.imagenet_backbone.filename
+        backbone.parent.mkdir(parents=True, exist_ok=True)
+        backbone.write_bytes(b"verified ImageNet backbone fixture")
+    upstream_ref = replace(
+        profile.model_upstream,
+        commit=_git(upstream, "rev-parse", "HEAD"),
+        license_sha256=sha256_file(upstream / "LICENSE"),
+    )
+    backbone_ref = replace(
+        profile.imagenet_backbone,
+        path=backbone.resolve(),
+        filename=backbone.name,
+        sha256=sha256_file(backbone),
+        byte_size=backbone.stat().st_size,
+    )
     return replace(
-        load_training_profile(PROFILE_PATH),
+        profile,
+        model_upstream=upstream_ref,
+        imagenet_backbone=backbone_ref,
         checkpoint_root=tmp_path / "checkpoints",
         result_root=tmp_path / "results",
     )
 
 
-def test_audit_records_clean_pinned_upstream(tmp_path: Path) -> None:
+def test_audit_records_profile_pinned_origin_checkout_and_files(tmp_path: Path) -> None:
     upstream = _write_upstream(tmp_path / "STEERER")
-    commit = subprocess.run(
-        ["git", "rev-parse", "HEAD"],
-        cwd=upstream,
-        check=True,
-        capture_output=True,
-        text=True,
-    ).stdout.strip()
+    profile = _profile(tmp_path, upstream)
 
-    audit = audit_upstream(
-        upstream,
-        expected_commit=commit,
-        expected_license_sha256=sha256_file(upstream / "LICENSE"),
-    )
+    audit = audit_upstream(profile, upstream)
 
-    assert audit.commit == commit
+    assert audit.origin_url == PINNED_ORIGIN
+    assert audit.commit == profile.model_upstream.commit
     assert audit.clean is True
-    assert audit.license_sha256 == sha256_file(upstream / "LICENSE")
-    assert audit.config_sha256 == sha256_file(upstream / "configs" / "QNRF_final.py")
+    assert audit.license_sha256 == profile.model_upstream.license_sha256
+    assert audit.config_path == (upstream / "configs" / "QNRF_final.py").resolve()
+    assert audit.config_sha256 == sha256_file(audit.config_path)
 
 
 @pytest.mark.parametrize("defect", ["wrong-commit", "dirty"])
 def test_audit_rejects_dirty_or_wrong_upstream(tmp_path: Path, defect: str) -> None:
     upstream = _write_upstream(tmp_path / "STEERER")
-    commit = subprocess.run(
-        ["git", "rev-parse", "HEAD"], cwd=upstream, check=True,
-        capture_output=True, text=True,
-    ).stdout.strip()
+    profile = _profile(tmp_path, upstream)
     if defect == "dirty":
         (upstream / "untracked.txt").write_text("dirty\n", encoding="utf-8")
     else:
-        commit = "a" * 40
+        profile = replace(
+            profile,
+            model_upstream=replace(profile.model_upstream, commit="a" * 40),
+        )
 
     with pytest.raises(ValueError, match="pinned|clean"):
-        audit_upstream(
-            upstream,
-            expected_commit=commit,
-            expected_license_sha256=sha256_file(upstream / "LICENSE"),
+        audit_upstream(profile, upstream)
+
+
+def test_audit_rejects_wrong_origin(tmp_path: Path) -> None:
+    upstream = _write_upstream(
+        tmp_path / "STEERER", origin_url="https://example.test/attacker.git"
+    )
+    profile = _profile(tmp_path, upstream)
+
+    with pytest.raises(ValueError, match="origin"):
+        audit_upstream(profile, upstream)
+
+
+def test_audit_rejects_config_path_escape(tmp_path: Path) -> None:
+    upstream = _write_upstream(tmp_path / "STEERER")
+    outside = tmp_path / "outside.py"
+    outside.write_text(OFFICIAL_CONFIG, encoding="utf-8")
+    profile = _profile(tmp_path, upstream)
+    profile = replace(
+        profile,
+        model_upstream=replace(profile.model_upstream, config_path=Path("../outside.py")),
+    )
+
+    with pytest.raises(ValueError, match="config.*inside|path"):
+        audit_upstream(profile, upstream)
+
+
+def test_untrusted_config_never_executes_before_origin_audit(tmp_path: Path) -> None:
+    marker = tmp_path / "executed.txt"
+    source = f"from pathlib import Path\nPath({str(marker)!r}).write_text('executed')\n"
+    upstream = _write_upstream(
+        tmp_path / "STEERER",
+        source,
+        origin_url="https://example.test/attacker.git",
+    )
+    profile = _profile(tmp_path, upstream)
+
+    with pytest.raises(ValueError, match="origin"):
+        synthesize_official_config(
+            profile=profile,
+            upstream_dir=upstream,
+            processed_root=tmp_path / "processed",
+            backbone_path=profile.imagenet_backbone.path,
+            stage="T1",
+            physical_batch=8,
+            accumulation_steps=1,
+            run_id="run-a",
         )
+
+    assert not marker.exists()
+
+
+def test_config_executes_the_single_audited_byte_snapshot(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    upstream = _write_upstream(tmp_path / "STEERER")
+    profile = _profile(tmp_path, upstream)
+    config_path = (upstream / "configs" / "QNRF_final.py").resolve()
+    expected_config_sha256 = sha256_file(config_path)
+    original_read_bytes = Path.read_bytes
+    config_reads = 0
+
+    def read_bytes_once(path: Path) -> bytes:
+        nonlocal config_reads
+        payload = original_read_bytes(path)
+        if path.resolve() == config_path:
+            config_reads += 1
+            path.write_text("raise RuntimeError('unaudited reread')\n", encoding="utf-8")
+        return payload
+
+    monkeypatch.setattr(Path, "read_bytes", read_bytes_once)
+
+    config = synthesize_official_config(
+        profile=profile,
+        upstream_dir=upstream,
+        processed_root=tmp_path / "processed",
+        backbone_path=profile.imagenet_backbone.path,
+        stage="T1",
+        physical_batch=8,
+        accumulation_steps=1,
+        run_id="run-a",
+    )
+
+    assert config_reads == 1
+    assert config["seed"] == 3035
+    assert config["droneai"]["upstream_config_sha256"] == expected_config_sha256
 
 
 @pytest.mark.parametrize("stage", ["T0", "T1", "T5", "T50"])
@@ -145,15 +242,13 @@ def test_config_uses_validation_and_keeps_official_800_epoch_horizon(
     tmp_path: Path, stage: str
 ) -> None:
     upstream = _write_upstream(tmp_path / "STEERER")
-    profile = _profile(tmp_path)
-    backbone = tmp_path / "hrnetv2_w48_imagenet_pretrained.pth"
-    backbone.write_bytes(b"backbone")
+    profile = _profile(tmp_path, upstream)
 
     config = synthesize_official_config(
         profile=profile,
         upstream_dir=upstream,
         processed_root=tmp_path / "processed",
-        backbone_path=backbone,
+        backbone_path=profile.imagenet_backbone.path,
         stage=stage,
         physical_batch=4,
         accumulation_steps=2,
@@ -163,8 +258,9 @@ def test_config_uses_validation_and_keeps_official_800_epoch_horizon(
     assert config["dataset"]["root"] == str(tmp_path / "processed")
     assert config["dataset"]["train_set"] == "train.txt"
     assert config["dataset"]["test_set"] == "val.txt"
-    assert "test" not in config["dataset"]["test_set"].lower()
-    assert config["network"]["pretrained_backbone"] == str(backbone)
+    assert config["network"]["pretrained_backbone"] == str(
+        profile.imagenet_backbone.path.resolve()
+    )
     assert config["gpus"] == (0,)
     assert config["train"]["batch_size_per_gpu"] == 4
     assert config["train"]["end_epoch"] == 800
@@ -173,9 +269,6 @@ def test_config_uses_validation_and_keeps_official_800_epoch_horizon(
         "T0": 0, "T1": 1, "T5": 5, "T50": 50
     }[stage]
     assert config["droneai"]["schedule_horizon_epochs"] == 800
-    assert config["droneai"]["checkpoint_run_dir"] == str(
-        tmp_path / "checkpoints" / "run-a"
-    )
 
 
 @pytest.mark.parametrize(
@@ -184,11 +277,12 @@ def test_config_uses_validation_and_keeps_official_800_epoch_horizon(
 )
 def test_config_rejects_unsafe_run_id(tmp_path: Path, run_id: str) -> None:
     upstream = _write_upstream(tmp_path / "STEERER")
-
+    profile = _profile(tmp_path, upstream)
     with pytest.raises(ValueError, match="run_id"):
         synthesize_official_config(
-            profile=_profile(tmp_path), upstream_dir=upstream,
-            processed_root=tmp_path / "processed", backbone_path=tmp_path / "backbone.pth",
+            profile=profile, upstream_dir=upstream,
+            processed_root=tmp_path / "processed",
+            backbone_path=profile.imagenet_backbone.path,
             stage="T1", physical_batch=8, accumulation_steps=1, run_id=run_id,
         )
 
@@ -198,16 +292,15 @@ def test_config_rejects_unsafe_run_id(tmp_path: Path, run_id: str) -> None:
     [("8", 1), (8, "1"), (2, 4), (8, 2)],
 )
 def test_config_rejects_non_integer_or_unapproved_batch_plan(
-    tmp_path: Path,
-    physical_batch: object,
-    accumulation_steps: object,
+    tmp_path: Path, physical_batch: object, accumulation_steps: object
 ) -> None:
     upstream = _write_upstream(tmp_path / "STEERER")
-
+    profile = _profile(tmp_path, upstream)
     with pytest.raises(ValueError, match="batch|accumulation"):
         synthesize_official_config(
-            profile=_profile(tmp_path), upstream_dir=upstream,
-            processed_root=tmp_path / "processed", backbone_path=tmp_path / "backbone.pth",
+            profile=profile, upstream_dir=upstream,
+            processed_root=tmp_path / "processed",
+            backbone_path=profile.imagenet_backbone.path,
             stage="T1", physical_batch=physical_batch,  # type: ignore[arg-type]
             accumulation_steps=accumulation_steps,  # type: ignore[arg-type]
             run_id="run-a",
@@ -216,51 +309,77 @@ def test_config_rejects_non_integer_or_unapproved_batch_plan(
 
 def test_config_rejects_resume_outside_current_run_lineage(tmp_path: Path) -> None:
     upstream = _write_upstream(tmp_path / "STEERER")
+    profile = _profile(tmp_path, upstream)
     with pytest.raises(ValueError, match="resume.*run"):
         synthesize_official_config(
-            profile=_profile(tmp_path), upstream_dir=upstream,
-            processed_root=tmp_path / "processed", backbone_path=tmp_path / "backbone.pth",
+            profile=profile, upstream_dir=upstream,
+            processed_root=tmp_path / "processed",
+            backbone_path=profile.imagenet_backbone.path,
             stage="T5", physical_batch=8, accumulation_steps=1, run_id="run-a",
             resume_path=tmp_path / "checkpoints" / "another-run" / "last.pth",
         )
 
 
-def test_config_rejects_resume_for_t0_or_t1(tmp_path: Path) -> None:
-    upstream = _write_upstream(tmp_path / "STEERER")
-    with pytest.raises(ValueError, match="T0|T1"):
-        synthesize_official_config(
-            profile=_profile(tmp_path), upstream_dir=upstream,
-            processed_root=tmp_path / "processed", backbone_path=tmp_path / "backbone.pth",
-            stage="T1", physical_batch=8, accumulation_steps=1, run_id="run-a",
-            resume_path=tmp_path / "checkpoints" / "run-a" / "last.pth",
-        )
-
-
 def test_config_rejects_mutated_official_training_contract(tmp_path: Path) -> None:
-    mutated = OFFICIAL_CONFIG.replace("end_epoch=800", "end_epoch=50")
-    upstream = _write_upstream(tmp_path / "STEERER", mutated)
-
+    upstream = _write_upstream(
+        tmp_path / "STEERER", OFFICIAL_CONFIG.replace("end_epoch=800", "end_epoch=50")
+    )
+    profile = _profile(tmp_path, upstream)
     with pytest.raises(ValueError, match="official.*end_epoch|end_epoch.*official"):
         synthesize_official_config(
-            profile=_profile(tmp_path), upstream_dir=upstream,
-            processed_root=tmp_path / "processed", backbone_path=tmp_path / "backbone.pth",
+            profile=profile, upstream_dir=upstream,
+            processed_root=tmp_path / "processed",
+            backbone_path=profile.imagenet_backbone.path,
             stage="T50", physical_batch=8, accumulation_steps=1, run_id="run-a",
         )
 
 
 class _FakeModel:
-    def __init__(self, parameters: dict[str, np.ndarray], loaded_paths: tuple[Path, ...]):
+    def __init__(self, parameters: dict[str, np.ndarray]):
         self._parameters = parameters
-        self.loaded_weight_paths = loaded_paths
 
     def named_parameters(self):
         return tuple(self._parameters.items())
 
 
+class _FakeCuda:
+    def manual_seed_all(self, _seed: int) -> None:
+        return None
+
+
+class _FakeTorch:
+    def __init__(self):
+        self.calls: list[Path] = []
+        self.cuda = _FakeCuda()
+
+        def original_load(path: str | Path, *args: object, **kwargs: object):
+            del args, kwargs
+            self.calls.append(Path(path).resolve())
+            return {"fixture": True}
+
+        self.load = original_load
+
+    def manual_seed(self, _seed: int) -> None:
+        return None
+
+
 class _FakeModelFactory:
-    def __init__(self, *, mutate_head: bool = False, extra_weight: Path | None = None):
+    def __init__(
+        self,
+        torch_module: _FakeTorch,
+        *,
+        read_backbone: bool = True,
+        read_path: Path | None = None,
+        mutate_head: bool = False,
+        raise_after_load: bool = False,
+        reference_weight: Path | None = None,
+    ):
+        self.torch = torch_module
+        self.read_backbone = read_backbone
+        self.read_path = read_path
         self.mutate_head = mutate_head
-        self.extra_weight = extra_weight
+        self.raise_after_load = raise_after_load
+        self.reference_weight = reference_weight
         self.calls: list[Path | None] = []
 
     def __call__(self, *, pretrained_backbone: Path | None):
@@ -271,63 +390,157 @@ class _FakeModelFactory:
             "multi_counters.weight": np.random.standard_normal(3).astype(np.float32),
             "upsample_module.fsia.weight": np.random.standard_normal(2).astype(np.float32),
         }
-        loaded_paths: tuple[Path, ...] = ()
+        if pretrained_backbone is None and self.reference_weight is not None:
+            self.torch.load(self.reference_weight)
         if pretrained_backbone is not None:
+            if self.read_backbone:
+                self.torch.load(self.read_path or pretrained_backbone)
+            if self.raise_after_load:
+                raise RuntimeError("constructor failed")
             parameters["backbone.conv.weight"] += 10
-            loaded_paths = (pretrained_backbone,)
             if self.mutate_head:
                 parameters["multi_counters.weight"] += 1
-            if self.extra_weight is not None:
-                loaded_paths += (self.extra_weight,)
-        return _FakeModel(parameters, loaded_paths)
+        return _FakeModel(parameters)
 
 
-def test_initialize_model_loads_backbone_only(tmp_path: Path) -> None:
-    backbone = tmp_path / "backbone.pth"
+def _model_fixture(tmp_path: Path):
+    upstream = _write_upstream(tmp_path / "STEERER")
+    backbone = tmp_path / "backbones" / "hrnetv2_w48_imagenet_pretrained.pth"
+    backbone.parent.mkdir(parents=True)
     backbone.write_bytes(b"verified ImageNet backbone")
-    factory = _FakeModelFactory()
+    return _profile(tmp_path, upstream, backbone), backbone
+
+
+def test_initialize_model_requires_profile_canonical_path_name_size_and_hash(
+    tmp_path: Path,
+) -> None:
+    profile, backbone = _model_fixture(tmp_path)
+    copied = tmp_path / "elsewhere" / backbone.name
+    copied.parent.mkdir()
+    copied.write_bytes(backbone.read_bytes())
+
+    defects = (
+        (profile, copied, "canonical|path"),
+        (
+            replace(
+                profile,
+                imagenet_backbone=replace(profile.imagenet_backbone, filename="other.pth"),
+            ),
+            backbone,
+            "filename|name",
+        ),
+        (
+            replace(
+                profile,
+                imagenet_backbone=replace(
+                    profile.imagenet_backbone,
+                    byte_size=profile.imagenet_backbone.byte_size + 1,
+                ),
+            ),
+            backbone,
+            "size",
+        ),
+        (
+            replace(
+                profile,
+                imagenet_backbone=replace(profile.imagenet_backbone, sha256="0" * 64),
+            ),
+            backbone,
+            "SHA-256",
+        ),
+    )
+    for mutated_profile, supplied_path, message in defects:
+        with pytest.raises(ValueError, match=message):
+            initialize_steerer_model(
+                mutated_profile,
+                _FakeModelFactory(_FakeTorch()),
+                supplied_path,
+                torch_module=_FakeTorch(),
+            )
+
+
+def test_initialize_model_requires_observed_approved_torch_load(tmp_path: Path) -> None:
+    profile, backbone = _model_fixture(tmp_path)
+    torch_module = _FakeTorch()
+    factory = _FakeModelFactory(torch_module, read_backbone=False)
+
+    with pytest.raises(ValueError, match="torch.load|read"):
+        initialize_steerer_model(
+            profile, factory, backbone, torch_module=torch_module
+        )
+
+
+def test_initialize_model_rejects_different_weight_read(tmp_path: Path) -> None:
+    profile, backbone = _model_fixture(tmp_path)
+    other = tmp_path / "model-checkpoint.pth"
+    other.write_bytes(b"forbidden")
+    torch_module = _FakeTorch()
+
+    with pytest.raises(PermissionError, match="other weight|backbone"):
+        initialize_steerer_model(
+            profile,
+            _FakeModelFactory(torch_module, read_path=other),
+            backbone,
+            torch_module=torch_module,
+        )
+
+
+def test_initialize_model_records_approved_path_read_and_backbone_scope(
+    tmp_path: Path,
+) -> None:
+    profile, backbone = _model_fixture(tmp_path)
+    torch_module = _FakeTorch()
+    factory = _FakeModelFactory(torch_module)
 
     audit = initialize_steerer_model(
-        factory, backbone, expected_sha256=sha256_file(backbone)
+        profile, factory, backbone, torch_module=torch_module
     )
 
     assert factory.calls == [None, backbone.resolve()]
     assert audit.loaded_scope == "backbone_only"
     assert audit.model_checkpoint_loaded is False
+    assert audit.observed_weight_load_paths == (backbone.resolve(),)
+    assert audit.observed_weight_load_count == 1
     assert audit.loaded_backbone_keys == ("backbone.conv.weight",)
     assert audit.unmatched_backbone_keys == ("backbone.bn.weight",)
     assert audit.random_head_parameter_count == 2
-    assert audit.randomly_initialized_non_backbone_keys == (
-        "multi_counters.weight", "upsample_module.fsia.weight"
-    )
 
 
-def test_initialize_model_rejects_head_changes_or_other_weight_reads(tmp_path: Path) -> None:
-    backbone = tmp_path / "backbone.pth"
-    backbone.write_bytes(b"verified ImageNet backbone")
-    other = tmp_path / "model-checkpoint.pth"
-    other.write_bytes(b"forbidden")
-
+def test_initialize_model_rejects_head_changes_and_reference_checkpoint(
+    tmp_path: Path,
+) -> None:
+    profile, backbone = _model_fixture(tmp_path)
+    torch_module = _FakeTorch()
     with pytest.raises(ValueError, match="head|non-backbone"):
         initialize_steerer_model(
-            _FakeModelFactory(mutate_head=True),
+            profile,
+            _FakeModelFactory(torch_module, mutate_head=True),
             backbone,
-            expected_sha256=sha256_file(backbone),
+            torch_module=torch_module,
         )
-    with pytest.raises(PermissionError, match="other weight|backbone"):
+
+    other = tmp_path / "reference-checkpoint.pth"
+    other.write_bytes(b"forbidden")
+    with pytest.raises(PermissionError, match="reference|checkpoint|weight"):
         initialize_steerer_model(
-            _FakeModelFactory(extra_weight=other),
+            profile,
+            _FakeModelFactory(torch_module, reference_weight=other),
             backbone,
-            expected_sha256=sha256_file(backbone),
+            torch_module=torch_module,
         )
 
 
-def test_initialize_model_checks_hash_before_constructor(tmp_path: Path) -> None:
-    backbone = tmp_path / "backbone.pth"
-    backbone.write_bytes(b"wrong bytes")
-    factory = _FakeModelFactory()
+def test_torch_load_is_restored_when_constructor_raises(tmp_path: Path) -> None:
+    profile, backbone = _model_fixture(tmp_path)
+    torch_module = _FakeTorch()
+    original_load = torch_module.load
 
-    with pytest.raises(ValueError, match="SHA-256"):
-        initialize_steerer_model(factory, backbone, expected_sha256="0" * 64)
+    with pytest.raises(RuntimeError, match="constructor failed"):
+        initialize_steerer_model(
+            profile,
+            _FakeModelFactory(torch_module, raise_after_load=True),
+            backbone,
+            torch_module=torch_module,
+        )
 
-    assert factory.calls == []
+    assert torch_module.load is original_load

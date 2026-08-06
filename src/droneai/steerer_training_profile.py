@@ -11,12 +11,24 @@ from droneai.integrity import is_sha256
 
 
 _STORAGE_ROOT = PurePosixPath("/workspace/data")
+_MODEL_URL = "https://github.com/taohan10200/STEERER.git"
 _MODEL_COMMIT = "5b1854dbc2d280f2326d67c65515d8baf9083810"
+_MODEL_LICENSE_SHA256 = "5c3649a9ac14d2839d2580710c10bdbc9c70cb6a79c07c06a3858952223b6733"
+_MODEL_CONFIG_PATH = Path("configs/QNRF_final.py")
 _SUCCESS_SCOPE = "PASS_COMMERCIAL_CANDIDATE"
 
 
 @dataclass(frozen=True)
+class ModelUpstreamReference:
+    url: str
+    commit: str
+    license_sha256: str
+    config_path: Path
+
+
+@dataclass(frozen=True)
 class ArtifactReference:
+    path: Path
     filename: str
     source_url: str
     provenance_url: str
@@ -25,6 +37,7 @@ class ArtifactReference:
 
 
 _PINNED_IMAGENET_BACKBONE = ArtifactReference(
+    path=Path("/workspace/data/checkpoints/backbones/hrnetv2_w48_imagenet_pretrained.pth"),
     filename="hrnetv2_w48_imagenet_pretrained.pth",
     source_url=(
         "https://github.com/hsfzxjy/models.storage/releases/download/"
@@ -42,7 +55,7 @@ _PINNED_IMAGENET_BACKBONE = ArtifactReference(
 
 @dataclass(frozen=True)
 class SteererTrainingProfile:
-    model_upstream_commit: str
+    model_upstream: ModelUpstreamReference
     dataset_population: int
     train_count: int
     validation_count: int
@@ -54,6 +67,12 @@ class SteererTrainingProfile:
     processed_root: Path
     checkpoint_root: Path
     result_root: Path
+
+    @property
+    def model_upstream_commit(self) -> str:
+        """Backward-compatible access to the authoritative upstream reference."""
+
+        return self.model_upstream.commit
 
 
 def _mapping(payload: Any, *, name: str, keys: set[str]) -> dict[str, Any]:
@@ -113,9 +132,10 @@ def _artifact_reference(payload: Any) -> ArtifactReference:
     artifact = _mapping(
         payload,
         name="imagenet_backbone",
-        keys={"filename", "source_url", "provenance_url", "sha256", "byte_size"},
+        keys={"path", "filename", "source_url", "provenance_url", "sha256", "byte_size"},
     )
     reference = ArtifactReference(
+        path=_storage_path(artifact["path"], name="imagenet_backbone.path"),
         filename=_string(artifact["filename"], name="imagenet_backbone.filename"),
         source_url=_string(artifact["source_url"], name="imagenet_backbone.source_url"),
         provenance_url=_string(
@@ -148,14 +168,28 @@ def validate_training_profile(payload: Any) -> SteererTrainingProfile:
     if root["dataset_id"] != "ucf-qnrf-kaggle-apache":
         raise ValueError("dataset_id is not approved")
 
-    upstream = _mapping(root["model_upstream"], name="model_upstream", keys={"url", "commit", "license_sha256"})
+    upstream = _mapping(
+        root["model_upstream"],
+        name="model_upstream",
+        keys={"url", "commit", "license_sha256", "config_path"},
+    )
     source_url = _string(upstream["url"], name="model_upstream.url")
     commit = _string(upstream["commit"], name="model_upstream.commit")
     license_sha256 = _string(upstream["license_sha256"], name="model_upstream.license_sha256")
-    if commit != _MODEL_COMMIT:
-        raise ValueError("model_upstream.commit is not approved")
-    if not source_url.startswith("https://") or not is_sha256(license_sha256):
-        raise ValueError("model_upstream URL and license SHA-256 are required")
+    config_path = Path(_string(upstream["config_path"], name="model_upstream.config_path"))
+    model_upstream = ModelUpstreamReference(
+        url=source_url,
+        commit=commit,
+        license_sha256=license_sha256,
+        config_path=config_path,
+    )
+    if model_upstream != ModelUpstreamReference(
+        url=_MODEL_URL,
+        commit=_MODEL_COMMIT,
+        license_sha256=_MODEL_LICENSE_SHA256,
+        config_path=_MODEL_CONFIG_PATH,
+    ):
+        raise ValueError("model_upstream does not match the approved pinned source")
 
     backbone = _artifact_reference(root["imagenet_backbone"])
 
@@ -205,7 +239,7 @@ def validate_training_profile(payload: Any) -> SteererTrainingProfile:
         raise PermissionError("sealed test access is forbidden for this training profile")
 
     return SteererTrainingProfile(
-        model_upstream_commit=commit,
+        model_upstream=model_upstream,
         dataset_population=population,
         train_count=train_count,
         validation_count=validation_count,

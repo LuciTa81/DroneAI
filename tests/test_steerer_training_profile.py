@@ -16,6 +16,12 @@ PROFILE = Path("configs/training/steerer_ucf_qnrf_imagenet.home5090.json")
 
 def test_profile_freezes_approved_training_contract() -> None:
     profile = load_training_profile(PROFILE)
+    assert profile.model_upstream.url == "https://github.com/taohan10200/STEERER.git"
+    assert profile.model_upstream.commit == "5b1854dbc2d280f2326d67c65515d8baf9083810"
+    assert profile.model_upstream.license_sha256 == (
+        "5c3649a9ac14d2839d2580710c10bdbc9c70cb6a79c07c06a3858952223b6733"
+    )
+    assert profile.model_upstream.config_path == Path("configs/QNRF_final.py")
     assert profile.model_upstream_commit == "5b1854dbc2d280f2326d67c65515d8baf9083810"
     assert profile.dataset_population == 1201
     assert (profile.train_count, profile.validation_count) == (961, 240)
@@ -24,6 +30,9 @@ def test_profile_freezes_approved_training_contract() -> None:
     assert profile.sealed_test_access is False
     assert profile.success_scope == "PASS_COMMERCIAL_CANDIDATE"
     assert profile.imagenet_backbone.filename == "hrnetv2_w48_imagenet_pretrained.pth"
+    assert profile.imagenet_backbone.path == Path(
+        "/workspace/data/checkpoints/backbones/hrnetv2_w48_imagenet_pretrained.pth"
+    )
     assert profile.imagenet_backbone.source_url == (
         "https://github.com/hsfzxjy/models.storage/releases/download/"
         "openseg-pytorch-pretrained/hrnetv2_w48_imagenet_pretrained.pth"
@@ -54,13 +63,16 @@ def test_profile_rejects_model_checkpoint_loading() -> None:
         (lambda payload: payload["split"].update({"train": 960}), "split"),
         (lambda payload: payload["rights"].update({"success_scope": "PASS"}), "success scope"),
         (lambda payload: payload["storage"].update({"result_root": "/tmp/results"}), "/workspace/data"),
+        (lambda payload: payload["model_upstream"].update({"url": "https://example.test/STEERER.git"}), "model_upstream"),
+        (lambda payload: payload["model_upstream"].update({"license_sha256": "a" * 64}), "model_upstream"),
+        (lambda payload: payload["imagenet_backbone"].update({"path": "/workspace/data/checkpoints/backbones/other.pth"}), "ImageNet backbone"),
     ],
 )
 def test_profile_rejects_policy_boundary_mutations(mutation, message: str) -> None:
     payload = json.loads(PROFILE.read_text())
     mutation(payload)
 
-    with pytest.raises(ValueError, match=message):
+    with pytest.raises((ValueError, PermissionError), match=message):
         validate_training_profile(payload)
 
 
@@ -68,6 +80,7 @@ def test_profile_rejects_policy_boundary_mutations(mutation, message: str) -> No
     "backbone",
     [
         ArtifactReference(
+            path=Path("/workspace/data/checkpoints/backbones/hrnetv2_w48_imagenet_pretrained.pth"),
             filename="hrnetv2_w48_imagenet_pretrained.pth",
             source_url="https://github.com/hsfzxjy/models.storage/releases/download/openseg-pytorch-pretrained/hrnetv2_w48_imagenet_pretrained.pth",
             provenance_url="https://onedrive.live.com/?action=locate&authkey=%21AKvqI6pBZlifgJk&cid=F7FD0B7F26543CEB&id=F7FD0B7F26543CEB%21116&parId=F7FD0B7F26543CEB%21105",
@@ -75,6 +88,7 @@ def test_profile_rejects_policy_boundary_mutations(mutation, message: str) -> No
             byte_size=310643500,
         ),
         ArtifactReference(
+            path=Path("/workspace/data/checkpoints/backbones/hrnetv2_w48_imagenet_pretrained.pth"),
             filename="hrnetv2_w48_imagenet_pretrained.pth",
             source_url="https://example.test/hrnetv2_w48_imagenet_pretrained.pth",
             provenance_url="https://onedrive.live.com/?action=locate&authkey=%21AKvqI6pBZlifgJk&cid=F7FD0B7F26543CEB&id=F7FD0B7F26543CEB%21116&parId=F7FD0B7F26543CEB%21105",
@@ -82,6 +96,7 @@ def test_profile_rejects_policy_boundary_mutations(mutation, message: str) -> No
             byte_size=310643500,
         ),
         ArtifactReference(
+            path=Path("/workspace/data/checkpoints/backbones/hrnetv2_w48_imagenet_pretrained.pth"),
             filename="hrnetv2_w48_imagenet_pretrained.pth",
             source_url="https://github.com/hsfzxjy/models.storage/releases/download/openseg-pytorch-pretrained/hrnetv2_w48_imagenet_pretrained.pth",
             provenance_url="https://onedrive.live.com/?action=locate&authkey=%21AKvqI6pBZlifgJk&cid=F7FD0B7F26543CEB&id=F7FD0B7F26543CEB%21116&parId=F7FD0B7F26543CEB%21105",

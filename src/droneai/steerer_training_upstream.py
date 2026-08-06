@@ -6,16 +6,17 @@ import copy
 import hashlib
 import random
 import re
-import runpy
+import subprocess
 from contextlib import contextmanager
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any, Callable, Iterator, Literal, Mapping
+from urllib.parse import urlsplit, urlunsplit
 
 import numpy as np
 
 from droneai.dm_count_adapter import _git_head, _git_status
-from droneai.integrity import is_sha256, sha256_file
+from droneai.integrity import sha256_file
 from droneai.steerer_training_profile import SteererTrainingProfile
 
 
@@ -65,10 +66,13 @@ _OFFICIAL_LR_CONFIG = {
 
 @dataclass(frozen=True)
 class UpstreamAudit:
+    origin_url: str
     commit: str
     clean: bool
     license_sha256: str
+    config_path: Path
     config_sha256: str
+    _config_bytes: bytes = field(repr=False, compare=False)
 
 
 @dataclass(frozen=True)
@@ -79,58 +83,124 @@ class ModelInitializationAudit:
     unmatched_backbone_keys: tuple[str, ...]
     randomly_initialized_non_backbone_keys: tuple[str, ...]
     random_head_parameter_count: int
+    observed_weight_load_paths: tuple[Path, ...]
+    observed_weight_load_count: int
 
     def to_json_dict(self) -> dict[str, object]:
         """Return the JSON-ready initialization evidence."""
 
-        return asdict(self)
+        payload = asdict(self)
+        payload["observed_weight_load_paths"] = [
+            str(path) for path in self.observed_weight_load_paths
+        ]
+        return payload
+
+
+def _git_remote_origin(upstream_dir: Path) -> str:
+    completed = subprocess.run(
+        ["git", "remote", "get-url", "origin"],
+        cwd=upstream_dir,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    return completed.stdout.strip()
+
+
+def _normalized_git_url(value: str) -> str:
+    raw = value.strip().replace("\\", "/")
+    scp_match = re.fullmatch(r"(?:git@)?([^/:]+):(.+)", raw)
+    if scp_match and "://" not in raw:
+        raw = f"https://{scp_match.group(1)}/{scp_match.group(2)}"
+    parts = urlsplit(raw)
+    if not parts.scheme or not parts.netloc:
+        raise ValueError("pinned STEERER origin must be an absolute Git URL")
+    scheme = parts.scheme.lower()
+    hostname = (parts.hostname or "").lower()
+    if scheme in {"ssh", "git+ssh"} and parts.username in {None, "git"}:
+        scheme = "https"
+    port = f":{parts.port}" if parts.port is not None else ""
+    normalized_path = "/" + parts.path.strip("/")
+    return urlunsplit((scheme, hostname + port, normalized_path, "", ""))
+
+
+def _audited_file(root: Path, relative_path: Path, *, name: str) -> Path:
+    if relative_path.is_absolute() or ".." in relative_path.parts:
+        raise ValueError(f"pinned STEERER {name} path must stay inside the audited root")
+    candidate = root / relative_path
+    if candidate.is_symlink():
+        raise ValueError(f"pinned STEERER {name} path cannot be a symlink")
+    try:
+        resolved = candidate.resolve(strict=True)
+        resolved.relative_to(root)
+    except (FileNotFoundError, ValueError) as exc:
+        raise ValueError(
+            f"pinned STEERER {name} path must be a file inside the audited root"
+        ) from exc
+    if not resolved.is_file():
+        raise ValueError(f"pinned STEERER {name} path must be a regular file")
+    return resolved
 
 
 def audit_upstream(
+    profile: SteererTrainingProfile,
     upstream_dir: str | Path,
-    *,
-    expected_commit: str,
-    expected_license_sha256: str,
 ) -> UpstreamAudit:
-    """Require the exact clean checkout and record reviewed source hashes."""
+    """Require the profile-pinned origin, checkout, and immutable config snapshot."""
 
-    root = Path(upstream_dir)
+    if not isinstance(profile, SteererTrainingProfile):
+        raise TypeError("validated STEERER training profile is required")
+    try:
+        root = Path(upstream_dir).resolve(strict=True)
+    except FileNotFoundError as exc:
+        raise ValueError("pinned STEERER upstream directory is required") from exc
     if not root.is_dir():
         raise ValueError("pinned STEERER upstream directory is required")
-    expected_commit = expected_commit.lower()
-    if len(expected_commit) != 40 or any(c not in "0123456789abcdef" for c in expected_commit):
-        raise ValueError("pinned STEERER commit must be a 40-character Git hash")
-    if not is_sha256(expected_license_sha256):
-        raise ValueError("pinned STEERER LICENSE SHA-256 is required")
 
-    observed_commit = _git_head(root)
-    if observed_commit != expected_commit:
+    expected_origin = _normalized_git_url(profile.model_upstream.url)
+    observed_origin = _normalized_git_url(_git_remote_origin(root))
+    if observed_origin != expected_origin:
         raise ValueError(
-            f"pinned STEERER commit mismatch: expected {expected_commit}, got {observed_commit}"
+            f"pinned STEERER origin mismatch: expected {expected_origin}, got {observed_origin}"
+        )
+    observed_commit = _git_head(root)
+    if observed_commit != profile.model_upstream.commit.lower():
+        raise ValueError(
+            "pinned STEERER commit mismatch: expected "
+            f"{profile.model_upstream.commit}, got {observed_commit}"
         )
     if _git_status(root):
         raise ValueError("pinned STEERER working tree must be clean")
 
-    license_path = root / "LICENSE"
-    config_path = root / "configs" / "QNRF_final.py"
-    if not license_path.is_file() or not config_path.is_file():
-        raise ValueError("pinned STEERER LICENSE and configs/QNRF_final.py are required")
-    license_sha256 = sha256_file(license_path)
-    if license_sha256 != expected_license_sha256.lower():
+    license_path = _audited_file(root, Path("LICENSE"), name="LICENSE")
+    config_path = _audited_file(
+        root, profile.model_upstream.config_path, name="config"
+    )
+    license_bytes = license_path.read_bytes()
+    config_bytes = config_path.read_bytes()
+    license_sha256 = hashlib.sha256(license_bytes).hexdigest()
+    if license_sha256 != profile.model_upstream.license_sha256.lower():
         raise ValueError("pinned STEERER LICENSE SHA-256 mismatch")
     return UpstreamAudit(
+        origin_url=observed_origin,
         commit=observed_commit,
         clean=True,
         license_sha256=license_sha256,
-        config_sha256=sha256_file(config_path),
+        config_path=config_path,
+        config_sha256=hashlib.sha256(config_bytes).hexdigest(),
+        _config_bytes=config_bytes,
     )
 
 
-def _official_config(upstream_dir: Path) -> dict[str, object]:
-    config_path = upstream_dir / "configs" / "QNRF_final.py"
-    if not config_path.is_file():
-        raise ValueError("official STEERER configs/QNRF_final.py is required")
-    namespace = runpy.run_path(str(config_path))
+def _official_config(audit: UpstreamAudit) -> dict[str, object]:
+    namespace: dict[str, object] = {
+        "__file__": str(audit.config_path),
+        "__name__": "droneai_steerer_audited_config",
+    }
+    exec(
+        compile(audit._config_bytes, str(audit.config_path), "exec"),
+        namespace,
+    )
     return {
         key: copy.deepcopy(value)
         for key, value in namespace.items()
@@ -190,6 +260,32 @@ def _is_within(path: Path, root: Path) -> bool:
     return True
 
 
+def _verified_profile_backbone(
+    profile: SteererTrainingProfile, backbone_path: str | Path
+) -> Path:
+    if profile.initialization != "imagenet_backbone_only":
+        raise PermissionError("official model checkpoint initialization is forbidden")
+    reference = profile.imagenet_backbone
+    if reference.path.name != reference.filename:
+        raise ValueError("ImageNet backbone filename does not match its canonical path")
+    try:
+        supplied = Path(backbone_path).resolve(strict=True)
+        canonical = reference.path.resolve(strict=True)
+    except FileNotFoundError as exc:
+        raise ValueError("canonical ImageNet backbone file is required") from exc
+    if supplied != canonical:
+        raise ValueError("ImageNet backbone must use the profile canonical path")
+    if supplied.is_symlink() or not supplied.is_file():
+        raise ValueError("canonical ImageNet backbone must be a regular non-symlink file")
+    if supplied.name != reference.filename:
+        raise ValueError("ImageNet backbone filename does not match the profile")
+    if supplied.stat().st_size != reference.byte_size:
+        raise ValueError("ImageNet backbone byte size does not match the profile")
+    if sha256_file(supplied) != reference.sha256.lower():
+        raise ValueError("ImageNet backbone SHA-256 does not match the profile")
+    return supplied
+
+
 def synthesize_official_config(
     *,
     profile: SteererTrainingProfile,
@@ -219,7 +315,9 @@ def synthesize_official_config(
     ):
         raise ValueError("physical batch and accumulation must be approved 8x1 or 4x2")
 
-    config = _official_config(Path(upstream_dir))
+    upstream_audit = audit_upstream(profile, upstream_dir)
+    backbone = _verified_profile_backbone(profile, backbone_path)
+    config = _official_config(upstream_audit)
     _assert_official_contract(config)
 
     result_dir = profile.result_root / run_id
@@ -235,7 +333,7 @@ def synthesize_official_config(
     network = _require_mapping(config, "network")
     dataset = _require_mapping(config, "dataset")
     train = _require_mapping(config, "train")
-    network["pretrained_backbone"] = str(Path(backbone_path))
+    network["pretrained_backbone"] = str(backbone)
     dataset["root"] = str(Path(processed_root))
     dataset["train_set"] = "train.txt"
     dataset["test_set"] = "val.txt"
@@ -260,6 +358,10 @@ def synthesize_official_config(
         "result_dir": str(result_dir),
         "checkpoint_run_dir": str(checkpoint_run_dir),
         "model_checkpoint_loaded": False,
+        "upstream_origin_url": upstream_audit.origin_url,
+        "upstream_commit": upstream_audit.commit,
+        "upstream_license_sha256": upstream_audit.license_sha256,
+        "upstream_config_sha256": upstream_audit.config_sha256,
     }
     return config
 
@@ -284,24 +386,27 @@ def _reset_rngs(seed: int, torch_module: Any | None) -> None:
 
 
 def _resolved_weight_path(source: object) -> Path:
-    if not isinstance(source, (str, bytes, Path)):
+    if not isinstance(source, (str, Path)):
         raise PermissionError("STEERER constructor attempted to read a non-path weight source")
     return Path(source).resolve(strict=False)
 
 
 @contextmanager
-def _weight_read_gate(
-    torch_module: Any | None, approved_backbone: Path
+def _torch_load_gate(
+    torch_module: Any, approved_backbone: Path | None
 ) -> Iterator[list[Path]]:
     observed: list[Path] = []
-    if torch_module is None or not hasattr(torch_module, "load"):
-        yield observed
-        return
+    if not hasattr(torch_module, "load"):
+        raise RuntimeError("PyTorch torch.load is required for initialization audit")
     original_load = torch_module.load
 
     def audited_load(source: object, *args: object, **kwargs: object) -> object:
         path = _resolved_weight_path(source)
         observed.append(path)
+        if approved_backbone is None:
+            raise PermissionError(
+                "random reference constructor attempted to read a checkpoint weight"
+            )
         if path != approved_backbone:
             raise PermissionError("STEERER constructor attempted to read another weight")
         return original_load(source, *args, **kwargs)
@@ -340,55 +445,36 @@ def _parameter_digests(model: object) -> dict[str, str]:
     return digests
 
 
-def _declared_weight_paths(model: object) -> tuple[Path, ...]:
-    raw = getattr(model, "loaded_weight_paths", ())
-    if raw is None:
-        return ()
-    if isinstance(raw, (str, bytes, Path)):
-        raw = (raw,)
-    try:
-        return tuple(_resolved_weight_path(path) for path in raw)
-    except TypeError as exc:
-        raise ValueError("loaded_weight_paths must be an iterable of paths") from exc
-
-
 def initialize_steerer_model(
+    profile: SteererTrainingProfile,
     model_factory: Callable[..., object],
     backbone_path: str | Path,
     *,
-    expected_sha256: str,
-    seed: int = 3035,
     torch_module: Any | None = None,
 ) -> ModelInitializationAudit:
     """Prove that constructor initialization changes only backbone parameters."""
 
-    backbone = Path(backbone_path).resolve(strict=False)
-    if not backbone.is_file():
-        raise ValueError("verified ImageNet backbone file is required")
-    if not is_sha256(expected_sha256) or sha256_file(backbone) != expected_sha256.lower():
-        raise ValueError("ImageNet backbone SHA-256 mismatch")
+    if not isinstance(profile, SteererTrainingProfile):
+        raise TypeError("validated STEERER training profile is required")
+    backbone = _verified_profile_backbone(profile, backbone_path)
     if not callable(model_factory):
         raise TypeError("model_factory must be callable")
-    if isinstance(seed, bool) or not isinstance(seed, int):
-        raise ValueError("seed must be an integer")
 
     torch_module = _optional_torch() if torch_module is None else torch_module
-    with _weight_read_gate(torch_module, backbone) as observed_paths:
-        _reset_rngs(seed, torch_module)
+    if torch_module is None:
+        raise RuntimeError("PyTorch is required for STEERER initialization audit")
+    with _torch_load_gate(torch_module, None):
+        _reset_rngs(profile.seed, torch_module)
         reference = model_factory(pretrained_backbone=None)
-        reference_declared = _declared_weight_paths(reference)
-        if reference_declared:
-            raise PermissionError("random reference constructor read another weight")
         reference_digests = _parameter_digests(reference)
 
-        _reset_rngs(seed, torch_module)
+    with _torch_load_gate(torch_module, backbone) as observed_paths:
+        _reset_rngs(profile.seed, torch_module)
         training_model = model_factory(pretrained_backbone=backbone)
         training_digests = _parameter_digests(training_model)
-        declared_paths = _declared_weight_paths(training_model)
 
-    all_observed = tuple(observed_paths) + declared_paths
-    if any(path != backbone for path in all_observed):
-        raise PermissionError("STEERER constructor attempted to read another weight than the backbone")
+    if not observed_paths:
+        raise ValueError("STEERER constructor did not read the approved backbone with torch.load")
     if set(reference_digests) != set(training_digests):
         raise ValueError("reference and backbone STEERER parameter keys differ")
 
@@ -420,4 +506,6 @@ def initialize_steerer_model(
         unmatched_backbone_keys=unmatched_backbone_keys,
         randomly_initialized_non_backbone_keys=non_backbone_keys,
         random_head_parameter_count=len(non_backbone_keys),
+        observed_weight_load_paths=tuple(observed_paths),
+        observed_weight_load_count=len(observed_paths),
     )
