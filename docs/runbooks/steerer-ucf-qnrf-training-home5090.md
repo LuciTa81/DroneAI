@@ -224,3 +224,128 @@ rsync -avm --include='*/' --include='*.json' --include='*.md' \
 
 Recompute SHA-256 for every copied artifact before committing. Do not put `.pth`
 files or any individual artifact above 25 MiB in Git.
+
+## 10. T800: approved epoch-5 to epoch-800 long run
+
+This section is the authoritative T800 launch procedure for run
+`steerer-qnrf-imagenet-20260806-t1-e`. Do not access the official UCF-QNRF Test.
+T800 continues the existing optimizer, scheduler, scaler, RNG, and best-metric
+lineage; it is not a fresh training run.
+
+Set the exact paths and verify the immutable epoch-5 predecessor before any GPU
+work:
+
+```bash
+WT=/workspace/.worktrees/steerer-ucf-training
+PY=/workspace/.venvs/steerer/bin/python
+UPSTREAM=/workspace/upstreams/STEERER
+PROCESSED=/workspace/data/datasets/ucf-qnrf-kaggle-apache/processed/steerer-training-v1
+BACKBONE=/workspace/data/checkpoints/backbones/hrnetv2_w48_imagenet_pretrained.pth
+BACKBONE_SHA=0efec102d97f2ef58f0e258b2c3076b3704b93ffc2b73f64c8da5462c0037ef8
+RUN_ID=steerer-qnrf-imagenet-20260806-t1-e
+CHECKPOINT_ROOT=/workspace/data/checkpoints/steerer-ucf-training/$RUN_ID
+RESULT_ROOT=/workspace/data/results/steerer-ucf-training/$RUN_ID
+RESUME=$CHECKPOINT_ROOT/milestone-005.pth
+EXPECTED_RESUME_SHA=2ce6800bcbbdaace881e5f2ecc9f481616a67b9b96254232b7e8e5285ceeafc4
+CONTAINER_IMAGE_DIGEST=sha256:90dfcacf0d65fec4357a37db72624b42febf8d3d9056924cdec3499237ed2691
+
+test "$(sha256sum "$RESUME" | cut -d' ' -f1)" = "$EXPECTED_RESUME_SHA"
+test "$(sha256sum "$BACKBONE" | cut -d' ' -f1)" = "$BACKBONE_SHA"
+test "$(git -C "$UPSTREAM" rev-parse HEAD)" = "5b1854dbc2d280f2326d67c65515d8baf9083810"
+test -z "$(git -C "$WT" status --short)"
+test -z "$(git -C "$UPSTREAM" status --short)"
+df -BG /workspace/data
+nvidia-smi
+cd "$WT"
+$PY -m pytest tests/test_steerer_training_longrun.py \
+  tests/test_steerer_training_runner.py -k t800 -q
+```
+
+Require at least 50 GB free, no unrelated GPU workload, a clean project/upstream,
+the exact hashes above, and passing synthetic T800 tests. The runner itself owns
+`$RESULT_ROOT/run.lock`; a second live T800 process is rejected.
+
+Attach to the existing persistent session with `tmux attach -t crowd`, then run:
+
+```bash
+mkdir -p "$RESULT_ROOT"
+cd "$WT"
+set -o pipefail
+$PY scripts/run_steerer_ucf_training.py \
+  --config configs/training/steerer_ucf_qnrf_imagenet.home5090.json \
+  --stage T800 --approved-stage T800 \
+  --run-id "$RUN_ID" --processed-root "$PROCESSED" \
+  --upstream-dir "$UPSTREAM" --backbone "$BACKBONE" \
+  --backbone-sha256 "$BACKBONE_SHA" \
+  --container-image-digest "$CONTAINER_IMAGE_DIGEST" --device cuda:0 \
+  --resume "$RESUME" \
+  2>&1 | tee "$RESULT_ROOT/run-result-t800.jsonl"
+```
+
+Detach with `Ctrl-b d`. Monitor without changing training parameters:
+
+```bash
+cat "$RESULT_ROOT/status.json"
+cat "$RESULT_ROOT/run.lock"
+tmux capture-pane -pt crowd -S -80
+nvidia-smi
+df -h /workspace/data
+tail -n 80 "$RESULT_ROOT/run-result-t800.jsonl"
+```
+
+`status.json` is atomically updated every epoch and validation boundary. Full
+240-image validation runs at epochs 25, 50, ..., 800. `last.pth` is promoted
+only after a boundary fully validates and reloads; milestone files are retained
+at epochs 100, 200, ..., 800.
+
+### Restart recovery
+
+After a restart, first verify that no T800 process owns `run.lock`, then compare
+`last.pth` with its unique `checkpoint-manifest.json` entry. Use the identical
+command above, changing only the resume argument to:
+
+```bash
+--resume "$CHECKPOINT_ROOT/last.pth"
+```
+
+Never resume an unmanifested checkpoint or an incomplete epoch. Persistent lock
+metadata is informational: the Linux kernel releases the advisory lock when the
+old process or host exits.
+
+### Completion and scoring
+
+Require all 32 boundary metric files plus the final and selected checkpoints:
+
+```bash
+test "$(find "$RESULT_ROOT" -maxdepth 1 -name 'metrics.epoch-*.json' | wc -l)" -eq 32
+test -f "$RESULT_ROOT/metrics.t800.json"
+test -f "$CHECKPOINT_ROOT/milestone-800.pth"
+test -f "$CHECKPOINT_ROOT/best-mae.pth"
+test -f "$CHECKPOINT_ROOT/best-rmse.pth"
+sha256sum "$CHECKPOINT_ROOT/last.pth" \
+  "$CHECKPOINT_ROOT/milestone-800.pth" \
+  "$CHECKPOINT_ROOT/best-mae.pth" \
+  "$CHECKPOINT_ROOT/best-rmse.pth"
+```
+
+Read the final content-addressed environment path from the last JSON result and
+score the final epoch-800 checkpoint:
+
+```bash
+ENVIRONMENT_PATH=$($PY -c 'import json,sys; rows=[json.loads(x) for x in open(sys.argv[1]) if x.startswith("{")]; print(rows[-1]["environment_path"])' "$RESULT_ROOT/run-result-t800.jsonl")
+$PY scripts/score_steerer_ucf_training.py \
+  --stage T800 --run-id "$RUN_ID" \
+  --profile "$WT/configs/training/steerer_ucf_qnrf_imagenet.home5090.json" \
+  --project-repo "$WT" --upstream-dir "$UPSTREAM" \
+  --processed-root "$PROCESSED" --backbone "$BACKBONE" \
+  --checkpoint "$CHECKPOINT_ROOT/last.pth" \
+  --checkpoint-manifest "$CHECKPOINT_ROOT/checkpoint-manifest.json" \
+  --environment "$ENVIRONMENT_PATH" --metrics "$RESULT_ROOT/metrics.t800.json" \
+  --output-dir "$RESULT_ROOT/score-bundle-t800"
+cat "$RESULT_ROOT/score-bundle-t800/score.json"
+```
+
+Acceptance requires `100/100`, `PASS_COMMERCIAL_CANDIDATE`, and no blockers.
+`metrics.t800.json` is the final epoch result; best-MAE and best-RMSE are
+reloaded and evaluated separately before the paper-gap report. This does not
+mean `PRODUCTION_APPROVED`.

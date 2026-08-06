@@ -496,6 +496,76 @@ def _verify_checkpoint_manifest(
     filenames = [str(entry["filename"]) for entry in normalized_entries]
     if len(filenames) != len(set(filenames)):
         raise ValueError("checkpoint policy entry filenames must be unique")
+    if inputs.stage == "T800":
+        required_epochs = tuple(range(100, 801, 100))
+        required_names = {
+            "last.pth",
+            "best-mae.pth",
+            "best-rmse.pth",
+            *(f"milestone-{epoch:03d}.pth" for epoch in required_epochs),
+        }
+        entries_by_name = {
+            str(entry["filename"]): entry for entry in normalized_entries
+        }
+        if not required_names.issubset(entries_by_name):
+            missing = sorted(required_names.difference(entries_by_name))
+            raise ValueError(
+                f"T800 checkpoint artifact manifest is incomplete: missing={missing}"
+            )
+        for filename in sorted(required_names):
+            artifact_path = _regular_file(
+                checkpoint_dir / filename, name="T800 checkpoint artifact"
+            )
+            artifact_entry = entries_by_name[filename]
+            if (
+                artifact_entry["byte_count"] != artifact_path.stat().st_size
+                or sha256_file(artifact_path)
+                != str(artifact_entry["sha256"]).lower()
+            ):
+                raise ValueError("T800 checkpoint artifact hash/size mismatch")
+            if filename.startswith("milestone-"):
+                milestone_epoch = int(filename.removeprefix("milestone-").removesuffix(".pth"))
+                if (
+                    artifact_entry["epoch"] != milestone_epoch
+                    or artifact_entry["metric_reason"]
+                    != f"milestone-{milestone_epoch:03d}"
+                    or artifact_entry["parent_checkpoint_sha256"] is None
+                ):
+                    raise ValueError("T800 checkpoint milestone lineage is invalid")
+        for filename, reason in (
+            ("best-mae.pth", "best_mae"),
+            ("best-rmse.pth", "best_rmse"),
+        ):
+            best_entry = entries_by_name[filename]
+            if best_entry["metric_reason"] != reason:
+                raise ValueError("T800 checkpoint best-model reason is invalid")
+            best_state = load_training_checkpoint(
+                checkpoint_dir / filename,
+                expected_sha256=str(best_entry["sha256"]).lower(),
+                torch_module=torch_module,
+            )
+            best_epoch = int(best_state["epoch"])
+            best_stage = str(best_state["stage"])
+            valid_best = (
+                (best_stage == "T1" and best_epoch == 1)
+                or (best_stage == "T5" and best_epoch == 5)
+                or (best_stage == "T50" and best_epoch == 50)
+                or (
+                    best_stage == "T800"
+                    and 25 <= best_epoch <= 800
+                    and best_epoch % 25 == 0
+                )
+            )
+            scheduler = best_state["scheduler"]
+            if (
+                best_state["run_id"] != inputs.run_id
+                or not valid_best
+                or not isinstance(scheduler, Mapping)
+                or scheduler.get("horizon") != 800
+                or best_state["environment_manifest_sha256"]
+                != best_entry["environment_manifest_sha256"]
+            ):
+                raise ValueError("T800 checkpoint best-model lineage is invalid")
     matches = [
         entry
         for entry in normalized_entries
@@ -524,10 +594,13 @@ def _verify_checkpoint_manifest(
         expected_sha256=observed_sha,
         torch_module=torch_module,
     )
+    scheduler = state["scheduler"]
     if (
         state["run_id"] != inputs.run_id
         or state["stage"] != inputs.stage
         or state["epoch"] != expected_epoch
+        or not isinstance(scheduler, Mapping)
+        or scheduler.get("horizon") != 800
         or state["environment_manifest_sha256"].lower()
         != str(entry["environment_manifest_sha256"]).lower()
     ):

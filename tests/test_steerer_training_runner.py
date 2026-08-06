@@ -997,6 +997,7 @@ def test_t800_runs_every_25_epoch_boundary_and_preserves_100_epoch_milestones(
 
     expected_boundaries = list(range(25, 801, 25))
     assert result.completed_epoch == 800
+    assert result.metrics_path.name == "metrics.t800.json"
     assert t800_engine.validation_epochs == expected_boundaries
     assert sorted(
         path.name for path in t800_engine.environment_path.parent.glob("metrics.epoch-*.json")
@@ -1650,6 +1651,74 @@ def test_cli_t0_constructs_pinned_engine_and_runs_hard_ceiling(
     assert calls["engine"]["stage"] == "T0"  # type: ignore[index]
     assert calls["run"][1]["stage"] == "T0"  # type: ignore[index]
     assert calls["run"][1]["container_image_digest"] == CONTAINER_DIGEST  # type: ignore[index]
+
+
+def test_cli_t800_holds_one_run_lock_around_engine_and_training(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    active = False
+    lock_calls: list[tuple[Path, str]] = []
+
+    class Lock:
+        def __init__(self, path: Path, *, run_id: str) -> None:
+            lock_calls.append((path, run_id))
+
+        def __enter__(self):
+            nonlocal active
+            active = True
+            return self
+
+        def __exit__(self, *_args: object) -> None:
+            nonlocal active
+            active = False
+
+    class Engine:
+        def __init__(self, **_kwargs: object) -> None:
+            assert active is True
+
+    result = SimpleNamespace(
+        stage="T800", completed_epoch=800, optimizer_steps=1,
+        validation_samples=240, finite_loss=True, checkpoint_round_trip=True,
+        physical_batch=8, accumulation_steps=1, amp_enabled=True,
+        cuda_oom_evidence=None, elapsed_seconds=1.0,
+        metrics_path=Path("/workspace/data/results/run/metrics.t800.json"),
+        metrics_sha256="1" * 64,
+        environment_path=Path("/workspace/data/results/run/environment.json"),
+        environment_sha256="2" * 64,
+        checkpoint_path=Path("/workspace/data/checkpoints/run/last.pth"),
+        checkpoint_sha256="3" * 64,
+    )
+
+    def run(_profile, **_kwargs: object):
+        assert active is True
+        return result
+
+    monkeypatch.setattr(training_cli, "RunLock", Lock)
+    monkeypatch.setattr(training_cli, "PinnedUpstreamTrainingEngine", Engine)
+    monkeypatch.setattr(training_cli, "run_training_stage", run)
+
+    exit_code = training_cli.main(
+        [
+            "--config", str(PROFILE_PATH),
+            "--stage", "T800", "--approved-stage", "T800",
+            "--run-id", "run-3035",
+            "--processed-root", "/workspace/data/datasets/ucf-qnrf-kaggle-apache/processed/steerer-training-v1",
+            "--upstream-dir", "/workspace/upstreams/STEERER",
+            "--backbone", "/workspace/data/checkpoints/backbones/hrnetv2_w48_imagenet_pretrained.pth",
+            "--backbone-sha256", "0efec102d97f2ef58f0e258b2c3076b3704b93ffc2b73f64c8da5462c0037ef8",
+            "--container-image-digest", CONTAINER_DIGEST,
+            "--resume", "/workspace/data/checkpoints/steerer-ucf-training/run-3035/last.pth",
+        ]
+    )
+
+    assert exit_code == 0
+    assert active is False
+    assert lock_calls == [
+        (
+            Path("/workspace/data/results/steerer-ucf-training/run-3035/run.lock"),
+            "run-3035",
+        )
+    ]
 
 
 def test_cli_requires_an_actual_container_image_digest() -> None:

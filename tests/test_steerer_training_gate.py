@@ -356,13 +356,36 @@ def _authoritative_fixture(
         },
         "environment_manifest_sha256": environment_sha,
     }
-    checkpoint_result = save_checkpoint_with_policy(
-        checkpoint_root / run_id,
-        state,
-        current_mae=1.0,
-        current_rmse=1.0,
-        torch_module=_FakeTorch(),
-    )
+    if stage == "T800":
+        parent_sha = "a" * 64
+        for epoch in range(100, 801, 100):
+            boundary_state = dict(state)
+            boundary_state["epoch"] = epoch
+            boundary_state["global_step"] = epoch * 16
+            boundary_state["scheduler"] = {
+                "last_epoch": epoch,
+                "horizon": 800,
+            }
+            checkpoint_result = save_checkpoint_with_policy(
+                checkpoint_root / run_id,
+                boundary_state,
+                current_mae=1.0,
+                current_rmse=1.0,
+                previous_best_mae=(2.0 if epoch == 100 else 1.0),
+                previous_best_rmse=(2.0 if epoch == 100 else 1.0),
+                parent_checkpoint_sha256=parent_sha,
+                preserve_milestone=True,
+                torch_module=_FakeTorch(),
+            )
+            parent_sha = checkpoint_result.artifacts["last"].sha256
+    else:
+        checkpoint_result = save_checkpoint_with_policy(
+            checkpoint_root / run_id,
+            state,
+            current_mae=1.0,
+            current_rmse=1.0,
+            torch_module=_FakeTorch(),
+        )
     checkpoint = checkpoint_result.artifacts["last"].path
     checkpoint_manifest = checkpoint_result.manifest_path
     inputs = AuthoritativeTrainingInputs(
@@ -563,6 +586,24 @@ def test_t800_checkpoint_payload_and_score_are_authoritative(tmp_path: Path) -> 
     assert report.score == 100
     assert report.status == "PASS_COMMERCIAL_CANDIDATE"
     assert report.failed_blockers == ()
+
+
+@pytest.mark.parametrize(
+    "filename",
+    ("best-mae.pth", "best-rmse.pth", "milestone-100.pth", "milestone-800.pth"),
+)
+def test_t800_authority_requires_hash_verified_best_and_milestone_artifacts(
+    tmp_path: Path, filename: str
+) -> None:
+    fixture = _authoritative_fixture(tmp_path, stage="T800")
+    (fixture.checkpoint.parent / filename).unlink()
+
+    with pytest.raises(ValueError, match="T800.*checkpoint|checkpoint.*artifact"):
+        verify_authoritative_training_evidence(
+            fixture.inputs,
+            _profile_override=fixture.profile,
+            torch_module=_FakeTorch(),
+        )
 
 
 def test_score_cli_accepts_t800_evidence_stage(tmp_path: Path) -> None:

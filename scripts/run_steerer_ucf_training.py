@@ -6,6 +6,7 @@ import argparse
 import json
 import re
 import sys
+from contextlib import nullcontext
 from pathlib import Path
 from typing import Sequence
 
@@ -15,6 +16,7 @@ if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
 from droneai.steerer_training_profile import load_training_profile
+from droneai.steerer_training_longrun import RunLock
 from droneai.steerer_training_runner import (
     PinnedUpstreamTrainingEngine,
     run_training_stage,
@@ -75,25 +77,34 @@ def main(argv: Sequence[str] | None = None) -> int:
             raise ValueError(
                 "--container-image-digest must be sha256 plus 64 hexadecimal characters"
             )
-        engine = PinnedUpstreamTrainingEngine(
-            profile=profile,
-            stage=args.stage,
-            run_id=args.run_id,
-            processed_root=args.processed_root,
-            upstream_dir=args.upstream_dir,
-            backbone_path=args.backbone,
-            device=args.device,
-            resume=args.resume,
+        run_lock = (
+            RunLock(
+                profile.result_root / args.run_id / "run.lock",
+                run_id=args.run_id,
+            )
+            if args.stage == "T800"
+            else nullcontext()
         )
-        result = run_training_stage(
-            profile,
-            stage=args.stage,
-            run_id=args.run_id,
-            resume=args.resume,
-            device=args.device,
-            container_image_digest=args.container_image_digest,
-            engine=engine,
-        )
+        with run_lock:
+            engine = PinnedUpstreamTrainingEngine(
+                profile=profile,
+                stage=args.stage,
+                run_id=args.run_id,
+                processed_root=args.processed_root,
+                upstream_dir=args.upstream_dir,
+                backbone_path=args.backbone,
+                device=args.device,
+                resume=args.resume,
+            )
+            result = run_training_stage(
+                profile,
+                stage=args.stage,
+                run_id=args.run_id,
+                resume=args.resume,
+                device=args.device,
+                container_image_digest=args.container_image_digest,
+                engine=engine,
+            )
     except (
         FileExistsError,
         FileNotFoundError,

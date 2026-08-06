@@ -1446,7 +1446,8 @@ def _write_stage_metrics(
             metrics_path = result_root / f"metrics.{stage.lower()}.json"
     _atomic_json(metrics_path, payload)
     if stage == "T800" and boundary_epoch == TARGET_EPOCH:
-        _atomic_json(result_root / "metrics.t800.json", payload)
+        metrics_path = result_root / "metrics.t800.json"
+        _atomic_json(metrics_path, payload)
     digest = sha256_file(metrics_path)
     if digest != _json_digest(payload):
         raise RuntimeError("runner metrics artifact hash mismatch")
