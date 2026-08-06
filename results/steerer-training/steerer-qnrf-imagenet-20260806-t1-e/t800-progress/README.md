@@ -12,3 +12,7 @@ manifest.
 The official UCF-QNRF Test remains sealed. The paper gap is diagnostic only
 because this run uses a Train-derived holdout while the paper reports the
 official Test after full training.
+
+At epoch 200, MAE/RMSE were 154.786/537.058, so the epoch-175 best
+129.808/379.434 remained selected. `milestone-200.pth` was still preserved as
+an independent, hash-verified recovery point.
