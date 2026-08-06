@@ -96,10 +96,13 @@ log. A lightweight status JSON is updated atomically after every epoch and
 validation boundary with epoch, global step, most recent loss, validation state,
 checkpoint hash, elapsed time, and estimated remaining time.
 
-The launcher refuses to start if another STEERER process owns the run lock. On
-normal completion or handled failure it releases the lock. After host reboot,
-the operator restarts the same command with the verified `last.pth`; the runner
-recomputes its hash and lineage before allocating training work.
+The launcher holds a non-blocking Linux advisory lock for the lifetime of the
+STEERER process and refuses to start if another live process owns it. The lock
+is released by the kernel on normal exit, process death, container stop, or host
+reboot; persistent metadata in the lock file is informational and cannot create
+a stale-lock dead end. After host reboot, the operator restarts the same command
+with the verified `last.pth`; the runner recomputes its hash and lineage before
+allocating training work.
 
 Expected runtime is approximately 8 hours from epoch 5 to 800 based on the T1
 and T5 measurements, with roughly 30-40 minutes attributable to periodic full

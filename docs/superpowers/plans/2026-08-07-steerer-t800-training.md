@@ -27,13 +27,16 @@
 - Modify: `configs/training/steerer_ucf_qnrf_imagenet.home5090.json`
 - Modify: `src/droneai/steerer_training_profile.py`
 - Modify: `src/droneai/steerer_training_checkpoint.py`
+- Modify: `src/droneai/steerer_training_evidence.py`
 - Modify: `src/droneai/steerer_training_gate.py`
+- Modify: `src/droneai/steerer_training_upstream.py`
 - Modify: `scripts/run_steerer_ucf_training.py`
 - Modify: `scripts/score_steerer_ucf_training.py`
 - Test: `tests/test_steerer_training_profile.py`
 - Test: `tests/test_steerer_training_checkpoint.py`
 - Test: `tests/test_steerer_training_gate.py`
 - Test: `tests/test_steerer_training_runner.py`
+- Test: `tests/test_steerer_training_upstream.py`
 
 **Interfaces:**
 - Consumes: existing T0/T1/T5/T50 stage validation and immutable evidence APIs.
@@ -186,9 +189,11 @@ def validation_boundaries(completed_epoch: int, target_epoch: int = TARGET_EPOCH
 
 - [ ] **Step 4: Write failing lock and status tests**
 
-Tests must prove a second live lock is rejected, stale metadata is not silently
-stolen, release removes only the owning lock, status JSON is strict and atomic,
-and an injected replace failure leaves the previous status readable.
+Tests must prove a second live advisory lock is rejected, process death releases
+the kernel lock even when metadata remains, status JSON is strict and atomic,
+and an injected replace failure leaves the previous status readable. Exercise
+the real `fcntl.flock` behavior in the Linux container; skip only those POSIX
+integration cases on Windows while still running boundary/status tests there.
 
 ```python
 def test_run_lock_rejects_duplicate_owner(tmp_path: Path) -> None:
@@ -207,10 +212,13 @@ def test_status_write_is_atomic(tmp_path: Path) -> None:
 
 - [ ] **Step 5: Implement `RunLock` and atomic status writes**
 
-Use `os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)` for lock
-creation. Store strict JSON containing run ID, PID, hostname, and creation time.
-Release only when the inode still belongs to that instance. Write status to a
-same-directory temporary file, `fsync`, then `os.replace`.
+Open the stable lock path with mode `0o600`, then use
+`fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)` for process-lifetime ownership.
+After locking, truncate and store strict JSON containing run ID, PID, hostname,
+and creation time. Release with `LOCK_UN` and close the owning descriptor; the
+kernel also releases it after crashes or reboot. On non-POSIX systems, raise a
+clear runtime error rather than claiming long-run locking is active. Write
+status to a same-directory temporary file, `fsync`, then `os.replace`.
 
 - [ ] **Step 6: Run long-run tests and verify GREEN**
 
