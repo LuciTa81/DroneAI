@@ -14,6 +14,7 @@ import pytest
 import scripts.run_steerer_ucf_training as training_cli
 import droneai.steerer_training_runner as training_runner
 
+from droneai.steerer_training_evidence import ValidationSampleObservation
 from droneai.steerer_training_profile import load_training_profile
 from droneai.steerer_training_runner import (
     AmpComparison,
@@ -21,7 +22,9 @@ from droneai.steerer_training_runner import (
     TrainingLineage,
     PinnedUpstreamTrainingEngine,
     _TorchPinnedRuntime,
+    _load_validation_annotation,
     _record_resize_memory,
+    _validation_spatial_observation,
     _epoch_data_seed,
     UpdateObservation,
     ValidationObservation,
@@ -44,6 +47,22 @@ class FakeTrainingEngine:
         self.density_values = (10.0, 5.0)
         self.gradient_norm = 0.5
         self.validation_count = 240
+        self.validation_samples = tuple(
+            ValidationSampleObservation(
+                sample_id=f"validation-{index:04d}",
+                target_count=12.0,
+                predicted_count=10.0,
+                game_l1=2.0,
+                quadrant_zone_mae=0.5,
+                localization_tp=8,
+                localization_fp=2,
+                localization_fn=4,
+                latency_ms=10.0,
+                peak_vram_mb=100.0,
+                density_sum_count_difference=0.0,
+            )
+            for index in range(self.validation_count)
+        )
         self.validation_loss = 0.75
         self.validation_counts = (10.0, 12.0)
         self.validation_pre_den = {"1": 10.0, "2": 5.0, "4": 2.5, "8": 1.25}
@@ -166,6 +185,7 @@ class FakeTrainingEngine:
             rmse=self.validation_rmse,
             density_values=tuple(self.validation_pre_den.values())
             + tuple(self.validation_gt_den.values()),
+            samples=self.validation_samples,
         )
 
     def checkpoint_state(self) -> dict[str, object]:
@@ -336,6 +356,89 @@ def test_t1_runs_exactly_one_epoch_and_full_validation(profile, fake_engine) -> 
     assert result.completed_epoch == 1
     assert result.optimizer_steps == 2
     assert result.validation_samples == 240
+
+
+def test_t1_rejects_duplicate_or_incomplete_validation_observations(
+    profile, tmp_path: Path
+) -> None:
+    """A nominal sample_count cannot conceal missing or duplicate per-image evidence."""
+
+    fake_engine = FakeTrainingEngine(tmp_path / "incomplete")
+    fake_engine.validation_samples = fake_engine.validation_samples[:-1]
+    with pytest.raises(ValueError, match="complete"):
+        run_training_stage(
+            profile, stage="T1", run_id="run-3035", engine=fake_engine
+        )
+
+    fake_engine = FakeTrainingEngine(tmp_path / "duplicate")
+    fake_engine.validation_samples = (fake_engine.validation_samples[0],) * fake_engine.validation_count
+    with pytest.raises(ValueError, match="unique"):
+        run_training_stage(
+            profile, stage="T1", run_id="run-3035", engine=fake_engine
+        )
+
+
+def test_validation_annotation_requires_exact_count_and_original_bounds(
+    tmp_path: Path,
+) -> None:
+    """Prepared annotation corruption must fail before it influences localization."""
+
+    annotation_dir = tmp_path / "jsons"
+    annotation_dir.mkdir()
+    annotation = annotation_dir / "sample-a.json"
+    annotation.write_text(
+        json.dumps(
+            {
+                "human_num": 2,
+                "points": [[1.0, 2.0], [9.5, 7.5]],
+                "source_width": 10,
+                "source_height": 8,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    loaded = _load_validation_annotation(tmp_path, "sample-a")
+
+    assert loaded.points == ((1.0, 2.0), (9.5, 7.5))
+    assert (loaded.width, loaded.height, loaded.count) == (10, 8, 2)
+
+    payload = json.loads(annotation.read_text(encoding="utf-8"))
+    payload["human_num"] = 3
+    annotation.write_text(json.dumps(payload), encoding="utf-8")
+    with pytest.raises(ValueError, match="count"):
+        _load_validation_annotation(tmp_path, "sample-a")
+
+
+def test_validation_spatial_observation_matches_density_and_point_contract() -> None:
+    """Changing quadrant or 16-pixel matching formulas must change this result."""
+
+    target = np.zeros((4, 4), dtype=np.float32)
+    predicted = np.zeros((4, 4), dtype=np.float32)
+    target[0, 0] = target[3, 3] = 1.0
+    predicted[0, 0] = predicted[3, 2] = 1.0
+
+    observation = _validation_spatial_observation(
+        sample_id="sample-a",
+        target_density=target,
+        predicted_density=predicted,
+        ground_truth_points=((0.0, 0.0), (30.0, 30.0)),
+        predicted_points=((1.0, 1.0), (50.0, 50.0)),
+        latency_ms=12.0,
+        peak_vram_mb=256.0,
+        localization_radius=16.0,
+    )
+
+    assert observation.target_count == 2.0
+    assert observation.predicted_count == 2.0
+    assert observation.game_l1 == 0.0
+    assert observation.quadrant_zone_mae == 0.0
+    assert (
+        observation.localization_tp,
+        observation.localization_fp,
+        observation.localization_fn,
+    ) == (1, 1, 1)
+    assert observation.density_sum_count_difference == 0.0
 
 
 def test_t1_to_t5_resume_matches_uninterrupted_lr_sequence(fake_engine) -> None:

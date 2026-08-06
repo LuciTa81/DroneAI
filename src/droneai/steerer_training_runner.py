@@ -8,6 +8,7 @@ import json
 import math
 import os
 import random
+import re
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -27,6 +28,9 @@ from droneai.steerer_training_checkpoint import (
     verify_resume,
 )
 from droneai.steerer_training_upstream import synthesize_official_config
+from droneai.steerer_training_evidence import ValidationSampleObservation
+from droneai.evaluation_metrics import _game_l1, _point_metrics
+from droneai.steerer_adapter import extract_steerer_points
 
 
 Stage = Literal["T0", "T1", "T5", "T50"]
@@ -96,11 +100,140 @@ class EpochObservation:
 @dataclass(frozen=True)
 class ValidationObservation:
     sample_count: int
+    samples: tuple[ValidationSampleObservation, ...]
     loss: float
     counts: tuple[float, ...]
     density_values: tuple[float, ...]
     mae: float
     rmse: float
+
+
+@dataclass(frozen=True)
+class PreparedValidationAnnotation:
+    sample_id: str
+    points: tuple[tuple[float, float], ...]
+    width: int
+    height: int
+    count: int
+
+
+def _load_validation_annotation(
+    processed_root: str | Path, sample_id: str
+) -> PreparedValidationAnnotation:
+    """Load one prepared Train-only annotation without accepting path traversal."""
+
+    if not isinstance(sample_id, str) or re.fullmatch(
+        r"[A-Za-z0-9][A-Za-z0-9._-]*", sample_id
+    ) is None:
+        raise ValueError("validation sample_id must be one safe path component")
+    root = Path(processed_root).resolve(strict=True)
+    annotation = (root / "jsons" / f"{sample_id}.json").resolve(strict=True)
+    if annotation.parent != (root / "jsons").resolve(strict=True) or annotation.is_symlink():
+        raise ValueError("validation annotation must stay in the prepared jsons directory")
+    try:
+        payload = json.loads(annotation.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise ValueError("validation annotation must contain strict JSON") from exc
+    if not isinstance(payload, Mapping):
+        raise ValueError("validation annotation must be a JSON object")
+    width = payload.get("source_width")
+    height = payload.get("source_height")
+    count = payload.get("human_num")
+    raw_points = payload.get("points")
+    if any(
+        isinstance(value, bool) or not isinstance(value, int) or value <= 0
+        for value in (width, height)
+    ):
+        raise ValueError("validation annotation dimensions are invalid")
+    if isinstance(count, bool) or not isinstance(count, int) or count < 0:
+        raise ValueError("validation annotation count is invalid")
+    if not isinstance(raw_points, list) or len(raw_points) != count:
+        raise ValueError("validation annotation point count differs from human_num")
+    points: list[tuple[float, float]] = []
+    for point in raw_points:
+        if not isinstance(point, list) or len(point) != 2:
+            raise ValueError("validation annotation point is malformed")
+        x, y = point
+        if (
+            isinstance(x, bool)
+            or isinstance(y, bool)
+            or not isinstance(x, (int, float))
+            or not isinstance(y, (int, float))
+            or not math.isfinite(float(x))
+            or not math.isfinite(float(y))
+            or not 0 <= float(x) < width
+            or not 0 <= float(y) < height
+        ):
+            raise ValueError("validation annotation point is outside original bounds")
+        points.append((float(x), float(y)))
+    return PreparedValidationAnnotation(
+        sample_id=sample_id,
+        points=tuple(points),
+        width=width,
+        height=height,
+        count=count,
+    )
+
+
+def _validation_spatial_observation(
+    *,
+    sample_id: str,
+    target_density: np.ndarray,
+    predicted_density: np.ndarray,
+    ground_truth_points: Sequence[tuple[float, float]],
+    predicted_points: Sequence[tuple[float, float]],
+    latency_ms: float,
+    peak_vram_mb: float,
+    localization_radius: float,
+    reported_predicted_count: float | None = None,
+) -> ValidationSampleObservation:
+    """Calculate one sample's count, density-zone, and point evidence."""
+
+    target = np.asarray(target_density, dtype=np.float64)
+    predicted = np.asarray(predicted_density, dtype=np.float64)
+    if target.ndim != 2 or predicted.shape != target.shape or not target.size:
+        raise ValueError("validation density maps must be non-empty matching 2D arrays")
+    if not np.isfinite(target).all() or not np.isfinite(predicted).all():
+        raise FloatingPointError("non-finite validation density tensor detected")
+    target_count = float(target.sum(dtype=np.float64))
+    density_count = float(predicted.sum(dtype=np.float64))
+    predicted_count = (
+        density_count
+        if reported_predicted_count is None
+        else float(reported_predicted_count)
+    )
+    if not all(
+        math.isfinite(value)
+        for value in (target_count, density_count, predicted_count, latency_ms, peak_vram_mb)
+    ):
+        raise FloatingPointError("non-finite validation observation detected")
+    if min(target_count, density_count, predicted_count, latency_ms, peak_vram_mb) < 0:
+        raise ValueError("validation observations must be non-negative")
+    point_metrics = _point_metrics(
+        tuple(ground_truth_points), tuple(predicted_points), localization_radius
+    )
+    if not ground_truth_points and not predicted_points:
+        true_positive = 0
+    else:
+        true_positive = int(
+            round(float(point_metrics["localization_precision"]) * len(predicted_points))
+        )
+    false_positive = len(predicted_points) - true_positive
+    false_negative = len(ground_truth_points) - true_positive
+    game_l1 = _game_l1(target, predicted)
+    return ValidationSampleObservation(
+        sample_id=sample_id,
+        target_count=target_count,
+        predicted_count=predicted_count,
+        game_l1=game_l1,
+        quadrant_zone_mae=game_l1 / 4.0,
+        localization_tp=true_positive,
+        localization_fp=false_positive,
+        localization_fn=false_negative,
+        latency_ms=float(latency_ms),
+        peak_vram_mb=float(peak_vram_mb),
+        density_sum_count_difference=abs(predicted_count - density_count),
+    )
 
 
 @dataclass(frozen=True)
@@ -869,15 +1002,53 @@ class _TorchPinnedRuntime:
         errors: list[float] = []
         counts: list[float] = []
         density_values: list[float] = []
+        samples: list[ValidationSampleObservation] = []
+
+        def density_array(value: object) -> np.ndarray:
+            tensor = value
+            for method_name in ("detach", "float", "cpu"):
+                method = getattr(tensor, method_name, None)
+                if callable(method):
+                    tensor = method()
+            numpy_method = getattr(tensor, "numpy", None)
+            if callable(numpy_method):
+                tensor = numpy_method()
+            array = np.asarray(tensor, dtype=np.float32)
+            while array.ndim > 2:
+                array = array[0]
+            if array.ndim != 2:
+                raise ValueError("validation density tensor must reduce to a 2D map")
+            return array
+
         with torch.no_grad(), self._official_scope():
             for batch in self._validation_loader:
+                ratio_metadata = batch[2]  # type: ignore[index]
+                ratio_item = getattr(ratio_metadata, "reshape", lambda *_: ratio_metadata)(-1)
+                ratio_item = ratio_item[0]  # type: ignore[index]
+                item_method = getattr(ratio_item, "item", None)
+                ratio = float(item_method() if callable(item_method) else ratio_item)
+                name_metadata = batch[3]  # type: ignore[index]
+                if not isinstance(name_metadata, (list, tuple)) or len(name_metadata) != 1:
+                    raise ValueError("validation loader must provide exactly one sample name")
+                sample_id = str(name_metadata[0])
+                annotation = _load_validation_annotation(
+                    self.processed_root, sample_id
+                )
                 images, labels = self._prepared_batch(batch)
+                torch.cuda.reset_peak_memory_stats(self._device)
+                torch.cuda.synchronize(self._device)
+                inference_started = time.perf_counter()
                 result = self._patch_forward(
                     self._model,
                     images,
                     labels,
                     self._patch_batch_size,
                     "val",
+                )
+                torch.cuda.synchronize(self._device)
+                latency_ms = max((time.perf_counter() - inference_started) * 1000.0, 1.0e-9)
+                peak_vram_mb = float(
+                    torch.cuda.max_memory_allocated(self._device) / (1024**2)
                 )
                 loss = result["losses"].mean()
                 predicted = result["pre_den"]["1"].sum()
@@ -905,13 +1076,52 @@ class _TorchPinnedRuntime:
                         raise FloatingPointError(f"non-finite {name} detected")
                 predicted_value = float(predicted.detach().float().item())
                 target_value = float(target.detach().float().item())
+                if not math.isclose(
+                    target_value,
+                    float(annotation.count),
+                    rel_tol=0.0,
+                    abs_tol=1.0e-3,
+                ):
+                    raise ValueError("validation annotation count differs from loader target")
+                predicted_density = density_array(result["pre_den"]["1"])
+                target_density = density_array(result["gt_den"]["1"])
+                valid_width = max(1, int(annotation.width * ratio + 0.5))
+                valid_height = max(1, int(annotation.height * ratio + 0.5))
+                localization_densities: list[np.ndarray] = []
+                for key, scale in (("1", 1), ("4", 4), ("8", 8)):
+                    if key not in result["pre_den"]:
+                        raise ValueError(f"validation prediction is missing density scale {key}")
+                    density = density_array(result["pre_den"][key])
+                    height = min(density.shape[0], max(1, math.ceil(valid_height / scale)))
+                    width = min(density.shape[1], max(1, math.ceil(valid_width / scale)))
+                    localization_densities.append(density[:height, :width])
+                model = getattr(self._model, "module", self._model)
+                predicted_points = extract_steerer_points(
+                    tuple(localization_densities),
+                    gaussian_maximum=float(getattr(model, "gaussian_maximum")),
+                    resize_ratio=ratio,
+                    original_size=(annotation.width, annotation.height),
+                )
+                sample_observation = _validation_spatial_observation(
+                    sample_id=sample_id,
+                    target_density=target_density,
+                    predicted_density=predicted_density,
+                    ground_truth_points=annotation.points,
+                    predicted_points=predicted_points,
+                    latency_ms=latency_ms,
+                    peak_vram_mb=peak_vram_mb,
+                    localization_radius=16.0,
+                    reported_predicted_count=predicted_value,
+                )
                 losses.append(float(loss.detach().float().item()))
                 counts.append(predicted_value)
                 errors.append(predicted_value - target_value)
+                samples.append(sample_observation)
         if not counts:
             raise RuntimeError("full validation loader produced no samples")
         return ValidationObservation(
             sample_count=len(counts),
+            samples=tuple(samples),
             loss=float(sum(losses) / len(losses)),
             counts=tuple(counts),
             density_values=tuple(density_values),
@@ -988,6 +1198,11 @@ def _validate_epoch(observation: EpochObservation) -> None:
 def _validate_validation(observation: ValidationObservation) -> None:
     if observation.sample_count < 0:
         raise ValueError("validation sample count cannot be negative")
+    if len(observation.samples) != observation.sample_count:
+        raise ValueError("validation observations must cover the complete reported sample count")
+    sample_ids = [sample.sample_id for sample in observation.samples]
+    if len(sample_ids) != len(set(sample_ids)):
+        raise ValueError("validation sample observations must use unique sample IDs")
     _finite_values((observation.loss,), name="validation loss")
     _finite_values(observation.counts, name="validation count")
     _finite_values(observation.density_values, name="validation density tensor")
