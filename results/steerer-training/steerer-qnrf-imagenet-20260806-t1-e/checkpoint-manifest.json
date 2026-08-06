@@ -1,0 +1,42 @@
+{
+  "checkpoints": [
+    {
+      "byte_count": 775125489,
+      "environment_manifest_sha256": "5d796fc2ef3ac8df1955c87bfb0970247a5f4887dd14c8ce1c43fbaf34461c64",
+      "epoch": 1,
+      "filename": "best-mae.pth",
+      "metric_reason": "best_mae",
+      "parent_checkpoint_sha256": null,
+      "sha256": "ae5560b8610ed7e28432d61f2d2f52cb47f9938cef6e4143f1b1f4dfc6b2b9ff"
+    },
+    {
+      "byte_count": 775130198,
+      "environment_manifest_sha256": "5d796fc2ef3ac8df1955c87bfb0970247a5f4887dd14c8ce1c43fbaf34461c64",
+      "epoch": 1,
+      "filename": "best-rmse.pth",
+      "metric_reason": "best_rmse",
+      "parent_checkpoint_sha256": null,
+      "sha256": "e76946f7ed213056274feb5a525ef46d63ecf9f408ae2b170370b861a52366ed"
+    },
+    {
+      "byte_count": 775106653,
+      "environment_manifest_sha256": "5d796fc2ef3ac8df1955c87bfb0970247a5f4887dd14c8ce1c43fbaf34461c64",
+      "epoch": 1,
+      "filename": "last.pth",
+      "metric_reason": "last",
+      "parent_checkpoint_sha256": null,
+      "sha256": "f2a526ca4e95d829b489d3d5c65df8104b023a0a70140550cd027ec6d4c23155"
+    },
+    {
+      "byte_count": 775149034,
+      "environment_manifest_sha256": "5d796fc2ef3ac8df1955c87bfb0970247a5f4887dd14c8ce1c43fbaf34461c64",
+      "epoch": 1,
+      "filename": "milestone-001.pth",
+      "metric_reason": "milestone-001",
+      "parent_checkpoint_sha256": null,
+      "sha256": "98940d57c8dfd532a3b78077421fe95443b20c0888a2f49255accc956220a509"
+    }
+  ],
+  "run_id": "steerer-qnrf-imagenet-20260806-t1-e",
+  "schema_version": 1
+}

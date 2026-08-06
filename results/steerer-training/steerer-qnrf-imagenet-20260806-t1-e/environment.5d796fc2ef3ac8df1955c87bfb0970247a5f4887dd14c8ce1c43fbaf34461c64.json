@@ -1,0 +1,53 @@
+{
+  "batch": {
+    "accumulation_steps": 1,
+    "effective_batch": 8,
+    "physical_batch": 8
+  },
+  "dataset": {
+    "dataset_inventory_sha256": "f38af282fc3007f0f204fb94c14b45595cc383207323eb7430c3a6546f41d042",
+    "official_test_accessed": false,
+    "population_sha256": "50718f9812c8bc7717a23cd3a73b7b2eba65a594176e8e5e66b3b3b4fcc87e38",
+    "processed_root": "/workspace/data/datasets/ucf-qnrf-kaggle-apache/processed/steerer-training-v1",
+    "source_partition": "official_train_only",
+    "split_manifest_sha256": "70ac8b8c5bd8fd2c820034fae9f2c39556e155447f910f4f1d972f583ef08dfe",
+    "test_sealed_sha256": "3a769ddbe1482ece5c1e1164ca1b96a21aa1b4355d7f3c8d1b38786dd28ca331",
+    "train_sha256": "22ad8d3bf53d3c582b1b2d902b25e44f86d38f448bf2d7cce7153b458b7702f4",
+    "validation_sha256": "d80b7fe911f80f9f48f6d5128dd94d7b08741afe0b4283425273b0560e7e142c"
+  },
+  "initialization": {
+    "backbone_byte_size": 310643500,
+    "backbone_path": "/workspace/data/checkpoints/backbones/hrnetv2_w48_imagenet_pretrained.pth",
+    "backbone_sha256": "0efec102d97f2ef58f0e258b2c3076b3704b93ffc2b73f64c8da5462c0037ef8",
+    "mode": "imagenet_backbone_only",
+    "model_checkpoint_loaded": false
+  },
+  "metrics": {
+    "path": "/workspace/data/results/steerer-ucf-training/steerer-qnrf-imagenet-20260806-t1-e/metrics.json",
+    "sha256": "bd7b7812f624374ef86f5d17bd56e7f4f6f6cb5d948e19f2bf510cd1f8b219c6"
+  },
+  "project": {
+    "git_commit": "329bd280b64346fc60fb01c700ca964e7913773a",
+    "profile_sha256": "a29680cbd71bf1e7226c121d13c91ad673632cc9d7bc6d6fbe525ddce1f40929"
+  },
+  "run_id": "steerer-qnrf-imagenet-20260806-t1-e",
+  "runtime": {
+    "container_image_digest": "sha256:90dfcacf0d65fec4357a37db72624b42febf8d3d9056924cdec3499237ed2691",
+    "cuda": "13.0",
+    "gpu": "NVIDIA GeForce RTX 5090",
+    "python": "3.12.3",
+    "torch": "2.9.0a0+145a3a7bda.nv25.10"
+  },
+  "schema_version": 2,
+  "stage": "T1",
+  "training": {
+    "config_sha256": "5c955c43b6840ed996cdf68891187e6b34bbe180c613cd58a1e090dc0bde0dd2"
+  },
+  "upstream": {
+    "clean": true,
+    "commit": "5b1854dbc2d280f2326d67c65515d8baf9083810",
+    "config_sha256": "a1bd95fa9dcb62ced8c248f0716d22f45f23080705d8445e195982f789c1314c",
+    "license_sha256": "5c3649a9ac14d2839d2580710c10bdbc9c70cb6a79c07c06a3858952223b6733",
+    "origin_url": "https://github.com/taohan10200/STEERER.git"
+  }
+}
