@@ -24,9 +24,13 @@ active `/workspace` checkout and create a linked worktree:
 
 ```powershell
 git push -u origin agent/steerer-ucf-training-implementation
-ssh home5090-pop "docker exec crowd-jupyter git -C /workspace fetch origin agent/steerer-ucf-training-implementation"
+ssh home5090-pop "git -C /home/lucita/crowd-counting-lab fetch origin agent/steerer-ucf-training-implementation"
 ssh home5090-pop "docker exec crowd-jupyter git -C /workspace worktree add /workspace/.worktrees/steerer-ucf-training origin/agent/steerer-ucf-training-implementation"
 ```
+
+Fetch runs on the Pop!_OS host because its verified GitHub SSH key is not mounted
+inside the container. Checkout still runs inside the container so the linked
+worktree records `/workspace` paths.
 
 If that worktree already exists, inspect it instead of deleting or resetting it.
 
@@ -61,13 +65,14 @@ SHA-256 rather than trusting its filename.
 ## 4. Audit and prepare UCF-QNRF Train only
 
 Expected raw input:
-`/workspace/data/datasets/ucf-qnrf-kaggle-apache/raw/Train`. The preparation CLI
+`/workspace/data/datasets/ucf-qnrf-kaggle-apache/raw/UCF-QNRF_ECCV18/Train`.
+The preparation CLI
 has no Test or dataset-root argument.
 
 ```bash
 WT=/workspace/.worktrees/steerer-ucf-training
 PY=/workspace/.venvs/steerer/bin/python
-RAW_TRAIN=/workspace/data/datasets/ucf-qnrf-kaggle-apache/raw/Train
+RAW_TRAIN=/workspace/data/datasets/ucf-qnrf-kaggle-apache/raw/UCF-QNRF_ECCV18/Train
 PROCESSED=/workspace/data/datasets/ucf-qnrf-kaggle-apache/processed/steerer-training-v1
 
 cd "$WT"
@@ -194,4 +199,3 @@ rsync -avm --include='*/' --include='*.json' --include='*.md' \
 
 Recompute SHA-256 for every copied artifact before committing. Do not put `.pth`
 files or any individual artifact above 25 MiB in Git.
-
