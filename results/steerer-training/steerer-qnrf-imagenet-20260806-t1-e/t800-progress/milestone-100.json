@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "run_id": "steerer-qnrf-imagenet-20260806-t1-e",
+  "stage": "T800",
+  "epoch": 100,
+  "validation_samples": 240,
+  "official_test_accessed": false,
+  "precision": "fp32",
+  "metrics": {
+    "mae": 150.77292341093224,
+    "rmse": 389.6155217469196,
+    "reference_mape": 16.76911921054591,
+    "game_l1": 166.0296880469604,
+    "localization_f1_16px": 0.7234542711547903,
+    "localization_precision_16px": 0.7870459552514752,
+    "localization_recall_16px": 0.6693705187535602,
+    "signed_bias": -40.73134087820848,
+    "validation_loss": 0.015693448526629558
+  },
+  "artifacts": {
+    "metrics_epoch_100_sha256": "8499433a2fe469ebc40248e686b06600187ace3e8094386ebcb9a3225cf967f8",
+    "last_sha256": "b362a7696ce9d19147d7e1e1633b9d85a79b1e62f472c6420d07ae805d4748ee",
+    "best_mae_sha256": "72e85bb4758edc9f4c223a2f41eb034056285937f2c80ee9cb862406ad0480fe",
+    "best_rmse_sha256": "35717d00c1f92aee6b0daa9261230c20a0b0950e559f6a1ae70710d543da6ece",
+    "milestone_100_sha256": "ffbab65f57eda2b97c1a7b7d84a515776477b855c61d338275a991979f17fd85",
+    "parent_checkpoint_sha256": "051b3015d0e2ec928c573fc35a556bfed00607fd230648f8cd3c8f857bc752db"
+  },
+  "reference_gap": {
+    "paper_mae": 74.3,
+    "paper_rmse": 128.3,
+    "mae_absolute_gap": 76.47292341093224,
+    "mae_ratio": 2.0292452679802455,
+    "rmse_absolute_gap": 261.3155217469196,
+    "rmse_ratio": 3.0367538717608697,
+    "comparison_scope": "diagnostic_only_train_holdout_vs_official_test"
+  },
+  "state": "PASS_VALIDATION_MILESTONE_ONLY"
+}
