@@ -114,6 +114,21 @@ def test_checkpoint_round_trip_restores_optimizer_scheduler_and_rng(tmp_path: Pa
     assert restored["rng"]["seed"] == 3035  # type: ignore[index]
 
 
+def test_checkpoint_round_trip_accepts_t800_epoch_800(tmp_path: Path) -> None:
+    state = _state(epoch=800, stage="T800")
+
+    saved = save_training_checkpoint(
+        tmp_path / "last.pth", state, torch_module=_FakeTorch()
+    )
+    restored = load_training_checkpoint(
+        saved.path, expected_sha256=saved.sha256, torch_module=_FakeTorch()
+    )
+
+    assert restored["stage"] == "T800"
+    assert restored["epoch"] == 800
+    assert restored["scheduler"] == {"last_epoch": 800, "horizon": 800}
+
+
 def test_resume_rejects_hash_mismatch_and_wrong_lineage(tmp_path: Path) -> None:
     state = _state()
     checkpoint = save_training_checkpoint(tmp_path / "last.pth", state, torch_module=_FakeTorch())

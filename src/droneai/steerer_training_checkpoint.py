@@ -40,7 +40,7 @@ CHECKPOINT_PAYLOAD_KEYS = frozenset(
         "environment_manifest_sha256",
     }
 )
-_STAGES = frozenset({"T0", "T1", "T5", "T50"})
+_STAGES = frozenset({"T0", "T1", "T5", "T50", "T800"})
 _MILESTONE_EPOCHS = {"T1": 1, "T5": 5, "T50": 50}
 _MANIFEST_FILENAME = "checkpoint-manifest.json"
 

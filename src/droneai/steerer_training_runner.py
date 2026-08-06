@@ -41,8 +41,8 @@ from droneai.evaluation_metrics import _game_l1
 from droneai.steerer_adapter import extract_steerer_points
 
 
-Stage = Literal["T0", "T1", "T5", "T50"]
-_STAGE_STOP_EPOCH = {"T0": 0, "T1": 1, "T5": 5, "T50": 50}
+Stage = Literal["T0", "T1", "T5", "T50", "T800"]
+_STAGE_STOP_EPOCH = {"T0": 0, "T1": 1, "T5": 5, "T50": 50, "T800": 800}
 _SCHEDULE_HORIZON = 800
 _SEED = 3035
 
@@ -443,7 +443,7 @@ class PinnedUpstreamTrainingEngine:
         if not isinstance(profile, SteererTrainingProfile):
             raise TypeError("validated STEERER training profile is required")
         if stage not in _STAGE_STOP_EPOCH:
-            raise ValueError("stage must be one of T0, T1, T5, or T50")
+            raise ValueError("stage must be one of T0, T1, T5, T50, or T800")
         self.profile = profile
         self.stage = stage
         self.run_id = run_id
@@ -1749,7 +1749,7 @@ def run_training_stage(
     if profile.seed != _SEED:
         raise ValueError("STEERER training profile seed must be 3035")
     if stage not in _STAGE_STOP_EPOCH:
-        raise ValueError("stage must be one of T0, T1, T5, or T50")
+        raise ValueError("stage must be one of T0, T1, T5, T50, or T800")
     if not run_id:
         raise ValueError("run_id is required")
     engine_stage = getattr(engine, "stage", stage)
@@ -1760,7 +1760,7 @@ def run_training_stage(
         raise ValueError("training engine run lineage differs from requested run")
     if stage in {"T0", "T1"} and resume is not None:
         raise ValueError("T0 and T1 cannot use a resume checkpoint")
-    if stage in {"T5", "T50"} and resume is None:
+    if stage in {"T5", "T50", "T800"} and resume is None:
         raise ValueError(f"{stage} requires a verified resume checkpoint")
     container_digest = container_image_digest or getattr(
         engine, "container_image_digest", None

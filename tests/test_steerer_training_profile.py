@@ -29,6 +29,13 @@ def test_profile_freezes_approved_training_contract() -> None:
     assert profile.initialization == "imagenet_backbone_only"
     assert profile.sealed_test_access is False
     assert profile.success_scope == "PASS_COMMERCIAL_CANDIDATE"
+    assert profile.stage_epochs == {
+        "T0": 0,
+        "T1": 1,
+        "T5": 5,
+        "T50": 50,
+        "T800": 800,
+    }
     assert profile.imagenet_backbone.filename == "hrnetv2_w48_imagenet_pretrained.pth"
     assert profile.imagenet_backbone.path == Path(
         "/workspace/data/checkpoints/backbones/hrnetv2_w48_imagenet_pretrained.pth"
@@ -53,6 +60,13 @@ def test_profile_rejects_model_checkpoint_loading() -> None:
     payload["initialization"]["model_checkpoint"] = "/weights/QNRF_mae_78.4.pth"
     with pytest.raises(PermissionError, match="model checkpoint loading is forbidden"):
         validate_training_profile(payload)
+
+
+def test_profile_stage_epochs_are_immutable_after_validation() -> None:
+    profile = load_training_profile(PROFILE)
+
+    with pytest.raises(TypeError):
+        profile.stage_epochs["T800"] = 801
 
 
 @pytest.mark.parametrize(

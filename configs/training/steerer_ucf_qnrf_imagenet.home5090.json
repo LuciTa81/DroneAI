@@ -9,7 +9,7 @@
   "split": {"seed": 3035, "train": 961, "validation": 240, "test_role": "sealed"},
   "initialization": {"mode": "imagenet_backbone_only", "model_checkpoint": null},
   "training": {"crop": [768, 768], "scale_range": [0.5, 2.0], "flip": true, "density_factor": 100, "optimizer": "AdamW", "learning_rate": 0.0001, "weight_decay": 0.0001, "warmup_epochs": 10, "scheduler": "cosine", "schedule_horizon_epochs": 800, "effective_batch": 8, "validation_long_side": 3072},
-  "stage_epochs": {"T0": 0, "T1": 1, "T5": 5, "T50": 50},
+  "stage_epochs": {"T0": 0, "T1": 1, "T5": 5, "T50": 50, "T800": 800},
   "storage": {"processed_root": "/workspace/data/datasets/ucf-qnrf-kaggle-apache/processed/steerer-training-v1", "checkpoint_root": "/workspace/data/checkpoints/steerer-ucf-training", "result_root": "/workspace/data/results/steerer-ucf-training"},
   "rights": {"success_scope": "PASS_COMMERCIAL_CANDIDATE", "production_approved": false, "sealed_test_access": false}
 }

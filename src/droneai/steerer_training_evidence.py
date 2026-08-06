@@ -253,9 +253,15 @@ def strict_metrics_payload(
 
     if not isinstance(run_id, str) or re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]*", run_id) is None:
         raise ValueError("run_id must be one safe path component")
-    expected = T0_METRICS if stage == "T0" else T1_METRICS if stage in {"T1", "T5", "T50"} else None
+    expected = (
+        T0_METRICS
+        if stage == "T0"
+        else T1_METRICS
+        if stage in {"T1", "T5", "T50", "T800"}
+        else None
+    )
     if expected is None:
-        raise ValueError("stage must be T0, T1, T5, or T50")
+        raise ValueError("stage must be T0, T1, T5, T50, or T800")
     if set(metrics) != expected:
         raise ValueError("metrics must contain the exact stage schema")
     validated = {name: _finite_number(value, name=name) for name, value in metrics.items()}

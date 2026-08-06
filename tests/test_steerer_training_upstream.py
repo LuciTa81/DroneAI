@@ -237,7 +237,7 @@ def test_config_executes_the_single_audited_byte_snapshot(
     assert config["droneai"]["upstream_config_sha256"] == expected_config_sha256
 
 
-@pytest.mark.parametrize("stage", ["T0", "T1", "T5", "T50"])
+@pytest.mark.parametrize("stage", ["T0", "T1", "T5", "T50", "T800"])
 def test_config_uses_validation_and_keeps_official_800_epoch_horizon(
     tmp_path: Path, stage: str
 ) -> None:
@@ -269,7 +269,7 @@ def test_config_uses_validation_and_keeps_official_800_epoch_horizon(
     assert config["train"]["end_epoch"] == 800
     assert config["log_dir"] == str(tmp_path / "results" / "run-a")
     assert config["droneai"]["stage_stop_epoch"] == {
-        "T0": 0, "T1": 1, "T5": 5, "T50": 50
+        "T0": 0, "T1": 1, "T5": 5, "T50": 50, "T800": 800
     }[stage]
     assert config["droneai"]["schedule_horizon_epochs"] == 800
 

@@ -5,7 +5,8 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
-from typing import Any
+from types import MappingProxyType
+from typing import Any, Mapping
 
 from droneai.integrity import is_sha256
 
@@ -68,6 +69,7 @@ class SteererTrainingProfile:
     initialization: str
     sealed_test_access: bool
     success_scope: str
+    stage_epochs: Mapping[str, int]
     imagenet_backbone: ArtifactReference
     processed_root: Path
     checkpoint_root: Path
@@ -224,8 +226,12 @@ def validate_training_profile(payload: Any) -> SteererTrainingProfile:
     training = _mapping(root["training"], name="training", keys={"crop", "scale_range", "flip", "density_factor", "optimizer", "learning_rate", "weight_decay", "warmup_epochs", "scheduler", "schedule_horizon_epochs", "effective_batch", "validation_long_side"})
     if training != {"crop": [768, 768], "scale_range": [0.5, 2.0], "flip": True, "density_factor": 100, "optimizer": "AdamW", "learning_rate": 0.0001, "weight_decay": 0.0001, "warmup_epochs": 10, "scheduler": "cosine", "schedule_horizon_epochs": 800, "effective_batch": 8, "validation_long_side": 3072}:
         raise ValueError("training settings are not approved")
-    stage_epochs = _mapping(root["stage_epochs"], name="stage_epochs", keys={"T0", "T1", "T5", "T50"})
-    if stage_epochs != {"T0": 0, "T1": 1, "T5": 5, "T50": 50}:
+    stage_epochs = _mapping(
+        root["stage_epochs"],
+        name="stage_epochs",
+        keys={"T0", "T1", "T5", "T50", "T800"},
+    )
+    if stage_epochs != {"T0": 0, "T1": 1, "T5": 5, "T50": 50, "T800": 800}:
         raise ValueError("stage epochs are not approved")
 
     storage = _mapping(root["storage"], name="storage", keys={"processed_root", "checkpoint_root", "result_root"})
@@ -258,6 +264,7 @@ def validate_training_profile(payload: Any) -> SteererTrainingProfile:
         initialization=initialization_mode,
         sealed_test_access=sealed_test_access,
         success_scope=success_scope,
+        stage_epochs=MappingProxyType(dict(stage_epochs)),
         imagenet_backbone=backbone,
         processed_root=processed_root,
         checkpoint_root=checkpoint_root,

@@ -175,7 +175,9 @@ def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Score existing STEERER validation evidence without training or Test access."
     )
-    parser.add_argument("--stage", choices=("T0", "T1", "T5", "T50"), required=True)
+    parser.add_argument(
+        "--stage", choices=("T0", "T1", "T5", "T50", "T800"), required=True
+    )
     parser.add_argument("--run-id", required=True)
     parser.add_argument("--profile", type=Path, required=True)
     parser.add_argument("--project-repo", type=Path, required=True)

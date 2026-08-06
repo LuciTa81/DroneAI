@@ -20,9 +20,9 @@ from droneai.integrity import sha256_file
 from droneai.steerer_training_profile import SteererTrainingProfile
 
 
-Stage = Literal["T0", "T1", "T5", "T50"]
+Stage = Literal["T0", "T1", "T5", "T50", "T800"]
 
-_STAGE_STOP_EPOCH = {"T0": 0, "T1": 1, "T5": 5, "T50": 50}
+_STAGE_STOP_EPOCH = {"T0": 0, "T1": 1, "T5": 5, "T50": 50, "T800": 800}
 _SCHEDULE_HORIZON = 800
 _TRAIN_WORKERS = 6
 _OFFICIAL_NETWORK = {
@@ -301,7 +301,7 @@ def synthesize_official_config(
     """Validate then narrowly adapt the pinned official QNRF MMCV config."""
 
     if not isinstance(stage, str) or stage not in _STAGE_STOP_EPOCH:
-        raise ValueError("stage must be one of T0, T1, T5, or T50")
+        raise ValueError("stage must be one of T0, T1, T5, T50, or T800")
     run_id = _safe_run_id(run_id)
     if (
         not isinstance(physical_batch, int)

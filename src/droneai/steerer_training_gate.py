@@ -34,7 +34,7 @@ from droneai.steerer_training_upstream import audit_upstream, synthesize_officia
 from droneai.ucf_qnrf import density_band
 
 
-STAGE_THRESHOLDS = {"T0": 70, "T1": 75, "T5": 80, "T50": 85}
+STAGE_THRESHOLDS = {"T0": 70, "T1": 75, "T5": 80, "T50": 85, "T800": 90}
 SUCCESS_STATUS = "PASS_COMMERCIAL_CANDIDATE"
 APPROVED_UPSTREAM_COMMIT = "5b1854dbc2d280f2326d67c65515d8baf9083810"
 
@@ -78,7 +78,7 @@ _AUTHORITY_TOKEN = object()
 _CANONICAL_PROFILE = Path(
     "configs/training/steerer_ucf_qnrf_imagenet.home5090.json"
 )
-_STAGE_EPOCHS = {"T0": 0, "T1": 1, "T5": 5, "T50": 50}
+_STAGE_EPOCHS = {"T0": 0, "T1": 1, "T5": 5, "T50": 50, "T800": 800}
 
 
 @dataclass(frozen=True)
@@ -584,7 +584,7 @@ def verify_authoritative_training_evidence(
     if not isinstance(inputs, AuthoritativeTrainingInputs):
         raise TypeError("AuthoritativeTrainingInputs are required")
     if inputs.stage not in STAGE_THRESHOLDS:
-        raise ValueError("stage must be T0, T1, T5, or T50")
+        raise ValueError("stage must be T0, T1, T5, T50, or T800")
     if not isinstance(inputs.run_id, str) or re.fullmatch(
         r"[A-Za-z0-9][A-Za-z0-9._-]*", inputs.run_id
     ) is None:
@@ -691,7 +691,9 @@ def verify_authoritative_training_evidence(
         accumulation_steps=accumulation_steps,
         run_id=inputs.run_id,
         resume_path=(
-            checkpoint.checkpoint_path if inputs.stage in {"T5", "T50"} else None
+            checkpoint.checkpoint_path
+            if inputs.stage in {"T5", "T50", "T800"}
+            else None
         ),
     )
     config_sha256 = _canonical_config_sha256(synthesized)

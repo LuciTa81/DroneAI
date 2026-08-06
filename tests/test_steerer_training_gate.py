@@ -325,11 +325,20 @@ def _authoritative_fixture(
         "schema_version": 1,
         "run_id": run_id,
         "stage": stage,
-        "epoch": {"T0": 0, "T1": 1, "T5": 5, "T50": 50}[stage],
+        "epoch": {"T0": 0, "T1": 1, "T5": 5, "T50": 50, "T800": 800}[stage],
         "global_step": 16,
         "model": {"weight": [1]},
         "optimizer": {"step": 16},
-        "scheduler": {"last_epoch": {"T0": 0, "T1": 1, "T5": 5, "T50": 50}[stage], "horizon": 800},
+        "scheduler": {
+            "last_epoch": {
+                "T0": 0,
+                "T1": 1,
+                "T5": 5,
+                "T50": 50,
+                "T800": 800,
+            }[stage],
+            "horizon": 800,
+        },
         "scaler": {},
         "best_mae": 1.0,
         "best_rmse": 1.0,
@@ -538,6 +547,43 @@ def test_stage_evidence_description_names_the_scored_stage(tmp_path: Path) -> No
     )
 
     assert validation_check.observed == "all 17 required T5 validation metrics recorded"
+
+
+def test_t800_checkpoint_payload_and_score_are_authoritative(tmp_path: Path) -> None:
+    fixture = _authoritative_fixture(tmp_path, stage="T800")
+    evidence = verify_authoritative_training_evidence(
+        fixture.inputs,
+        _profile_override=fixture.profile,
+        torch_module=_FakeTorch(),
+    )
+
+    report = score_training_stage(evidence, stage="T800")
+
+    assert report.threshold == 90
+    assert report.score == 100
+    assert report.status == "PASS_COMMERCIAL_CANDIDATE"
+    assert report.failed_blockers == ()
+
+
+def test_score_cli_accepts_t800_evidence_stage(tmp_path: Path) -> None:
+    args = scoring_cli._parser().parse_args(
+        [
+            "--stage", "T800",
+            "--run-id", "run-3035",
+            "--profile", str(tmp_path / "profile.json"),
+            "--project-repo", str(tmp_path / "project"),
+            "--upstream-dir", str(tmp_path / "upstream"),
+            "--processed-root", str(tmp_path / "processed"),
+            "--backbone", str(tmp_path / "backbone.pth"),
+            "--checkpoint", str(tmp_path / "last.pth"),
+            "--checkpoint-manifest", str(tmp_path / "checkpoint-manifest.json"),
+            "--environment", str(tmp_path / "environment.json"),
+            "--metrics", str(tmp_path / "metrics.json"),
+            "--output-dir", str(tmp_path / "score-bundle"),
+        ]
+    )
+
+    assert args.stage == "T800"
 
 
 def test_matching_self_declared_hash_cannot_replace_profile_backbone(

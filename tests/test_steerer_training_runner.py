@@ -1372,6 +1372,35 @@ def test_cli_has_no_test_switch_and_requires_explicit_later_stage_approval() -> 
     assert exit_code == 2
 
 
+def test_cli_requires_matching_t800_approval_and_resume() -> None:
+    parser = training_cli._parser()
+    required = [
+        "--config", str(PROFILE_PATH),
+        "--stage", "T800",
+        "--run-id", "run-3035",
+        "--processed-root", "/workspace/data/datasets/ucf-qnrf-kaggle-apache/processed/steerer-training-v1",
+        "--upstream-dir", "/workspace/upstreams/STEERER",
+        "--backbone", "/workspace/data/checkpoints/backbones/hrnetv2_w48_imagenet_pretrained.pth",
+        "--backbone-sha256", "0efec102d97f2ef58f0e258b2c3076b3704b93ffc2b73f64c8da5462c0037ef8",
+        "--container-image-digest", CONTAINER_DIGEST,
+        "--resume", "/workspace/data/checkpoints/steerer-ucf-training/run-3035/last.pth",
+    ]
+
+    approved = parser.parse_args(required + ["--approved-stage", "T800"])
+    training_cli._validate_stage_ceiling(approved)
+
+    mismatched = parser.parse_args(required + ["--approved-stage", "T50"])
+    with pytest.raises(PermissionError, match="T800.*approved-stage"):
+        training_cli._validate_stage_ceiling(mismatched)
+
+    without_resume = parser.parse_args(
+        [item for index, item in enumerate(required) if index not in {16, 17}]
+        + ["--approved-stage", "T800"]
+    )
+    with pytest.raises(ValueError, match="T800.*resume"):
+        training_cli._validate_stage_ceiling(without_resume)
+
+
 def test_cli_backbone_hash_is_only_confirmation_of_profile_authority() -> None:
     """A caller-provided hash must never replace the checked-in approved hash."""
 

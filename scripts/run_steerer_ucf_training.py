@@ -26,8 +26,10 @@ def _parser() -> argparse.ArgumentParser:
         description="Run the pinned STEERER UCF-QNRF training lane without Test access."
     )
     parser.add_argument("--config", type=Path, required=True)
-    parser.add_argument("--stage", choices=("T0", "T1", "T5", "T50"), required=True)
-    parser.add_argument("--approved-stage", choices=("T5", "T50"))
+    parser.add_argument(
+        "--stage", choices=("T0", "T1", "T5", "T50", "T800"), required=True
+    )
+    parser.add_argument("--approved-stage", choices=("T5", "T50", "T800"))
     parser.add_argument("--run-id", required=True)
     parser.add_argument("--processed-root", type=Path, required=True)
     parser.add_argument("--upstream-dir", type=Path, required=True)
@@ -44,7 +46,7 @@ def _validate_stage_ceiling(args: argparse.Namespace) -> None:
         if args.resume is not None:
             raise ValueError("T0 and T1 cannot use --resume")
         if args.approved_stage is not None:
-            raise ValueError("--approved-stage is reserved for T5 and T50")
+            raise ValueError("--approved-stage is reserved for T5, T50, and T800")
         return
     if args.resume is None:
         raise ValueError(f"{args.stage} requires --resume")
