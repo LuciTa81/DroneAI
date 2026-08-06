@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-08-06T20:34:51.5155005Z",
+  "run_id": "steerer-qnrf-imagenet-20260806-t1-e",
+  "stage": "T800",
+  "training_started": false,
+  "project": {
+    "branch": "agent/steerer-ucf-training-implementation",
+    "commit": "861e42f0609b15618cd1e38f82ddfeaf869d30a0",
+    "local_clean": true,
+    "remote_clean": true,
+    "github_aligned": true
+  },
+  "runtime": {
+    "host": "pop-os",
+    "os": "Linux",
+    "container": "crowd-jupyter",
+    "container_state": "running",
+    "container_image_digest": "sha256:90dfcacf0d65fec4357a37db72624b42febf8d3d9056924cdec3499237ed2691",
+    "gpu": "NVIDIA GeForce RTX 5090",
+    "gpu_memory_total_mb": 32607,
+    "gpu_memory_used_mb": 123,
+    "gpu_utilization_percent": 0,
+    "gpu_temperature_c": 45,
+    "data_free_gb": 495,
+    "cuda_matmul_result": 262144.0
+  },
+  "lineage": {
+    "upstream_commit": "5b1854dbc2d280f2326d67c65515d8baf9083810",
+    "upstream_clean": true,
+    "backbone_sha256": "0efec102d97f2ef58f0e258b2c3076b3704b93ffc2b73f64c8da5462c0037ef8",
+    "resume_checkpoint": "/workspace/data/checkpoints/steerer-ucf-training/steerer-qnrf-imagenet-20260806-t1-e/milestone-005.pth",
+    "resume_checkpoint_sha256": "2ce6800bcbbdaace881e5f2ecc9f481616a67b9b96254232b7e8e5285ceeafc4"
+  },
+  "dataset": {
+    "source_partition": "official_train_only",
+    "train_count": 961,
+    "validation_count": 240,
+    "official_test_accessed": false,
+    "train_sha256": "22ad8d3bf53d3c582b1b2d902b25e44f86d38f448bf2d7cce7153b458b7702f4",
+    "validation_sha256": "d80b7fe911f80f9f48f6d5128dd94d7b08741afe0b4283425273b0560e7e142c",
+    "dataset_inventory_sha256": "f38af282fc3007f0f204fb94c14b45595cc383207323eb7430c3a6546f41d042",
+    "split_manifest_sha256": "70ac8b8c5bd8fd2c820034fae9f2c39556e155447f910f4f1d972f583ef08dfe",
+    "test_sealed_sha256": "3a769ddbe1482ece5c1e1164ca1b96a21aa1b4355d7f3c8d1b38786dd28ca331"
+  },
+  "verification": {
+    "environment_setup_status": "PASS",
+    "synthetic_t800_tests": {
+      "passed": 6,
+      "failed": 0,
+      "deselected": 67,
+      "elapsed_seconds": 11.49
+    },
+    "local_focused_suite": {
+      "passed": 178,
+      "failed": 0,
+      "skipped": 2,
+      "elapsed_seconds": 287.14
+    }
+  },
+  "status": "PASS_PREFLIGHT_ONLY"
+}
