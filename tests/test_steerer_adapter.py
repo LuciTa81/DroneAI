@@ -15,6 +15,7 @@ from droneai.integrity import sha256_file
 from droneai.steerer_adapter import (
     STEERERAdapter,
     _load_official_components,
+    _unwrap_steerer_checkpoint,
     calculate_steerer_size,
     extract_steerer_points,
 )
@@ -468,3 +469,40 @@ def test_adapter_turns_backend_error_into_explicit_failed_prediction(
     assert prediction.points == ()
     assert prediction.failure_state == "RuntimeError: inference failed"
     assert prediction.latency_ms > 0
+
+
+def test_research_checkpoint_unwrap_behavior_remains_frozen() -> None:
+    """Adding project checkpoints must not reinterpret old research smoke payloads."""
+
+    upstream = {"state_dict": {"weight": 1}}
+    raw = {"weight": 2}
+
+    assert _unwrap_steerer_checkpoint(upstream) == {"weight": 1}
+    assert _unwrap_steerer_checkpoint(raw) is raw
+
+
+@pytest.mark.parametrize("key", ["state_dict", "model"])
+def test_project_training_checkpoint_unwraps_exactly_one_supported_key(key: str) -> None:
+    """Project checkpoints may expose only their documented model payload key."""
+
+    payload = {key: {"weight": 3}, "optimizer": {"step": 4}}
+
+    assert _unwrap_steerer_checkpoint(
+        payload, checkpoint_origin="project_training"
+    ) == {"weight": 3}
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {"state_dict": {"a": 1}, "model": {"b": 2}},
+        {"optimizer": {"step": 1}},
+    ],
+)
+def test_project_training_checkpoint_rejects_ambiguous_or_missing_model(
+    payload: dict[str, object]
+) -> None:
+    """Choosing a key from an ambiguous project payload could load the wrong weights."""
+
+    with pytest.raises(ValueError, match="exactly one|state_dict.*model"):
+        _unwrap_steerer_checkpoint(payload, checkpoint_origin="project_training")

@@ -8,7 +8,7 @@ import sys
 import time
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Protocol, Sequence
+from typing import Literal, Protocol, Sequence
 
 import numpy as np
 from PIL import Image
@@ -35,6 +35,31 @@ _REVIEWED_PATHS = (
     "lib/datasets/nwpu.py",
 )
 _UPSTREAM_NAMESPACE_ROOTS = ("lib", "mmcv_custom")
+
+CheckpointOrigin = Literal["research_checkpoint", "project_training"]
+
+
+def _unwrap_steerer_checkpoint(
+    payload: object, *, checkpoint_origin: CheckpointOrigin = "research_checkpoint"
+) -> object:
+    """Select model weights without changing the frozen research payload behavior."""
+
+    if checkpoint_origin == "research_checkpoint":
+        if isinstance(payload, dict) and "state_dict" in payload:
+            return payload["state_dict"]
+        return payload
+    if checkpoint_origin != "project_training":
+        raise ValueError("checkpoint_origin is unsupported")
+    if not isinstance(payload, dict):
+        raise ValueError(
+            "project training checkpoint must contain exactly one of state_dict or model"
+        )
+    supported = [key for key in ("state_dict", "model") if key in payload]
+    if len(supported) != 1:
+        raise ValueError(
+            "project training checkpoint must contain exactly one of state_dict or model"
+        )
+    return payload[supported[0]]
 
 
 class STEERERBackend(Protocol):
@@ -395,7 +420,14 @@ def _load_official_components(upstream_dir: Path):
 class TorchSTEERERBackend:
     """Lazy CUDA backend for the pinned official STEERER implementation."""
 
-    def __init__(self, *, upstream_dir: Path, checkpoint_path: Path, device: str):
+    def __init__(
+        self,
+        *,
+        upstream_dir: Path,
+        checkpoint_path: Path,
+        device: str,
+        checkpoint_origin: CheckpointOrigin = "research_checkpoint",
+    ):
         try:
             import torch
         except ImportError as error:  # pragma: no cover - exercised on home5090
@@ -425,8 +457,9 @@ class TorchSTEERERBackend:
                 )
             except TypeError:  # pragma: no cover - old PyTorch compatibility
                 state = torch.load(checkpoint_path, map_location=self._device)
-            if isinstance(state, dict) and "state_dict" in state:
-                state = state["state_dict"]
+            state = _unwrap_steerer_checkpoint(
+                state, checkpoint_origin=checkpoint_origin
+            )
             incompatible = model.load_state_dict(state, strict=False)
             self.missing_keys = tuple(incompatible.missing_keys)
             self.unexpected_keys = tuple(incompatible.unexpected_keys)
@@ -496,6 +529,7 @@ class STEERERAdapter(ModelAdapter):
         device: str,
         backend: STEERERBackend | None = None,
         long_side_cap: int = 3072,
+        checkpoint_origin: CheckpointOrigin = "research_checkpoint",
     ):
         self.upstream_dir = Path(upstream_dir).resolve()
         self.checkpoint_path = Path(checkpoint_path).resolve()
@@ -503,6 +537,9 @@ class STEERERAdapter(ModelAdapter):
         self.checkpoint_sha256 = checkpoint_sha256.lower()
         self.device = device
         self.long_side_cap = long_side_cap
+        self.checkpoint_origin = checkpoint_origin
+        if checkpoint_origin not in {"research_checkpoint", "project_training"}:
+            raise ValueError("checkpoint_origin is unsupported")
         if not self.upstream_dir.is_dir() or not (
             self.upstream_dir / "configs" / "QNRF_final.py"
         ).is_file():
@@ -525,6 +562,7 @@ class STEERERAdapter(ModelAdapter):
             upstream_dir=self.upstream_dir,
             checkpoint_path=self.checkpoint_path,
             device=self.device,
+            checkpoint_origin=self.checkpoint_origin,
         )
 
     def _normalized_image(

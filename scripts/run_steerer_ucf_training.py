@@ -1,0 +1,121 @@
+"""Run one explicitly approved, stage-bounded STEERER training segment."""
+
+from __future__ import annotations
+
+import argparse
+import json
+import sys
+from pathlib import Path
+from typing import Sequence
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+SRC_ROOT = REPO_ROOT / "src"
+if str(SRC_ROOT) not in sys.path:
+    sys.path.insert(0, str(SRC_ROOT))
+
+from droneai.steerer_training_profile import load_training_profile
+from droneai.steerer_training_runner import (
+    PinnedUpstreamTrainingEngine,
+    run_training_stage,
+)
+
+
+def _parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        description="Run the pinned STEERER UCF-QNRF training lane without Test access."
+    )
+    parser.add_argument("--config", type=Path, required=True)
+    parser.add_argument("--stage", choices=("T0", "T1", "T5", "T50"), required=True)
+    parser.add_argument("--approved-stage", choices=("T5", "T50"))
+    parser.add_argument("--run-id", required=True)
+    parser.add_argument("--processed-root", type=Path, required=True)
+    parser.add_argument("--upstream-dir", type=Path, required=True)
+    parser.add_argument("--backbone", type=Path, required=True)
+    parser.add_argument("--backbone-sha256", required=True)
+    parser.add_argument("--resume", type=Path)
+    parser.add_argument("--device", default="cuda:0")
+    return parser
+
+
+def _validate_stage_ceiling(args: argparse.Namespace) -> None:
+    if args.stage in {"T0", "T1"}:
+        if args.resume is not None:
+            raise ValueError("T0 and T1 cannot use --resume")
+        if args.approved_stage is not None:
+            raise ValueError("--approved-stage is reserved for T5 and T50")
+        return
+    if args.resume is None:
+        raise ValueError(f"{args.stage} requires --resume")
+    if args.approved_stage != args.stage:
+        raise PermissionError(
+            f"{args.stage} requires an explicit matching --approved-stage"
+        )
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    args = _parser().parse_args(argv)
+    try:
+        _validate_stage_ceiling(args)
+        profile = load_training_profile(args.config)
+        if args.processed_root != profile.processed_root:
+            raise ValueError("--processed-root must match the authoritative profile")
+        if args.backbone != profile.imagenet_backbone.path:
+            raise ValueError("--backbone must match the authoritative profile")
+        if args.backbone_sha256.lower() != profile.imagenet_backbone.sha256:
+            raise ValueError(
+                "--backbone-sha256 must confirm the authoritative profile hash"
+            )
+        engine = PinnedUpstreamTrainingEngine(
+            profile=profile,
+            stage=args.stage,
+            run_id=args.run_id,
+            processed_root=args.processed_root,
+            upstream_dir=args.upstream_dir,
+            backbone_path=args.backbone,
+            device=args.device,
+            resume=args.resume,
+        )
+        result = run_training_stage(
+            profile,
+            stage=args.stage,
+            run_id=args.run_id,
+            resume=args.resume,
+            device=args.device,
+            engine=engine,
+        )
+    except (
+        FileExistsError,
+        FileNotFoundError,
+        FloatingPointError,
+        PermissionError,
+        RuntimeError,
+        TypeError,
+        ValueError,
+    ) as error:
+        print(
+            json.dumps({"status": "gate_violation", "error": str(error)}),
+            file=sys.stderr,
+        )
+        return 2
+    print(
+        json.dumps(
+            {
+                "status": "completed",
+                "stage": result.stage,
+                "completed_epoch": result.completed_epoch,
+                "optimizer_steps": result.optimizer_steps,
+                "validation_samples": result.validation_samples,
+                "finite_loss": result.finite_loss,
+                "checkpoint_round_trip": result.checkpoint_round_trip,
+                "physical_batch": result.physical_batch,
+                "accumulation_steps": result.accumulation_steps,
+                "elapsed_seconds": result.elapsed_seconds,
+            },
+            sort_keys=True,
+        )
+    )
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
