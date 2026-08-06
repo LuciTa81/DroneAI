@@ -149,6 +149,10 @@ class TrainingEngine(Protocol):
 
     def restore_checkpoint_state(self, state: dict[str, object]) -> None: ...
 
+    def restore_checkpoint_core_state(self, state: dict[str, object]) -> None: ...
+
+    def restore_scaler_state(self, state: object, *, enabled: bool) -> None: ...
+
     def snapshot(self) -> object: ...
 
     def restore_snapshot(self, snapshot: object) -> None: ...
@@ -413,6 +417,18 @@ class PinnedUpstreamTrainingEngine:
     def probe_snapshot(self) -> dict[str, object]:
         return getattr(self._require_runtime(), "probe_snapshot")()
 
+    def restore_probe_snapshot(self, state: dict[str, object]) -> None:
+        getattr(self._require_runtime(), "restore_probe_snapshot")(state)
+
+    def restore_checkpoint_core_state(self, state: dict[str, object]) -> None:
+        getattr(self._require_runtime(), "restore_checkpoint_core_state")(state)
+        self.global_step = int(getattr(self._runtime, "global_step"))
+
+    def restore_scaler_state(self, state: object, *, enabled: bool) -> None:
+        getattr(self._require_runtime(), "restore_scaler_state")(
+            state, enabled=enabled
+        )
+
     def set_progress(self, *, completed_epoch: int, global_step: int) -> None:
         self.completed_epoch = completed_epoch
         self.global_step = global_step
@@ -595,6 +611,7 @@ class _TorchPinnedRuntime:
 
     def _next_train_batch(self) -> object:
         if self._train_iterator is None:
+            self._apply_adaptive_resize_state(0)
             self._train_iterator = iter(self._make_train_loader(0))
         try:
             return next(self._train_iterator)  # type: ignore[arg-type]
@@ -617,6 +634,13 @@ class _TorchPinnedRuntime:
             generator=generator,
             worker_init_fn=_seed_data_worker,
         )
+
+    def _apply_adaptive_resize_state(self, epoch: int) -> None:
+        if not isinstance(epoch, int) or isinstance(epoch, bool) or epoch < 0:
+            raise ValueError("adaptive resize epoch must be a non-negative integer")
+        # Upstream uses zero-based epochs and disables AI_resize after index 5,
+        # so one-based epoch 6 is the last epoch trained with it enabled.
+        self._train_dataset.AI_resize = epoch <= 6
 
     def _prepared_batch(self, batch: object) -> tuple[object, list[object]]:
         images, labels, _size, _names = batch  # type: ignore[misc]
@@ -699,7 +723,38 @@ class _TorchPinnedRuntime:
                 return cloned
             return copy.deepcopy(value)
 
-        return cpu_clone(self.checkpoint_state())  # type: ignore[return-value]
+        model = getattr(self._model, "module", self._model)
+        scaler_state = None if self._scaler is None else self._scaler.state_dict()
+        return cpu_clone(  # type: ignore[return-value]
+            {
+                "model": model.state_dict(),
+                "optimizer": self._optimizer.state_dict(),
+                "scheduler": self._scheduler.state_dict(),
+                "scaler": scaler_state,
+                "scaler_enabled": self._scaler_enabled,
+            }
+        )
+
+    def restore_probe_snapshot(self, state: dict[str, object]) -> None:
+        if set(state) != {
+            "model",
+            "optimizer",
+            "scheduler",
+            "scaler",
+            "scaler_enabled",
+        }:
+            raise ValueError("training probe snapshot is incomplete")
+        self.restore_checkpoint_core_state(state)
+        enabled = state["scaler_enabled"]
+        if enabled is None:
+            self._scaler = None
+            self._scaler_enabled = None
+            return
+        if not isinstance(enabled, bool) or not isinstance(state["scaler"], Mapping):
+            raise ValueError("training probe scaler snapshot is invalid")
+        self._scaler = None
+        self._scaler_enabled = None
+        self.restore_scaler_state(state["scaler"], enabled=enabled)
 
     def compare_amp_to_fp32(self) -> AmpComparison:
         if self._probe_batch is None:
@@ -781,6 +836,7 @@ class _TorchPinnedRuntime:
         gradients: list[float] = []
         rates: list[float] = []
         self._current_sample_tokens = []
+        self._apply_adaptive_resize_state(epoch)
         self._train_iterator = iter(self._make_train_loader(epoch))
         try:
             for _ in range(self._updates_per_epoch):
@@ -791,8 +847,6 @@ class _TorchPinnedRuntime:
                 rates.append(observation.learning_rate)
         finally:
             self._train_iterator = None
-        if epoch > 5:
-            self._train_dataset.AI_resize = False
         return EpochObservation(
             epoch=epoch,
             optimizer_steps=self._updates_per_epoch,
@@ -873,17 +927,28 @@ class _TorchPinnedRuntime:
     def restore_checkpoint_state(self, state: dict[str, object]) -> None:
         if set(state) != {"model", "optimizer", "scheduler", "scaler"}:
             raise ValueError("project checkpoint components are incomplete")
+        self.restore_checkpoint_core_state(state)
+        scaler_state = state["scaler"]
+        if not isinstance(scaler_state, Mapping):
+            raise ValueError("project checkpoint scaler state is invalid")
+        self.restore_scaler_state(scaler_state, enabled=bool(scaler_state))
+
+    def restore_checkpoint_core_state(self, state: dict[str, object]) -> None:
+        if not {"model", "optimizer", "scheduler"}.issubset(state):
+            raise ValueError("project checkpoint core components are incomplete")
         model = getattr(self._model, "module", self._model)
         model.load_state_dict(state["model"], strict=True)
         self._optimizer.load_state_dict(state["optimizer"])
         self._scheduler.load_state_dict(state["scheduler"])
-        scaler_state = state["scaler"]
-        enabled = bool(scaler_state)
-        scaler = self._ensure_scaler(enabled)
-        scaler.load_state_dict(scaler_state)
         scheduler_updates = getattr(self._scheduler, "t", None)
         if scheduler_updates is not None:
             self.global_step = int(scheduler_updates) + 1
+
+    def restore_scaler_state(self, state: object, *, enabled: bool) -> None:
+        if not isinstance(state, Mapping) or bool(state) != enabled:
+            raise ValueError("checkpoint scaler state is incompatible with AMP decision")
+        scaler = self._ensure_scaler(enabled)
+        scaler.load_state_dict(state)
 
 
 def _build_torch_runtime(**kwargs: object) -> _TorchPinnedRuntime:
@@ -944,7 +1009,11 @@ def _probe_batch_without_update(engine: TrainingEngine) -> None:
     try:
         engine.probe_batch()
     finally:
-        engine.restore_checkpoint_state(state)
+        restore_probe = getattr(engine, "restore_probe_snapshot", None)
+        if callable(restore_probe):
+            restore_probe(state)
+        else:
+            engine.restore_checkpoint_state(state)
         restore_rng_state(rng, torch_module=torch_module)
         set_progress = getattr(engine, "set_progress", None)
         if callable(set_progress):
@@ -1164,10 +1233,15 @@ def _restore_resume(
     stage: Stage,
     run_id: str,
     resume: Path,
-) -> str:
+) -> tuple[str, object]:
     path, expected_sha256, environment_manifest_sha256 = _resume_manifest_hash(
         engine, run_id=run_id, resume=resume
     )
+    environment_path = engine.environment_path
+    if not environment_path.is_file() or environment_path.is_symlink():
+        raise ValueError("existing environment evidence is required for resume")
+    if sha256_file(environment_path) != environment_manifest_sha256:
+        raise ValueError("environment evidence SHA-256 mismatch")
     expectations = ResumeExpectations(
         run_id=run_id,
         config_sha256=engine.lineage.config_sha256,
@@ -1196,8 +1270,8 @@ def _restore_resume(
     if not accepted:
         predecessor = "T1" if stage == "T5" else "T5"
         raise ValueError(f"{stage} requires its verified {predecessor} predecessor checkpoint")
-    engine.restore_checkpoint_state(
-        {key: state[key] for key in ("model", "optimizer", "scheduler", "scaler")}
+    engine.restore_checkpoint_core_state(
+        {key: state[key] for key in ("model", "optimizer", "scheduler")}
     )
     global_step = int(state["global_step"])
     set_progress = getattr(engine, "set_progress", None)
@@ -1211,7 +1285,7 @@ def _restore_resume(
     if hasattr(engine, "best_rmse"):
         engine.best_rmse = float(state["best_rmse"])  # type: ignore[attr-defined]
     restore_rng_state(state["rng"], torch_module=torch_module)  # type: ignore[arg-type]
-    return expected_sha256
+    return expected_sha256, state["scaler"]
 
 
 def run_epochs(
@@ -1304,8 +1378,9 @@ def run_training_stage(
         engine.configure_batch(physical_batch, accumulation_steps)
         _probe_batch_without_update(engine)
     parent_checkpoint_sha256: str | None = None
+    resumed_scaler_state: object | None = None
     if resume is not None:
-        parent_checkpoint_sha256 = _restore_resume(
+        parent_checkpoint_sha256, resumed_scaler_state = _restore_resume(
             engine,
             stage=stage,
             run_id=run_id,
@@ -1315,6 +1390,8 @@ def run_training_stage(
     _finite_values((amp_comparison.fp32_loss,), name="FP32 comparison loss")
     _finite_values((amp_comparison.fp32_count,), name="FP32 comparison count")
     amp_enabled = amp_comparison.accepted
+    if resume is not None:
+        engine.restore_scaler_state(resumed_scaler_state, enabled=amp_enabled)
     environment_manifest_sha256 = _write_environment(
         engine,
         run_id=run_id,

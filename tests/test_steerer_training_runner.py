@@ -5,6 +5,7 @@ import json
 import pickle
 import random
 from pathlib import Path
+from types import MethodType
 
 import numpy as np
 import pytest
@@ -17,6 +18,7 @@ from droneai.steerer_training_runner import (
     EpochObservation,
     TrainingLineage,
     PinnedUpstreamTrainingEngine,
+    _TorchPinnedRuntime,
     _record_resize_memory,
     _epoch_data_seed,
     UpdateObservation,
@@ -71,6 +73,8 @@ class FakeTrainingEngine:
         )
         self.resumed_amp_comparison: AmpComparison | None = None
         self.amp_compare_model_weights: list[int] = []
+        self.scaler_mode: bool | None = None
+        self.restored_scaler_modes: list[bool] = []
         self.torch_module = _FakeTorch()
         self.best_mae = 1.0e20
         self.best_rmse = 1.0e20
@@ -83,6 +87,7 @@ class FakeTrainingEngine:
         self.batch_plans.append((physical_batch, accumulation_steps))
 
     def probe_batch(self) -> None:
+        self._select_scaler(False)
         if self.probe_error is not None:
             raise self.probe_error
         if self.oom_on_batch8 and self.batch_plans[-1] == (8, 1):
@@ -107,6 +112,7 @@ class FakeTrainingEngine:
         return self.amp_comparison
 
     def run_update(self, *, amp_enabled: bool) -> UpdateObservation:
+        self._select_scaler(amp_enabled)
         self.amp_flags.append(amp_enabled)
         self.global_step += 1
         self.model_weight += 1
@@ -120,10 +126,9 @@ class FakeTrainingEngine:
         )
 
     def run_epoch(self, epoch: int, *, amp_enabled: bool) -> EpochObservation:
-        del amp_enabled
         rates = []
         for _ in range(2):
-            observation = self.run_update(amp_enabled=False)
+            observation = self.run_update(amp_enabled=amp_enabled)
             rates.append(observation.learning_rate)
         self.completed_epoch = epoch
         epoch_rng = random.Random(_epoch_data_seed(3035, epoch))
@@ -157,14 +162,35 @@ class FakeTrainingEngine:
         )
 
     def checkpoint_state(self) -> dict[str, object]:
+        if self.scaler_mode is None:
+            self._select_scaler(False)
         return {
             "model": {"weight": self.model_weight},
             "optimizer": {"step": self.global_step},
             "scheduler": {"global_step": self.global_step, "horizon": 800},
-            "scaler": {"enabled": True},
+            "scaler": {"scale": 65536.0} if self.scaler_mode else {},
         }
 
-    def restore_checkpoint_state(self, state: dict[str, object]) -> None:
+    def probe_snapshot(self) -> dict[str, object]:
+        return {
+            "model": {"weight": self.model_weight},
+            "optimizer": {"step": self.global_step},
+            "scheduler": {"global_step": self.global_step, "horizon": 800},
+            "scaler": (
+                None
+                if self.scaler_mode is None
+                else ({"scale": 65536.0} if self.scaler_mode else {})
+            ),
+            "scaler_enabled": self.scaler_mode,
+        }
+
+    def restore_probe_snapshot(self, state: dict[str, object]) -> None:
+        self.restore_checkpoint_core_state(state)
+        enabled = state["scaler_enabled"]
+        assert enabled is None or isinstance(enabled, bool)
+        self.scaler_mode = enabled
+
+    def restore_checkpoint_core_state(self, state: dict[str, object]) -> None:
         optimizer = state["optimizer"]
         scheduler = state["scheduler"]
         assert isinstance(optimizer, dict) and isinstance(scheduler, dict)
@@ -173,6 +199,25 @@ class FakeTrainingEngine:
         assert isinstance(model, dict)
         self.model_weight = int(model["weight"])
         assert scheduler["horizon"] == 800
+
+    def restore_scaler_state(
+        self, state: object, *, enabled: bool
+    ) -> None:
+        if not isinstance(state, dict) or bool(state) != enabled:
+            raise ValueError("checkpoint scaler state is incompatible with AMP decision")
+        self._select_scaler(enabled)
+        self.restored_scaler_modes.append(enabled)
+
+    def restore_checkpoint_state(self, state: dict[str, object]) -> None:
+        self.restore_checkpoint_core_state(state)
+        scaler = state["scaler"]
+        enabled = bool(scaler)
+        self._select_scaler(enabled)
+
+    def _select_scaler(self, enabled: bool) -> None:
+        if self.scaler_mode is not None and self.scaler_mode != enabled:
+            raise RuntimeError("scaler mode was permanently selected before AMP decision")
+        self.scaler_mode = enabled
 
     def snapshot(self) -> tuple[int, int, int, tuple[float, ...], tuple[str, ...]]:
         return (
@@ -308,6 +353,47 @@ def test_staged_epochs_match_uninterrupted_sample_and_augmentation_order(
     assert staged.sample_tokens == uninterrupted.sample_tokens
 
 
+def test_adaptive_resize_state_is_absolute_epoch_deterministic_across_resume() -> None:
+    """A fresh epoch-7 runtime must not re-enable upstream adaptive resize."""
+
+    def runtime() -> _TorchPinnedRuntime:
+        candidate = object.__new__(_TorchPinnedRuntime)
+        candidate._train_dataset = type("Dataset", (), {"AI_resize": True})()
+        candidate._updates_per_epoch = 1
+        candidate._train_iterator = None
+        candidate._current_sample_tokens = []
+        candidate.global_step = 0
+        candidate.loader_states = []
+
+        def make_loader(self, epoch: int):
+            state = bool(self._train_dataset.AI_resize)
+            self.loader_states.append((epoch, state))
+            return iter((f"epoch-{epoch}:resize-{state}",))
+
+        def run_update(self, *, amp_enabled: bool) -> UpdateObservation:
+            del amp_enabled
+            token = next(self._train_iterator)
+            self._current_sample_tokens.append(token)
+            self.global_step += 1
+            return UpdateObservation(1.0, (1.0,), 1.0, 0.0001)
+
+        candidate._make_train_loader = MethodType(make_loader, candidate)
+        candidate.run_update = MethodType(run_update, candidate)
+        return candidate
+
+    uninterrupted = runtime()
+    epoch6 = uninterrupted.run_epoch(6, amp_enabled=False)
+    epoch7 = uninterrupted.run_epoch(7, amp_enabled=False)
+    resumed = runtime()
+    resumed_epoch7 = resumed.run_epoch(7, amp_enabled=False)
+
+    assert epoch6.sample_tokens == ("epoch-6:resize-True",)
+    assert epoch7.sample_tokens == ("epoch-7:resize-False",)
+    assert resumed_epoch7.sample_tokens == epoch7.sample_tokens
+    assert uninterrupted.loader_states == [(6, True), (7, False)]
+    assert resumed.loader_states == [(7, False)]
+
+
 def test_runner_stops_on_non_finite_loss(profile, fake_engine) -> None:
     """A NaN loss must stop before a checkpoint can legitimize the run."""
 
@@ -412,6 +498,7 @@ def test_probe_full_optimizer_step_leaves_no_update_in_t0(profile, fake_engine) 
     assert result.optimizer_steps == 1
     assert fake_engine.global_step == 1
     assert fake_engine.model_weight == 1
+    assert fake_engine.scaler_mode is True
 
 
 def test_optimizer_step_only_oom_triggers_clean_4x2_rebuild(
@@ -468,6 +555,59 @@ def test_amp_is_used_only_after_finite_strict_numerical_gate(
     assert fake_engine.amp_flags == [accepted]
     environment = json.loads(fake_engine.environment_path.read_text(encoding="utf-8"))
     assert environment["amp"]["enabled"] is accepted
+
+
+def test_amp_approved_fresh_stage_selects_enabled_scaler_only_after_probe(
+    profile, fake_engine
+) -> None:
+    """A disabled probe scaler must not prevent an AMP-approved fresh update."""
+
+    run_training_stage(profile, stage="T0", run_id="run-3035", engine=fake_engine)
+
+    assert fake_engine.scaler_mode is True
+    assert fake_engine.global_step == 1
+
+
+def test_amp_checkpoint_resume_restores_compatible_scaler_after_comparison(
+    profile, tmp_path: Path
+) -> None:
+    """A resumed AMP scaler must load only after resumed-weight numerical comparison."""
+
+    t1_engine = FakeTrainingEngine(tmp_path)
+    run_training_stage(profile, stage="T1", run_id="run-3035", engine=t1_engine)
+    t5_engine = FakeTrainingEngine(tmp_path)
+
+    run_training_stage(
+        profile,
+        stage="T5",
+        run_id="run-3035",
+        resume=t1_engine.checkpoint_dir / "last.pth",
+        engine=t5_engine,
+    )
+
+    assert t5_engine.amp_compare_model_weights == [2]
+    assert t5_engine.restored_scaler_modes[0] is True
+    assert t5_engine.scaler_mode is True
+
+
+def test_resume_rejects_scaler_state_incompatible_with_amp_decision(
+    profile, tmp_path: Path
+) -> None:
+    """Silently loading an enabled scaler into an FP32 resume corrupts semantics."""
+
+    t1_engine = FakeTrainingEngine(tmp_path)
+    run_training_stage(profile, stage="T1", run_id="run-3035", engine=t1_engine)
+    t5_engine = FakeTrainingEngine(tmp_path)
+    t5_engine.resumed_amp_comparison = AmpComparison(1.0, 1.0, 100.0, 101.0)
+
+    with pytest.raises(ValueError, match="scaler state is incompatible"):
+        run_training_stage(
+            profile,
+            stage="T5",
+            run_id="run-3035",
+            resume=t1_engine.checkpoint_dir / "last.pth",
+            engine=t5_engine,
+        )
 
 
 def test_stage_checkpoint_is_task5_payload_and_round_trips_from_disk(
@@ -584,6 +724,7 @@ def test_resume_is_restored_before_amp_comparison(profile, tmp_path: Path) -> No
     """AMP eligibility must be measured on resumed weights, not fresh ImageNet weights."""
 
     t1_engine = FakeTrainingEngine(tmp_path)
+    t1_engine.amp_comparison = AmpComparison(1.0, 1.0, 100.0, 101.0)
     run_training_stage(profile, stage="T1", run_id="run-3035", engine=t1_engine)
     t5_engine = FakeTrainingEngine(tmp_path)
     t5_engine.resumed_amp_comparison = AmpComparison(
@@ -626,6 +767,55 @@ def test_resume_hash_is_taken_from_manifest_before_deserialization(
             engine=t5_engine,
         )
 
+    assert t5_engine.global_step == 0
+
+
+def test_resume_requires_existing_environment_evidence_before_restore(
+    profile, tmp_path: Path
+) -> None:
+    """A missing environment file must not be silently regenerated during resume."""
+
+    t1_engine = FakeTrainingEngine(tmp_path)
+    run_training_stage(profile, stage="T1", run_id="run-3035", engine=t1_engine)
+    resume = t1_engine.checkpoint_dir / "last.pth"
+    t1_engine.environment_path.unlink()
+    t5_engine = FakeTrainingEngine(tmp_path)
+
+    with pytest.raises(ValueError, match="environment evidence is required"):
+        run_training_stage(
+            profile,
+            stage="T5",
+            run_id="run-3035",
+            resume=resume,
+            engine=t5_engine,
+        )
+
+    assert not t5_engine.environment_path.exists()
+    assert t5_engine.global_step == 0
+
+
+def test_resume_rejects_tampered_environment_without_overwriting_it(
+    profile, tmp_path: Path
+) -> None:
+    """Manifest metadata cannot authorize environment bytes that no longer match."""
+
+    t1_engine = FakeTrainingEngine(tmp_path)
+    run_training_stage(profile, stage="T1", run_id="run-3035", engine=t1_engine)
+    resume = t1_engine.checkpoint_dir / "last.pth"
+    tampered = b'{"tampered":true}\n'
+    t1_engine.environment_path.write_bytes(tampered)
+    t5_engine = FakeTrainingEngine(tmp_path)
+
+    with pytest.raises(ValueError, match="environment evidence SHA-256 mismatch"):
+        run_training_stage(
+            profile,
+            stage="T5",
+            run_id="run-3035",
+            resume=resume,
+            engine=t5_engine,
+        )
+
+    assert t5_engine.environment_path.read_bytes() == tampered
     assert t5_engine.global_step == 0
 
 
