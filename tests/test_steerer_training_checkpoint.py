@@ -272,6 +272,85 @@ def test_checkpoint_policy_writes_last_best_milestone_and_atomic_manifest(
     assert all(entry["byte_count"] > 0 for entry in manifest["checkpoints"])
 
 
+def test_t800_policy_preserves_only_100_epoch_milestones(tmp_path: Path) -> None:
+    at_100 = save_checkpoint_with_policy(
+        tmp_path,
+        _state(epoch=100, stage="T800"),
+        current_mae=90.0,
+        current_rmse=150.0,
+        preserve_milestone=True,
+        torch_module=_FakeTorch(),
+    )
+
+    assert set(at_100.artifacts) == {"last", "milestone-100"}
+    assert (tmp_path / "milestone-100.pth").is_file()
+
+    at_125 = save_checkpoint_with_policy(
+        tmp_path,
+        _state(epoch=125, stage="T800"),
+        current_mae=89.0,
+        current_rmse=149.0,
+        preserve_milestone=False,
+        torch_module=_FakeTorch(),
+    )
+
+    assert set(at_125.artifacts) == {"last"}
+    assert not (tmp_path / "milestone-125.pth").exists()
+
+
+@pytest.mark.parametrize(
+    ("epoch", "preserve_milestone"),
+    [(100, False), (125, True)],
+)
+def test_t800_policy_rejects_wrong_milestone_decision(
+    tmp_path: Path, epoch: int, preserve_milestone: bool
+) -> None:
+    with pytest.raises(ValueError, match="100-epoch"):
+        save_checkpoint_with_policy(
+            tmp_path,
+            _state(epoch=epoch, stage="T800"),
+            current_mae=90.0,
+            current_rmse=150.0,
+            preserve_milestone=preserve_milestone,
+            torch_module=_FakeTorch(),
+        )
+
+
+def test_legacy_stage_rejects_explicit_milestone_override(tmp_path: Path) -> None:
+    with pytest.raises(ValueError, match="T800"):
+        save_checkpoint_with_policy(
+            tmp_path,
+            _state(epoch=5, stage="T5"),
+            current_mae=12.5,
+            current_rmse=21.0,
+            preserve_milestone=False,
+            torch_module=_FakeTorch(),
+        )
+
+
+def test_t800_policy_requires_explicit_milestone_decision(tmp_path: Path) -> None:
+    with pytest.raises(ValueError, match="explicit.*milestone"):
+        save_checkpoint_with_policy(
+            tmp_path,
+            _state(epoch=100, stage="T800"),
+            current_mae=90.0,
+            current_rmse=150.0,
+            torch_module=_FakeTorch(),
+        )
+
+
+def test_t800_policy_rejects_non_validation_boundary(tmp_path: Path) -> None:
+    with pytest.raises(ValueError, match="25-epoch"):
+        save_checkpoint_with_policy(
+            tmp_path,
+            _state(epoch=126, stage="T800"),
+            current_mae=90.0,
+            current_rmse=150.0,
+            preserve_milestone=False,
+            torch_module=_FakeTorch(),
+        )
+
+
 def test_checkpoint_policy_rejects_foreign_manifest_before_overwriting_last(
     tmp_path: Path,
 ) -> None:

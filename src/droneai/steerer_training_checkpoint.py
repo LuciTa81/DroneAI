@@ -388,6 +388,7 @@ def save_checkpoint_with_policy(
     previous_best_mae: float | None = None,
     previous_best_rmse: float | None = None,
     parent_checkpoint_sha256: str | None = None,
+    preserve_milestone: bool | None = None,
     torch_module: Any | None = None,
 ) -> CheckpointPolicyResult:
     """Persist ``last``, improved bests, and the stage milestone with an atomic manifest."""
@@ -395,6 +396,23 @@ def save_checkpoint_with_policy(
     validated = _validate_checkpoint_payload(state)
     if parent_checkpoint_sha256 is not None and not is_sha256(parent_checkpoint_sha256):
         raise ValueError("parent checkpoint SHA-256 is invalid")
+    stage = str(validated["stage"])
+    epoch = int(validated["epoch"])
+    if preserve_milestone is None:
+        if stage == "T800":
+            raise ValueError("T800 requires an explicit milestone decision")
+        should_preserve_milestone = _MILESTONE_EPOCHS.get(stage) == epoch
+    else:
+        if not isinstance(preserve_milestone, bool):
+            raise TypeError("preserve_milestone must be boolean or null")
+        if stage != "T800":
+            raise ValueError("explicit milestone control is reserved for T800")
+        if not 25 <= epoch <= 800 or epoch % 25 != 0:
+            raise ValueError("T800 checkpoints must be 25-epoch validation boundaries")
+        expected_milestone = epoch % 100 == 0
+        if preserve_milestone is not expected_milestone:
+            raise ValueError("T800 milestone decision must match the 100-epoch policy")
+        should_preserve_milestone = preserve_milestone
     for name, value in (("current MAE", current_mae), ("current RMSE", current_rmse)):
         if not isinstance(value, (int, float)) or isinstance(value, bool) or not math.isfinite(value):
             raise ValueError(f"{name} must be finite")
@@ -443,9 +461,8 @@ def save_checkpoint_with_policy(
         )
         artifacts["best-rmse"] = artifact
         writes.append(("best-rmse", artifact, "best_rmse"))
-    stage = str(validated["stage"])
-    if _MILESTONE_EPOCHS.get(stage) == validated["epoch"]:
-        key = f"milestone-{int(validated['epoch']):03d}"
+    if should_preserve_milestone:
+        key = f"milestone-{epoch:03d}"
         artifact = save_training_checkpoint(
             directory / f"{key}.pth", validated, torch_module=torch_module
         )
