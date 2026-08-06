@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import importlib.util
 import inspect
 import json
 import subprocess
@@ -11,6 +12,10 @@ import pytest
 
 from droneai.steerer_training_split import build_training_split, write_training_split
 from droneai.ucf_qnrf import UCFQNRFRecord
+
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+PROFILE_PATH = REPO_ROOT / "configs/training/steerer_ucf_qnrf_imagenet.home5090.json"
 
 
 def _record(sample_id: str, band: str) -> UCFQNRFRecord:
@@ -101,5 +106,58 @@ def test_prepare_cli_exposes_train_root_but_no_test_or_dataset_root() -> None:
     ).stdout
 
     assert "--train-root" in help_text
+    assert "--config" in help_text
+    assert "--output-root" in help_text
     assert "--test-root" not in help_text
     assert "--dataset-root" not in help_text
+    assert "--output-dir" not in help_text
+    assert "--seed" not in help_text
+    assert "--validation-count" not in help_text
+
+
+def _prepare_module():
+    spec = importlib.util.spec_from_file_location(
+        "prepare_steerer_ucf_training_test",
+        REPO_ROOT / "scripts/prepare_steerer_ucf_training.py",
+    )
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_prepare_cli_rejects_incomplete_population_before_creating_output(
+    tmp_path: Path, records: tuple[UCFQNRFRecord, ...], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    module = _prepare_module()
+    monkeypatch.setattr(module, "index_ucf_qnrf_train", lambda _: records[:-1])
+    output = tmp_path / "prepared"
+
+    with pytest.raises(ValueError, match=r"expected=1201 observed=1200"):
+        module.main(
+            [
+                "--config", str(PROFILE_PATH),
+                "--train-root", str(tmp_path / "Train"),
+                "--output-root", str(output),
+            ]
+        )
+
+    assert not output.exists()
+
+
+def test_prepare_cli_writes_exact_approved_split_counts(
+    tmp_path: Path, records: tuple[UCFQNRFRecord, ...], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    module = _prepare_module()
+    monkeypatch.setattr(module, "index_ucf_qnrf_train", lambda _: records)
+    output = tmp_path / "prepared"
+
+    assert module.main(
+        [
+            "--config", str(PROFILE_PATH),
+            "--train-root", str(tmp_path / "Train"),
+            "--output-root", str(output),
+        ]
+    ) == 0
+    assert len((output / "train.txt").read_text(encoding="utf-8").splitlines()) == 961
+    assert len((output / "val.txt").read_text(encoding="utf-8").splitlines()) == 240

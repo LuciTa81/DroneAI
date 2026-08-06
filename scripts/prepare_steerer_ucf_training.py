@@ -13,6 +13,7 @@ if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
 from droneai.steerer_training_split import build_training_split, write_training_split
+from droneai.steerer_training_profile import load_training_profile
 from droneai.ucf_qnrf import index_ucf_qnrf_train
 
 
@@ -20,20 +21,34 @@ def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Create a deterministic STEERER train/validation split from UCF-QNRF training data."
     )
+    parser.add_argument("--config", type=Path, required=True)
     parser.add_argument("--train-root", type=Path, required=True)
-    parser.add_argument("--output-dir", type=Path, required=True)
-    parser.add_argument("--seed", type=int, default=3035)
-    parser.add_argument("--validation-count", type=int, default=240)
+    parser.add_argument("--output-root", type=Path, required=True)
     return parser
 
 
 def main(argv: Sequence[str] | None = None) -> int:
     args = _parser().parse_args(argv)
+    profile = load_training_profile(args.config)
     records = index_ucf_qnrf_train(args.train_root)
+    if len(records) != profile.dataset_population:
+        raise ValueError(
+            "indexed training population must equal approved profile population: "
+            f"expected={profile.dataset_population} observed={len(records)}"
+        )
     split = build_training_split(
-        records, seed=args.seed, validation_count=args.validation_count
+        records, seed=profile.seed, validation_count=profile.validation_count
     )
-    write_training_split(args.output_dir, split)
+    if (len(split.train_ids), len(split.validation_ids)) != (
+        profile.train_count,
+        profile.validation_count,
+    ):
+        raise ValueError(
+            "prepared split must equal approved profile counts: "
+            f"expected={profile.train_count}/{profile.validation_count} "
+            f"observed={len(split.train_ids)}/{len(split.validation_ids)}"
+        )
+    write_training_split(args.output_root, split)
     print(f"Prepared {len(split.train_ids)} train and {len(split.validation_ids)} validation IDs")
     return 0
 
