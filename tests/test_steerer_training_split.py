@@ -9,7 +9,10 @@ import sys
 from pathlib import Path
 
 import pytest
+from PIL import Image
 
+import droneai.steerer_training_split as training_split
+from droneai.integrity import sha256_file
 from droneai.steerer_training_split import build_training_split, write_training_split
 from droneai.ucf_qnrf import UCFQNRFRecord
 
@@ -97,6 +100,37 @@ def test_split_writer_requires_a_new_empty_output_directory(
         write_training_split(output, build_training_split(records, seed=3035, validation_count=240))
 
 
+@pytest.mark.parametrize(
+    "failed_artifact",
+    ("train.txt", "val.txt", "test-sealed.json", "split-manifest.json"),
+)
+def test_split_writer_cleans_temp_files_when_a_split_artifact_replace_fails(
+    tmp_path: Path,
+    records: tuple[UCFQNRFRecord, ...],
+    monkeypatch: pytest.MonkeyPatch,
+    failed_artifact: str,
+) -> None:
+    """A failed split-file replace must not expose a partial destination or leak a temp file."""
+
+    output = tmp_path / "split"
+    real_replace = training_split.os.replace
+
+    def fail_artifact_replace(source: Path, destination: Path) -> None:
+        if Path(destination).name == failed_artifact:
+            raise OSError(f"injected {failed_artifact} replacement failure")
+        real_replace(source, destination)
+
+    monkeypatch.setattr(training_split.os, "replace", fail_artifact_replace)
+
+    with pytest.raises(OSError, match=f"injected {failed_artifact} replacement failure"):
+        write_training_split(
+            output, build_training_split(records, seed=3035, validation_count=240)
+        )
+
+    assert not output.exists()
+    assert not list(tmp_path.rglob("*.tmp"))
+
+
 def test_prepare_cli_exposes_train_root_but_no_test_or_dataset_root() -> None:
     help_text = subprocess.run(
         [sys.executable, "scripts/prepare_steerer_ucf_training.py", "--help"],
@@ -146,26 +180,32 @@ def test_prepare_cli_rejects_incomplete_population_before_creating_output(
 
 def test_prepare_cli_writes_exact_approved_split_counts(
     tmp_path: Path,
-    records: tuple[UCFQNRFRecord, ...],
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
+    source_image = tmp_path / "source.jpg"
+    source_annotation = tmp_path / "source_ann.mat"
+    Image.new("RGB", (2, 2), color=(12, 34, 56)).save(source_image, quality=91)
+    source_annotation.write_bytes(b"pre-indexed annotation")
+    source_sha256 = sha256_file(source_image)
+    annotation_sha256 = sha256_file(source_annotation)
+    records = tuple(
+        UCFQNRFRecord(
+            sample_id=f"sample-{index:04d}",
+            image_path=source_image,
+            annotation_path=source_annotation,
+            image_sha256=source_sha256,
+            annotation_sha256=annotation_sha256,
+            width=2,
+            height=2,
+            points=((0.0, 0.0),),
+            density_band="low",
+        )
+        for index in range(1201)
+    )
     module = _prepare_module()
     monkeypatch.setattr(module, "index_ucf_qnrf_train", lambda _: records)
     output = tmp_path / "prepared"
-    calls: dict[str, object] = {}
-
-    def fake_prepare(
-        actual_records: tuple[UCFQNRFRecord, ...], split: object, *, output_root: Path
-    ) -> Path:
-        calls["records"] = actual_records
-        calls["split"] = split
-        manifest = output_root / "manifests" / "training-manifest.json"
-        manifest.parent.mkdir(parents=True)
-        manifest.write_text("{}\n", encoding="utf-8")
-        return manifest
-
-    monkeypatch.setattr(module, "prepare_training_dataset", fake_prepare, raising=False)
 
     assert module.main(
         [
@@ -175,8 +215,31 @@ def test_prepare_cli_writes_exact_approved_split_counts(
         ]
     ) == 0
     result = json.loads(capsys.readouterr().out)
-    assert calls["records"] == records
     assert result["status"] == "prepared"
-    assert (result["train_count"], result["validation_count"]) == (961, 240)
+    assert (result["sample_count"], result["train_count"], result["validation_count"]) == (
+        1201,
+        961,
+        240,
+    )
     assert result["manifest_path"] == str(output / "manifests" / "training-manifest.json")
     assert len(result["manifest_sha256"]) == 64
+    manifest = json.loads((output / "manifests" / "training-manifest.json").read_text())
+    assert manifest["source_partition"] == "official_train_only"
+    assert manifest["converted_sample_count"] == 1201
+    assert (manifest["train_count"], manifest["validation_count"]) == (961, 240)
+    assert (
+        manifest["count_mismatches"],
+        manifest["out_of_bounds_points"],
+        manifest["out_of_bounds_boxes"],
+    ) == (0, 0, 0)
+    assert len((output / "train.txt").read_text().splitlines()) == 961
+    assert len((output / "val.txt").read_text().splitlines()) == 240
+    assert len(list((output / "images").glob("*.jpg"))) == 1201
+    assert len(list((output / "jsons").glob("*.json"))) == 1201
+    assert len((output / "manifests" / "input-inventory.jsonl").read_text().splitlines()) == 1201
+    assert len((output / "manifests" / "output-inventory.jsonl").read_text().splitlines()) == 1201
+    source_bytes = source_image.read_bytes()
+    for image in (output / "images").glob("*.jpg"):
+        assert image.read_bytes() == source_bytes
+        assert sha256_file(image) == source_sha256
+    assert not list(output.rglob("*.tmp"))

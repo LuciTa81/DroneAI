@@ -115,8 +115,23 @@ def build_training_split(
     )
 
 
+def _atomic_write_bytes(path: Path, payload: bytes) -> None:
+    """Replace one split artifact only after its bytes are durable."""
+
+    temporary = path.with_name(f".{path.name}.tmp")
+    try:
+        with temporary.open("xb") as stream:
+            stream.write(payload)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, path)
+    except BaseException:
+        temporary.unlink(missing_ok=True)
+        raise
+
+
 def _write_lines(path: Path, values: tuple[str, ...]) -> None:
-    path.write_bytes(("\n".join(values) + "\n").encode("utf-8"))
+    _atomic_write_bytes(path, ("\n".join(values) + "\n").encode("utf-8"))
 
 
 def write_training_split(output_dir: str | Path, split: SteererTrainingSplit) -> Path:
@@ -130,13 +145,19 @@ def write_training_split(output_dir: str | Path, split: SteererTrainingSplit) ->
     try:
         _write_lines(temporary / "train.txt", split.train_ids)
         _write_lines(temporary / "val.txt", split.validation_ids)
-        (temporary / "test-sealed.json").write_text(
-            json.dumps({"role": "sealed", "sample_count": 334, "accessed": False}, indent=2)
-            + "\n",
-            encoding="utf-8",
+        _atomic_write_bytes(
+            temporary / "test-sealed.json",
+            (
+                json.dumps(
+                    {"role": "sealed", "sample_count": 334, "accessed": False},
+                    indent=2,
+                )
+                + "\n"
+            ).encode("utf-8"),
         )
-        (temporary / "split-manifest.json").write_text(
-            json.dumps(asdict(split), indent=2, sort_keys=True) + "\n", encoding="utf-8"
+        _atomic_write_bytes(
+            temporary / "split-manifest.json",
+            (json.dumps(asdict(split), indent=2, sort_keys=True) + "\n").encode("utf-8"),
         )
         os.replace(temporary, destination)
     except BaseException:
