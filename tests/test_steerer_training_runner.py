@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import replace
+import hashlib
 import json
 import pickle
 import random
@@ -353,12 +354,12 @@ def test_staged_epochs_match_uninterrupted_sample_and_augmentation_order(
     assert staged.sample_tokens == uninterrupted.sample_tokens
 
 
-def test_adaptive_resize_state_is_absolute_epoch_deterministic_across_resume() -> None:
-    """A fresh epoch-7 runtime must not re-enable upstream adaptive resize."""
+def test_adaptive_resize_stays_pinned_false_for_all_stages_and_resume() -> None:
+    """The QNRF lane must never enter unapproved AI_resize code paths."""
 
     def runtime() -> _TorchPinnedRuntime:
         candidate = object.__new__(_TorchPinnedRuntime)
-        candidate._train_dataset = type("Dataset", (), {"AI_resize": True})()
+        candidate._train_dataset = type("Dataset", (), {"AI_resize": False})()
         candidate._updates_per_epoch = 1
         candidate._train_iterator = None
         candidate._current_sample_tokens = []
@@ -381,16 +382,27 @@ def test_adaptive_resize_state_is_absolute_epoch_deterministic_across_resume() -
         candidate.run_update = MethodType(run_update, candidate)
         return candidate
 
+    initial = runtime()
+    assert initial._train_dataset.AI_resize is False
+    assert initial._next_train_batch() == "epoch-0:resize-False"
+    assert initial.loader_states == [(0, False)]
+
+    for stage, epoch in (("T1", 1), ("T5", 5), ("T50", 50)):
+        candidate = runtime()
+        observation = candidate.run_epoch(epoch, amp_enabled=False)
+        assert observation.sample_tokens == (f"epoch-{epoch}:resize-False",), stage
+        assert candidate.loader_states == [(epoch, False)], stage
+
     uninterrupted = runtime()
     epoch6 = uninterrupted.run_epoch(6, amp_enabled=False)
     epoch7 = uninterrupted.run_epoch(7, amp_enabled=False)
     resumed = runtime()
     resumed_epoch7 = resumed.run_epoch(7, amp_enabled=False)
 
-    assert epoch6.sample_tokens == ("epoch-6:resize-True",)
+    assert epoch6.sample_tokens == ("epoch-6:resize-False",)
     assert epoch7.sample_tokens == ("epoch-7:resize-False",)
     assert resumed_epoch7.sample_tokens == epoch7.sample_tokens
-    assert uninterrupted.loader_states == [(6, True), (7, False)]
+    assert uninterrupted.loader_states == [(6, False), (7, False)]
     assert resumed.loader_states == [(7, False)]
 
 
@@ -778,7 +790,11 @@ def test_resume_requires_existing_environment_evidence_before_restore(
     t1_engine = FakeTrainingEngine(tmp_path)
     run_training_stage(profile, stage="T1", run_id="run-3035", engine=t1_engine)
     resume = t1_engine.checkpoint_dir / "last.pth"
-    t1_engine.environment_path.unlink()
+    with resume.open("rb") as stream:
+        payload = pickle.load(stream)
+    digest = payload["environment_manifest_sha256"]
+    evidence = t1_engine.environment_path.parent / f"environment.{digest}.json"
+    evidence.unlink()
     t5_engine = FakeTrainingEngine(tmp_path)
 
     with pytest.raises(ValueError, match="environment evidence is required"):
@@ -790,8 +806,27 @@ def test_resume_requires_existing_environment_evidence_before_restore(
             engine=t5_engine,
         )
 
-    assert not t5_engine.environment_path.exists()
+    assert not evidence.exists()
+    assert t5_engine.environment_path.is_file()
     assert t5_engine.global_step == 0
+
+
+def test_checkpoint_environment_evidence_is_content_addressed_and_immutable(
+    profile, tmp_path: Path
+) -> None:
+    """A checkpoint must authorize immutable bytes, not a mutable summary pathname."""
+
+    engine = FakeTrainingEngine(tmp_path)
+    run_training_stage(profile, stage="T1", run_id="run-3035", engine=engine)
+    with (engine.checkpoint_dir / "last.pth").open("rb") as stream:
+        payload = pickle.load(stream)
+    digest = payload["environment_manifest_sha256"]
+    evidence = engine.environment_path.parent / f"environment.{digest}.json"
+
+    assert evidence.is_file()
+    assert not evidence.is_symlink()
+    assert hashlib.sha256(evidence.read_bytes()).hexdigest() == digest
+    assert evidence.read_bytes() == engine.environment_path.read_bytes()
 
 
 def test_resume_rejects_tampered_environment_without_overwriting_it(
@@ -802,8 +837,12 @@ def test_resume_rejects_tampered_environment_without_overwriting_it(
     t1_engine = FakeTrainingEngine(tmp_path)
     run_training_stage(profile, stage="T1", run_id="run-3035", engine=t1_engine)
     resume = t1_engine.checkpoint_dir / "last.pth"
+    with resume.open("rb") as stream:
+        payload = pickle.load(stream)
+    digest = payload["environment_manifest_sha256"]
+    evidence = t1_engine.environment_path.parent / f"environment.{digest}.json"
     tampered = b'{"tampered":true}\n'
-    t1_engine.environment_path.write_bytes(tampered)
+    evidence.write_bytes(tampered)
     t5_engine = FakeTrainingEngine(tmp_path)
 
     with pytest.raises(ValueError, match="environment evidence SHA-256 mismatch"):
@@ -815,8 +854,103 @@ def test_resume_rejects_tampered_environment_without_overwriting_it(
             engine=t5_engine,
         )
 
-    assert t5_engine.environment_path.read_bytes() == tampered
+    assert evidence.read_bytes() == tampered
     assert t5_engine.global_step == 0
+
+
+def test_resume_rejects_symlinked_immutable_environment_evidence(
+    profile, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A content-addressed filename must not authorize a symlink target."""
+
+    t1_engine = FakeTrainingEngine(tmp_path)
+    run_training_stage(profile, stage="T1", run_id="run-3035", engine=t1_engine)
+    resume = t1_engine.checkpoint_dir / "last.pth"
+    with resume.open("rb") as stream:
+        payload = pickle.load(stream)
+    digest = payload["environment_manifest_sha256"]
+    evidence = t1_engine.environment_path.parent / f"environment.{digest}.json"
+    original_is_symlink = Path.is_symlink
+    monkeypatch.setattr(
+        Path,
+        "is_symlink",
+        lambda self: self == evidence or original_is_symlink(self),
+    )
+
+    with pytest.raises(ValueError, match="immutable environment evidence is required"):
+        run_training_stage(
+            profile,
+            stage="T5",
+            run_id="run-3035",
+            resume=resume,
+            engine=FakeTrainingEngine(tmp_path),
+        )
+
+
+def test_crash_after_new_environment_write_keeps_old_checkpoint_resumable(
+    profile, tmp_path: Path
+) -> None:
+    """A failed stage must not revoke the immutable evidence of its predecessor."""
+
+    rejected_amp = AmpComparison(1.0, 1.0, 100.0, 101.0)
+    t1_engine = FakeTrainingEngine(tmp_path)
+    t1_engine.amp_comparison = rejected_amp
+    run_training_stage(profile, stage="T1", run_id="run-3035", engine=t1_engine)
+    old_resume = t1_engine.checkpoint_dir / "last.pth"
+    with old_resume.open("rb") as stream:
+        old_payload = pickle.load(stream)
+    old_digest = old_payload["environment_manifest_sha256"]
+    old_evidence = (
+        t1_engine.environment_path.parent / f"environment.{old_digest}.json"
+    )
+    old_bytes = old_evidence.read_bytes()
+
+    crashed = FakeTrainingEngine(tmp_path)
+    crashed.resumed_amp_comparison = rejected_amp
+    crashed.oom_on_batch8 = True
+    crashed.loss = float("nan")
+    with pytest.raises(FloatingPointError, match="non-finite.*loss"):
+        run_training_stage(
+            profile,
+            stage="T5",
+            run_id="run-3035",
+            resume=old_resume,
+            engine=crashed,
+        )
+    new_summary = crashed.environment_path.read_bytes()
+    new_digest = hashlib.sha256(new_summary).hexdigest()
+    new_evidence = crashed.environment_path.parent / f"environment.{new_digest}.json"
+    assert new_digest != old_digest
+    assert new_evidence.read_bytes() == new_summary
+    assert old_evidence.read_bytes() == old_bytes
+
+    retry = FakeTrainingEngine(tmp_path)
+    retry.resumed_amp_comparison = rejected_amp
+    retry.oom_on_batch8 = True
+    run_training_stage(
+        profile,
+        stage="T5",
+        run_id="run-3035",
+        resume=old_resume,
+        engine=retry,
+    )
+    new_resume = retry.checkpoint_dir / "last.pth"
+    with new_resume.open("rb") as stream:
+        new_payload = pickle.load(stream)
+    assert new_payload["environment_manifest_sha256"] == new_digest
+
+    old_evidence.unlink()
+    t50_engine = FakeTrainingEngine(tmp_path)
+    t50_engine.resumed_amp_comparison = rejected_amp
+    t50_engine.oom_on_batch8 = True
+    result = run_training_stage(
+        profile,
+        stage="T50",
+        run_id="run-3035",
+        resume=new_resume,
+        engine=t50_engine,
+    )
+    assert result.completed_epoch == 50
 
 
 def test_resume_manifest_filename_cannot_authorize_nested_checkpoint(

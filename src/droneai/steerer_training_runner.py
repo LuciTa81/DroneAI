@@ -611,7 +611,7 @@ class _TorchPinnedRuntime:
 
     def _next_train_batch(self) -> object:
         if self._train_iterator is None:
-            self._apply_adaptive_resize_state(0)
+            self._enforce_pinned_resize_state()
             self._train_iterator = iter(self._make_train_loader(0))
         try:
             return next(self._train_iterator)  # type: ignore[arg-type]
@@ -635,12 +635,11 @@ class _TorchPinnedRuntime:
             worker_init_fn=_seed_data_worker,
         )
 
-    def _apply_adaptive_resize_state(self, epoch: int) -> None:
-        if not isinstance(epoch, int) or isinstance(epoch, bool) or epoch < 0:
-            raise ValueError("adaptive resize epoch must be a non-negative integer")
-        # Upstream uses zero-based epochs and disables AI_resize after index 5,
-        # so one-based epoch 6 is the last epoch trained with it enabled.
-        self._train_dataset.AI_resize = epoch <= 6
+    def _enforce_pinned_resize_state(self) -> None:
+        # Pinned QNRF inherits NWPU's False default. The upstream loop only
+        # reasserts False; enabling the unpopulated resize-memory path is not
+        # part of this approved training lane.
+        self._train_dataset.AI_resize = False
 
     def _prepared_batch(self, batch: object) -> tuple[object, list[object]]:
         images, labels, _size, _names = batch  # type: ignore[misc]
@@ -836,7 +835,7 @@ class _TorchPinnedRuntime:
         gradients: list[float] = []
         rates: list[float] = []
         self._current_sample_tokens = []
-        self._apply_adaptive_resize_state(epoch)
+        self._enforce_pinned_resize_state()
         self._train_iterator = iter(self._make_train_loader(epoch))
         try:
             for _ in range(self._updates_per_epoch):
@@ -1090,12 +1089,20 @@ def _write_environment(
             "required_relative_count_difference_below": 1.0e-3,
         },
     }
+    encoded = (
+        json.dumps(payload, indent=2, sort_keys=True, allow_nan=False) + "\n"
+    ).encode("utf-8")
+    digest = hashlib.sha256(encoded).hexdigest()
+    evidence_path = engine.environment_path.parent / f"environment.{digest}.json"
+    _atomic_json(evidence_path, payload)
+    if sha256_file(evidence_path) != digest:
+        raise RuntimeError("content-addressed environment evidence hash mismatch")
     _atomic_json(
         engine.environment_path,
         payload,
         replace_existing=replace_existing,
     )
-    return sha256_file(engine.environment_path)
+    return digest
 
 
 def _checkpoint_components(engine: TrainingEngine) -> dict[str, Mapping[str, object]]:
@@ -1237,9 +1244,12 @@ def _restore_resume(
     path, expected_sha256, environment_manifest_sha256 = _resume_manifest_hash(
         engine, run_id=run_id, resume=resume
     )
-    environment_path = engine.environment_path
+    environment_path = (
+        engine.environment_path.parent
+        / f"environment.{environment_manifest_sha256}.json"
+    )
     if not environment_path.is_file() or environment_path.is_symlink():
-        raise ValueError("existing environment evidence is required for resume")
+        raise ValueError("immutable environment evidence is required for resume")
     if sha256_file(environment_path) != environment_manifest_sha256:
         raise ValueError("environment evidence SHA-256 mismatch")
     expectations = ResumeExpectations(
