@@ -17,8 +17,27 @@ _SUCCESS_SCOPE = "PASS_COMMERCIAL_CANDIDATE"
 
 @dataclass(frozen=True)
 class ArtifactReference:
+    filename: str
     source_url: str
+    provenance_url: str
     sha256: str
+    byte_size: int
+
+
+_PINNED_IMAGENET_BACKBONE = ArtifactReference(
+    filename="hrnetv2_w48_imagenet_pretrained.pth",
+    source_url=(
+        "https://github.com/hsfzxjy/models.storage/releases/download/"
+        "openseg-pytorch-pretrained/hrnetv2_w48_imagenet_pretrained.pth"
+    ),
+    provenance_url=(
+        "https://onedrive.live.com/?action=locate&authkey=%21AKvqI6pBZlifgJk&"
+        "cid=F7FD0B7F26543CEB&id=F7FD0B7F26543CEB%21116&"
+        "parId=F7FD0B7F26543CEB%21105"
+    ),
+    sha256="0efec102d97f2ef58f0e258b2c3076b3704b93ffc2b73f64c8da5462c0037ef8",
+    byte_size=310643500,
+)
 
 
 @dataclass(frozen=True)
@@ -31,6 +50,7 @@ class SteererTrainingProfile:
     initialization: str
     sealed_test_access: bool
     success_scope: str
+    imagenet_backbone: ArtifactReference
     processed_root: Path
     checkpoint_root: Path
     result_root: Path
@@ -84,9 +104,29 @@ def validate_initialization(
     *, backbone: ArtifactReference, model_checkpoint: Path | None
 ) -> None:
     if model_checkpoint is not None:
-        raise PermissionError("official STEERER checkpoint loading is forbidden")
-    if not backbone.source_url.startswith("https://") or not is_sha256(backbone.sha256):
+        raise PermissionError("model checkpoint loading is forbidden")
+    if backbone != _PINNED_IMAGENET_BACKBONE:
+        raise PermissionError("ImageNet backbone must match the pinned artifact")
+
+
+def _artifact_reference(payload: Any) -> ArtifactReference:
+    artifact = _mapping(
+        payload,
+        name="imagenet_backbone",
+        keys={"filename", "source_url", "provenance_url", "sha256", "byte_size"},
+    )
+    reference = ArtifactReference(
+        filename=_string(artifact["filename"], name="imagenet_backbone.filename"),
+        source_url=_string(artifact["source_url"], name="imagenet_backbone.source_url"),
+        provenance_url=_string(
+            artifact["provenance_url"], name="imagenet_backbone.provenance_url"
+        ),
+        sha256=_string(artifact["sha256"], name="imagenet_backbone.sha256"),
+        byte_size=_integer(artifact["byte_size"], name="imagenet_backbone.byte_size"),
+    )
+    if not reference.source_url.startswith("https://") or not is_sha256(reference.sha256):
         raise PermissionError("ImageNet backbone source URL and SHA-256 are required")
+    return reference
 
 
 def validate_training_profile(payload: Any) -> SteererTrainingProfile:
@@ -94,7 +134,7 @@ def validate_training_profile(payload: Any) -> SteererTrainingProfile:
         payload,
         name="training profile",
         keys={
-            "schema_version", "run_family", "runtime_backend", "model_upstream",
+            "schema_version", "run_family", "runtime_backend", "model_upstream", "imagenet_backbone",
             "dataset_id", "dataset_population", "split", "initialization", "training",
             "stage_epochs", "storage", "rights",
         },
@@ -114,10 +154,10 @@ def validate_training_profile(payload: Any) -> SteererTrainingProfile:
     license_sha256 = _string(upstream["license_sha256"], name="model_upstream.license_sha256")
     if commit != _MODEL_COMMIT:
         raise ValueError("model_upstream.commit is not approved")
-    validate_initialization(
-        backbone=ArtifactReference(source_url=source_url, sha256=license_sha256),
-        model_checkpoint=None,
-    )
+    if not source_url.startswith("https://") or not is_sha256(license_sha256):
+        raise ValueError("model_upstream URL and license SHA-256 are required")
+
+    backbone = _artifact_reference(root["imagenet_backbone"])
 
     population = _integer(root["dataset_population"], name="dataset_population")
     if population != 1201:
@@ -138,7 +178,7 @@ def validate_training_profile(payload: Any) -> SteererTrainingProfile:
     if checkpoint is not None and not isinstance(checkpoint, str):
         raise ValueError("initialization.model_checkpoint must be null or a path")
     validate_initialization(
-        backbone=ArtifactReference(source_url=source_url, sha256=license_sha256),
+        backbone=backbone,
         model_checkpoint=Path(checkpoint) if checkpoint is not None else None,
     )
 
@@ -173,6 +213,7 @@ def validate_training_profile(payload: Any) -> SteererTrainingProfile:
         initialization=initialization_mode,
         sealed_test_access=sealed_test_access,
         success_scope=success_scope,
+        imagenet_backbone=backbone,
         processed_root=processed_root,
         checkpoint_root=checkpoint_root,
         result_root=result_root,

@@ -23,12 +23,26 @@ def test_profile_freezes_approved_training_contract() -> None:
     assert profile.initialization == "imagenet_backbone_only"
     assert profile.sealed_test_access is False
     assert profile.success_scope == "PASS_COMMERCIAL_CANDIDATE"
+    assert profile.imagenet_backbone.filename == "hrnetv2_w48_imagenet_pretrained.pth"
+    assert profile.imagenet_backbone.source_url == (
+        "https://github.com/hsfzxjy/models.storage/releases/download/"
+        "openseg-pytorch-pretrained/hrnetv2_w48_imagenet_pretrained.pth"
+    )
+    assert profile.imagenet_backbone.provenance_url == (
+        "https://onedrive.live.com/?action=locate&authkey=%21AKvqI6pBZlifgJk&"
+        "cid=F7FD0B7F26543CEB&id=F7FD0B7F26543CEB%21116&"
+        "parId=F7FD0B7F26543CEB%21105"
+    )
+    assert profile.imagenet_backbone.sha256 == (
+        "0efec102d97f2ef58f0e258b2c3076b3704b93ffc2b73f64c8da5462c0037ef8"
+    )
+    assert profile.imagenet_backbone.byte_size == 310643500
 
 
-def test_profile_rejects_official_steerer_checkpoint() -> None:
+def test_profile_rejects_model_checkpoint_loading() -> None:
     payload = json.loads(PROFILE.read_text())
     payload["initialization"]["model_checkpoint"] = "/weights/QNRF_mae_78.4.pth"
-    with pytest.raises(PermissionError, match="official STEERER checkpoint"):
+    with pytest.raises(PermissionError, match="model checkpoint loading is forbidden"):
         validate_training_profile(payload)
 
 
@@ -50,8 +64,33 @@ def test_profile_rejects_policy_boundary_mutations(mutation, message: str) -> No
         validate_training_profile(payload)
 
 
-def test_initialization_requires_https_source_and_sha256() -> None:
-    backbone = ArtifactReference(source_url="http://example.test/backbone", sha256="x" * 64)
+@pytest.mark.parametrize(
+    "backbone",
+    [
+        ArtifactReference(
+            filename="hrnetv2_w48_imagenet_pretrained.pth",
+            source_url="https://github.com/hsfzxjy/models.storage/releases/download/openseg-pytorch-pretrained/hrnetv2_w48_imagenet_pretrained.pth",
+            provenance_url="https://onedrive.live.com/?action=locate&authkey=%21AKvqI6pBZlifgJk&cid=F7FD0B7F26543CEB&id=F7FD0B7F26543CEB%21116&parId=F7FD0B7F26543CEB%21105",
+            sha256="invalid",
+            byte_size=310643500,
+        ),
+        ArtifactReference(
+            filename="hrnetv2_w48_imagenet_pretrained.pth",
+            source_url="https://example.test/hrnetv2_w48_imagenet_pretrained.pth",
+            provenance_url="https://onedrive.live.com/?action=locate&authkey=%21AKvqI6pBZlifgJk&cid=F7FD0B7F26543CEB&id=F7FD0B7F26543CEB%21116&parId=F7FD0B7F26543CEB%21105",
+            sha256="0efec102d97f2ef58f0e258b2c3076b3704b93ffc2b73f64c8da5462c0037ef8",
+            byte_size=310643500,
+        ),
+        ArtifactReference(
+            filename="hrnetv2_w48_imagenet_pretrained.pth",
+            source_url="https://github.com/hsfzxjy/models.storage/releases/download/openseg-pytorch-pretrained/hrnetv2_w48_imagenet_pretrained.pth",
+            provenance_url="https://onedrive.live.com/?action=locate&authkey=%21AKvqI6pBZlifgJk&cid=F7FD0B7F26543CEB&id=F7FD0B7F26543CEB%21116&parId=F7FD0B7F26543CEB%21105",
+            sha256="f" * 64,
+            byte_size=310643500,
+        ),
+    ],
+)
+def test_initialization_rejects_non_pinned_backbone(backbone: ArtifactReference) -> None:
 
     with pytest.raises(PermissionError, match="ImageNet backbone"):
         validate_initialization(backbone=backbone, model_checkpoint=None)
