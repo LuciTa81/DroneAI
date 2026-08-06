@@ -18,9 +18,11 @@ if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
 from droneai.steerer_training_gate import (
+    AuthoritativeTrainingEvidence,
+    AuthoritativeTrainingInputs,
     REQUIRED_ARTIFACTS,
     score_training_stage,
-    validate_training_evidence,
+    verify_authoritative_training_evidence,
     verify_referenced_artifacts,
 )
 
@@ -80,8 +82,11 @@ def _require_verified_artifacts(evidence: Any, *, stage: str) -> None:
         raise ValueError("; ".join(failures))
 
 
-def _bundle_payloads(evidence: Mapping[str, Any], *, stage: str) -> dict[str, str | bytes]:
-    report = score_training_stage(evidence, stage=stage)
+def _bundle_payloads(
+    authority: AuthoritativeTrainingEvidence, *, stage: str
+) -> dict[str, str | bytes]:
+    report = score_training_stage(authority, stage=stage)
+    evidence = authority.evidence
     provenance = evidence["provenance"]
     artifacts = evidence["artifacts"]
     assert isinstance(provenance, Mapping) and isinstance(artifacts, Mapping)
@@ -139,12 +144,16 @@ def _bundle_payloads(evidence: Mapping[str, Any], *, stage: str) -> dict[str, st
     }
 
 
-def write_stage_result(evidence: Any, *, stage: str, output_dir: str | Path) -> Path:
+def write_stage_result(
+    evidence: AuthoritativeTrainingEvidence, *, stage: str, output_dir: str | Path
+) -> Path:
     """Verify all input bytes before creating an empty result directory."""
 
-    validated = validate_training_evidence(evidence, stage=stage)
+    if not isinstance(evidence, AuthoritativeTrainingEvidence):
+        raise TypeError("verified AuthoritativeTrainingEvidence is required")
+    validated = evidence.evidence
     _require_verified_artifacts(validated, stage=stage)
-    payloads = _bundle_payloads(validated, stage=stage)
+    payloads = _bundle_payloads(evidence, stage=stage)
     if set(payloads) != _OUTPUT_NAMES:
         raise RuntimeError("stage bundle file set is incomplete")
     target = Path(output_dir)
@@ -166,8 +175,17 @@ def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Score existing STEERER validation evidence without training or Test access."
     )
-    parser.add_argument("--evidence", type=Path, required=True)
     parser.add_argument("--stage", choices=("T0", "T1", "T5", "T50"), required=True)
+    parser.add_argument("--run-id", required=True)
+    parser.add_argument("--profile", type=Path, required=True)
+    parser.add_argument("--project-repo", type=Path, required=True)
+    parser.add_argument("--upstream-dir", type=Path, required=True)
+    parser.add_argument("--processed-root", type=Path, required=True)
+    parser.add_argument("--backbone", type=Path, required=True)
+    parser.add_argument("--checkpoint", type=Path, required=True)
+    parser.add_argument("--checkpoint-manifest", type=Path, required=True)
+    parser.add_argument("--environment", type=Path, required=True)
+    parser.add_argument("--metrics", type=Path, required=True)
     parser.add_argument("--output-dir", type=Path, required=True)
     return parser
 
@@ -175,8 +193,22 @@ def _parser() -> argparse.ArgumentParser:
 def main(argv: Sequence[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     try:
-        evidence = load_strict_json(args.evidence)
-        write_stage_result(evidence, stage=args.stage, output_dir=args.output_dir)
+        authority = verify_authoritative_training_evidence(
+            AuthoritativeTrainingInputs(
+                stage=args.stage,
+                run_id=args.run_id,
+                profile_path=args.profile,
+                project_repo_root=args.project_repo,
+                upstream_dir=args.upstream_dir,
+                processed_root=args.processed_root,
+                backbone_path=args.backbone,
+                checkpoint_path=args.checkpoint,
+                checkpoint_manifest_path=args.checkpoint_manifest,
+                environment_path=args.environment,
+                metrics_path=args.metrics,
+            )
+        )
+        write_stage_result(authority, stage=args.stage, output_dir=args.output_dir)
     except (FileExistsError, FileNotFoundError, OSError, TypeError, ValueError) as error:
         print(json.dumps({"status": "gate_violation", "error": str(error)}), file=sys.stderr)
         return 2
