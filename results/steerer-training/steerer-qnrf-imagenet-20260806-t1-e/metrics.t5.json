@@ -1,0 +1,24 @@
+{
+  "metrics": {
+    "density_sum_count_difference": 2.1469400682387155e-05,
+    "fps": 4.603635447235531,
+    "game_l1": 429.1907472894039,
+    "localization_f1_16px": 0.5296287284538527,
+    "localization_precision_16px": 0.4489815963775542,
+    "localization_recall_16px": 0.6455913715262248,
+    "mae": 389.9947239130735,
+    "median_latency_ms": 217.21963249729015,
+    "p95_latency_ms": 242.90584321715863,
+    "peak_vram_mb": 5344.8837890625,
+    "quadrant_zone_mae": 107.29768682235097,
+    "reference_mape": 36.12697879824414,
+    "rmse": 1029.69494243286,
+    "signed_bias": -366.2884790986776,
+    "train_loss": 0.04743387916047747,
+    "training_window_improvement": 0.0004429865706091149,
+    "validation_loss": 0.021092448355193482
+  },
+  "run_id": "steerer-qnrf-imagenet-20260806-t1-e",
+  "schema_version": 1,
+  "stage": "T5"
+}

@@ -524,6 +524,22 @@ def test_authoritative_fixture_passes_only_after_recomputed_verification(
     assert score_training_stage(evidence, stage="T1").status == "PASS_COMMERCIAL_CANDIDATE"
 
 
+def test_stage_evidence_description_names_the_scored_stage(tmp_path: Path) -> None:
+    fixture = _authoritative_fixture(tmp_path, stage="T5")
+    evidence = verify_authoritative_training_evidence(
+        fixture.inputs,
+        _profile_override=fixture.profile,
+        torch_module=_FakeTorch(),
+    )
+
+    report = score_training_stage(evidence, stage="T5")
+    validation_check = next(
+        check for check in report.checks if check.check_id == "validation.stage_evidence"
+    )
+
+    assert validation_check.observed == "all 17 required T5 validation metrics recorded"
+
+
 def test_matching_self_declared_hash_cannot_replace_profile_backbone(
     tmp_path: Path,
 ) -> None:

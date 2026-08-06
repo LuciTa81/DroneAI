@@ -1009,7 +1009,7 @@ def score_training_stage(evidence: Any, *, stage: str) -> StageReport:
     validation_observed = (
         "T0 intentionally records only its one-update training loss"
         if stage == "T0"
-        else f"all {len(REQUIRED_T1_METRICS)} required T1 validation metrics recorded"
+        else f"all {len(_metric_names(stage))} required {stage} validation metrics recorded"
     )
 
     checks = (
