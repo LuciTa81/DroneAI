@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import pickle
 import random
+from dataclasses import replace
 from pathlib import Path
 
 import numpy as np
@@ -10,6 +11,7 @@ import pytest
 
 from droneai.steerer_training_checkpoint import (
     CHECKPOINT_PAYLOAD_KEYS,
+    ResumeExpectations,
     capture_rng_state,
     load_training_checkpoint,
     restore_rng_state,
@@ -84,6 +86,18 @@ def _state(*, epoch: int = 1, stage: str = "T1") -> dict[str, object]:
     }
 
 
+def _expectations(state: dict[str, object]) -> ResumeExpectations:
+    return ResumeExpectations(
+        run_id=str(state["run_id"]),
+        config_sha256=str(state["config_sha256"]),
+        split_sha256s=dict(state["split_sha256s"]),  # type: ignore[arg-type]
+        dataset_inventory_sha256=str(state["dataset_inventory_sha256"]),
+        backbone_sha256=str(state["backbone_sha256"]),
+        upstream_commit=str(state["upstream_commit"]),
+        environment_manifest_sha256=str(state["environment_manifest_sha256"]),
+    )
+
+
 def test_checkpoint_round_trip_restores_optimizer_scheduler_and_rng(tmp_path: Path) -> None:
     state = _state()
     saved = save_training_checkpoint(tmp_path / "last.pth", state, torch_module=_FakeTorch())
@@ -101,22 +115,67 @@ def test_checkpoint_round_trip_restores_optimizer_scheduler_and_rng(tmp_path: Pa
 
 
 def test_resume_rejects_hash_mismatch_and_wrong_lineage(tmp_path: Path) -> None:
-    checkpoint = save_training_checkpoint(
-        tmp_path / "last.pth", _state(), torch_module=_FakeTorch()
-    )
+    state = _state()
+    checkpoint = save_training_checkpoint(tmp_path / "last.pth", state, torch_module=_FakeTorch())
+    expectations = _expectations(state)
 
     with pytest.raises(ValueError, match="SHA-256"):
         verify_resume(
             checkpoint,
             expected_sha256="0" * 64,
-            expected_run_id="another-run",
+            expectations=expectations,
             torch_module=_FakeTorch(),
         )
     with pytest.raises(ValueError, match="lineage"):
         verify_resume(
             checkpoint,
             expected_sha256=checkpoint.sha256,
-            expected_run_id="another-run",
+            expectations=replace(expectations, run_id="another-run"),
+            torch_module=_FakeTorch(),
+        )
+
+
+def test_resume_accepts_exact_provenance_expectations(tmp_path: Path) -> None:
+    state = _state()
+    checkpoint = save_training_checkpoint(tmp_path / "last.pth", state, torch_module=_FakeTorch())
+
+    restored = verify_resume(
+        checkpoint,
+        expected_sha256=checkpoint.sha256,
+        expectations=_expectations(state),
+        torch_module=_FakeTorch(),
+    )
+
+    assert restored == state
+
+
+@pytest.mark.parametrize(
+    "field",
+    (
+        "config_sha256",
+        "split_sha256s",
+        "dataset_inventory_sha256",
+        "backbone_sha256",
+        "upstream_commit",
+        "environment_manifest_sha256",
+    ),
+)
+def test_resume_rejects_each_provenance_mismatch(tmp_path: Path, field: str) -> None:
+    state = _state()
+    checkpoint = save_training_checkpoint(tmp_path / "last.pth", state, torch_module=_FakeTorch())
+    changed = dict(state)
+    if field == "split_sha256s":
+        changed[field] = {"train": "9" * 64, "validation": "c" * 64}
+    elif field == "upstream_commit":
+        changed[field] = "1" * 40
+    else:
+        changed[field] = "9" * 64
+
+    with pytest.raises(ValueError, match=field):
+        verify_resume(
+            checkpoint,
+            expected_sha256=checkpoint.sha256,
+            expectations=_expectations(changed),
             torch_module=_FakeTorch(),
         )
 
@@ -176,6 +235,8 @@ def test_checkpoint_policy_writes_last_best_milestone_and_atomic_manifest(
     tmp_path: Path,
 ) -> None:
     state = _state(epoch=5, stage="T5")
+    state["best_mae"] = 13.0
+    state["best_rmse"] = 22.0
 
     result = save_checkpoint_with_policy(
         tmp_path,
@@ -194,3 +255,65 @@ def test_checkpoint_policy_writes_last_best_milestone_and_atomic_manifest(
     }
     assert all(entry["parent_checkpoint_sha256"] == "1" * 64 for entry in manifest["checkpoints"])
     assert all(entry["byte_count"] > 0 for entry in manifest["checkpoints"])
+
+
+def test_checkpoint_policy_rejects_foreign_manifest_before_overwriting_last(
+    tmp_path: Path,
+) -> None:
+    sentinel = b"preserve-existing-checkpoint"
+    last = tmp_path / "last.pth"
+    last.write_bytes(sentinel)
+    (tmp_path / "checkpoint-manifest.json").write_text(
+        json.dumps({"schema_version": 1, "run_id": "foreign-run", "checkpoints": []}),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="manifest lineage"):
+        save_checkpoint_with_policy(
+            tmp_path,
+            _state(epoch=2, stage="T5"),
+            current_mae=12.0,
+            current_rmse=20.0,
+            torch_module=_FakeTorch(),
+        )
+
+    assert last.read_bytes() == sentinel
+    assert not list(tmp_path.glob("*.tmp"))
+
+
+def test_checkpoint_policy_preserves_best_artifacts_and_manifest_entries_on_ties(
+    tmp_path: Path,
+) -> None:
+    first = _state(epoch=1, stage="T1")
+    first["best_mae"] = 13.0
+    first["best_rmse"] = 22.0
+    save_checkpoint_with_policy(
+        tmp_path,
+        first,
+        current_mae=12.5,
+        current_rmse=21.0,
+        torch_module=_FakeTorch(),
+    )
+    best_mae = (tmp_path / "best-mae.pth").read_bytes()
+    best_rmse = (tmp_path / "best-rmse.pth").read_bytes()
+    before = json.loads((tmp_path / "checkpoint-manifest.json").read_text(encoding="utf-8"))
+    before_best_entries = [
+        entry for entry in before["checkpoints"] if entry["filename"] in {"best-mae.pth", "best-rmse.pth"}
+    ]
+
+    result = save_checkpoint_with_policy(
+        tmp_path,
+        _state(epoch=2, stage="T5"),
+        current_mae=12.5,
+        current_rmse=21.0,
+        torch_module=_FakeTorch(),
+    )
+    after = json.loads(result.manifest_path.read_text(encoding="utf-8"))
+    after_best_entries = [
+        entry for entry in after["checkpoints"] if entry["filename"] in {"best-mae.pth", "best-rmse.pth"}
+    ]
+
+    assert set(result.artifacts) == {"last"}
+    assert (tmp_path / "best-mae.pth").read_bytes() == best_mae
+    assert (tmp_path / "best-rmse.pth").read_bytes() == best_rmse
+    assert after_best_entries == before_best_entries

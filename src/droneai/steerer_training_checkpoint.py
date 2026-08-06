@@ -9,6 +9,7 @@ import random
 import re
 from dataclasses import dataclass
 from pathlib import Path
+from types import MappingProxyType
 from typing import Any, Mapping
 
 import numpy as np
@@ -170,6 +171,54 @@ def _validate_checkpoint_payload(payload: Mapping[str, object]) -> dict[str, obj
     return state
 
 
+@dataclass(frozen=True)
+class ResumeExpectations:
+    """Immutable provenance that must match before a run may resume."""
+
+    run_id: str
+    config_sha256: str
+    split_sha256s: Mapping[str, str]
+    dataset_inventory_sha256: str
+    backbone_sha256: str
+    upstream_commit: str
+    environment_manifest_sha256: str
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.run_id, str) or not self.run_id:
+            raise ValueError("resume run ID is required")
+        for field in (
+            "config_sha256",
+            "dataset_inventory_sha256",
+            "backbone_sha256",
+            "environment_manifest_sha256",
+        ):
+            value = getattr(self, field)
+            if not is_sha256(value):
+                raise ValueError(f"resume {field} must be a SHA-256")
+            object.__setattr__(self, field, value.lower())
+        if not isinstance(self.upstream_commit, str) or re.fullmatch(
+            r"[0-9a-fA-F]{40}", self.upstream_commit
+        ) is None:
+            raise ValueError("resume upstream_commit must be a full Git commit")
+        object.__setattr__(self, "upstream_commit", self.upstream_commit.lower())
+        if (
+            not isinstance(self.split_sha256s, Mapping)
+            or not self.split_sha256s
+            or not all(
+                isinstance(name, str) and name and is_sha256(value)
+                for name, value in self.split_sha256s.items()
+            )
+        ):
+            raise ValueError("resume split_sha256s must be a non-empty hash mapping")
+        object.__setattr__(
+            self,
+            "split_sha256s",
+            MappingProxyType(
+                {name: value.lower() for name, value in self.split_sha256s.items()}
+            ),
+        )
+
+
 def _artifact(path: Path) -> CheckpointArtifact:
     if not path.is_file():
         raise FileNotFoundError(f"checkpoint missing: {path}")
@@ -244,23 +293,37 @@ def verify_resume(
     checkpoint: CheckpointArtifact | str | Path,
     *,
     expected_sha256: str,
-    expected_run_id: str,
+    expectations: ResumeExpectations,
     torch_module: Any | None = None,
 ) -> dict[str, object]:
     """Load only a hash-verified checkpoint from the expected run lineage."""
 
-    if not isinstance(expected_run_id, str) or not expected_run_id:
-        raise ValueError("expected resume lineage run ID is required")
+    if not isinstance(expectations, ResumeExpectations):
+        raise TypeError("complete ResumeExpectations are required for checkpoint resume")
     state = load_training_checkpoint(
         _checkpoint_path(checkpoint),
         expected_sha256=expected_sha256,
         torch_module=torch_module,
     )
-    if state["run_id"] != expected_run_id:
+    if state["run_id"] != expectations.run_id:
         raise ValueError(
             "checkpoint lineage mismatch: "
-            f"expected run ID {expected_run_id}, got {state['run_id']}"
+            f"expected run ID {expectations.run_id}, got {state['run_id']}"
         )
+    for field in (
+        "config_sha256",
+        "dataset_inventory_sha256",
+        "backbone_sha256",
+        "upstream_commit",
+        "environment_manifest_sha256",
+    ):
+        if state[field].lower() != getattr(expectations, field):
+            raise ValueError(f"checkpoint provenance mismatch: {field}")
+    observed_split_sha256s = {
+        name: value.lower() for name, value in state["split_sha256s"].items()
+    }
+    if observed_split_sha256s != dict(expectations.split_sha256s):
+        raise ValueError("checkpoint provenance mismatch: split_sha256s")
     return state
 
 
@@ -329,18 +392,20 @@ def save_checkpoint_with_policy(
             raise ValueError(f"{name} must be finite")
 
     directory = Path(checkpoint_dir)
+    manifest_path = directory / _MANIFEST_FILENAME
+    records = _load_manifest(manifest_path, run_id=str(validated["run_id"]))
     artifacts: dict[str, CheckpointArtifact] = {}
     artifacts["last"] = save_training_checkpoint(
         directory / "last.pth", validated, torch_module=torch_module
     )
     writes: list[tuple[str, CheckpointArtifact, str]] = [("last", artifacts["last"], "last")]
-    if current_mae <= float(validated["best_mae"]):
+    if current_mae < float(validated["best_mae"]):
         artifact = save_training_checkpoint(
             directory / "best-mae.pth", validated, torch_module=torch_module
         )
         artifacts["best-mae"] = artifact
         writes.append(("best-mae", artifact, "best_mae"))
-    if current_rmse <= float(validated["best_rmse"]):
+    if current_rmse < float(validated["best_rmse"]):
         artifact = save_training_checkpoint(
             directory / "best-rmse.pth", validated, torch_module=torch_module
         )
@@ -355,8 +420,6 @@ def save_checkpoint_with_policy(
         artifacts[key] = artifact
         writes.append((key, artifact, key))
 
-    manifest_path = directory / _MANIFEST_FILENAME
-    records = _load_manifest(manifest_path, run_id=str(validated["run_id"]))
     replacement_names = {artifact.path.name for _, artifact, _ in writes}
     records = [record for record in records if record.get("filename") not in replacement_names]
     records.extend(
@@ -385,6 +448,7 @@ __all__ = [
     "CHECKPOINT_SCHEMA_VERSION",
     "CheckpointArtifact",
     "CheckpointPolicyResult",
+    "ResumeExpectations",
     "atomic_torch_save",
     "capture_rng_state",
     "load_training_checkpoint",
