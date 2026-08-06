@@ -90,6 +90,7 @@ class EpochObservation:
     density_values: tuple[float, ...]
     gradient_norms: tuple[float, ...]
     learning_rates: tuple[float, ...]
+    sample_tokens: tuple[str, ...]
 
 
 @dataclass(frozen=True)
@@ -97,6 +98,7 @@ class ValidationObservation:
     sample_count: int
     loss: float
     counts: tuple[float, ...]
+    density_values: tuple[float, ...]
     mae: float
     rmse: float
 
@@ -106,6 +108,7 @@ class EpochRunResult:
     completed_epoch: int
     optimizer_steps: int
     learning_rates: tuple[float, ...]
+    sample_tokens: tuple[str, ...]
 
 
 @dataclass(frozen=True)
@@ -166,6 +169,20 @@ def _canonical_config_sha256(config: Mapping[str, object]) -> str:
         stable, sort_keys=True, separators=(",", ":"), default=str
     ).encode("utf-8")
     return hashlib.sha256(encoded).hexdigest()
+
+
+def _epoch_data_seed(seed: int, epoch: int) -> int:
+    if seed != _SEED or not isinstance(epoch, int) or isinstance(epoch, bool) or epoch < 0:
+        raise ValueError("epoch data seed requires seed 3035 and a non-negative epoch")
+    return (seed * 1_000_003 + epoch) % (2**63 - 1)
+
+
+def _seed_data_worker(_worker_id: int) -> None:
+    import torch
+
+    worker_seed = int(torch.initial_seed() % (2**32))
+    random.seed(worker_seed)
+    np.random.seed(worker_seed)
 
 
 def _record_resize_memory(
@@ -393,6 +410,9 @@ class PinnedUpstreamTrainingEngine:
         getattr(self._require_runtime(), "restore_checkpoint_state")(state)
         self.global_step = int(getattr(self._runtime, "global_step"))
 
+    def probe_snapshot(self) -> dict[str, object]:
+        return getattr(self._require_runtime(), "probe_snapshot")()
+
     def set_progress(self, *, completed_epoch: int, global_step: int) -> None:
         self.completed_epoch = completed_epoch
         self.global_step = global_step
@@ -450,6 +470,7 @@ class _TorchPinnedRuntime:
         self._scaler: object | None = None
         self._scaler_enabled: bool | None = None
         self.set_seed(seed)
+        self._seed = seed
 
         with self._scope(self._upstream_dir):
             try:
@@ -517,16 +538,8 @@ class _TorchPinnedRuntime:
                 downsample_rate=1,
             )
             workers = int(config_object.workers)
-            self._train_loader = torch.utils.data.DataLoader(
-                self._train_dataset,
-                batch_size=physical_batch,
-                shuffle=True,
-                num_workers=workers,
-                pin_memory=True,
-                drop_last=True,
-                persistent_workers=workers > 0,
-                collate_fn=default_collate,
-            )
+            self._workers = workers
+            self._collate_fn = default_collate
             self._probe_loader = torch.utils.data.DataLoader(
                 self._train_dataset,
                 batch_size=physical_batch,
@@ -544,7 +557,7 @@ class _TorchPinnedRuntime:
                 pin_memory=True,
                 collate_fn=default_collate,
             )
-            physical_iterations = len(self._train_loader)
+            physical_iterations = len(self._train_dataset) // physical_batch
             if physical_iterations == 0 or physical_iterations % accumulation_steps:
                 raise ValueError(
                     "training batches must divide exactly into approved accumulation steps"
@@ -561,6 +574,7 @@ class _TorchPinnedRuntime:
             self._route_size = tuple(int(value) for value in config_object.train.route_size)
         self._train_iterator: object | None = None
         self._probe_batch: object | None = None
+        self._current_sample_tokens: list[str] = []
 
     def _official_scope(self):
         return self._scope(self._upstream_dir)
@@ -581,12 +595,28 @@ class _TorchPinnedRuntime:
 
     def _next_train_batch(self) -> object:
         if self._train_iterator is None:
-            self._train_iterator = iter(self._train_loader)
+            self._train_iterator = iter(self._make_train_loader(0))
         try:
             return next(self._train_iterator)  # type: ignore[arg-type]
         except StopIteration:
-            self._train_iterator = iter(self._train_loader)
-            return next(self._train_iterator)  # type: ignore[arg-type]
+            raise RuntimeError("deterministic epoch loader ended before its update ceiling")
+
+    def _make_train_loader(self, epoch: int) -> object:
+        torch = self.torch_module
+        generator = torch.Generator()
+        generator.manual_seed(_epoch_data_seed(self._seed, epoch))
+        return torch.utils.data.DataLoader(
+            self._train_dataset,
+            batch_size=self._physical_batch,
+            shuffle=True,
+            num_workers=self._workers,
+            pin_memory=True,
+            drop_last=True,
+            persistent_workers=False,
+            collate_fn=self._collate_fn,
+            generator=generator,
+            worker_init_fn=_seed_data_worker,
+        )
 
     def _prepared_batch(self, batch: object) -> tuple[object, list[object]]:
         images, labels, _size, _names = batch  # type: ignore[misc]
@@ -610,6 +640,10 @@ class _TorchPinnedRuntime:
                 names=tuple(name_metadata[0]),
                 route_size=self._route_size,
             )
+            self._current_sample_tokens.extend(str(name) for name in name_metadata[0])
+            self._current_sample_tokens.append(
+                hashlib.sha256(repr(name_metadata[1:]).encode("utf-8")).hexdigest()
+            )
         images, labels = self._prepared_batch(batch)
         with self._official_scope(), self._autocast(amp_enabled):
             result = self._model(images, labels, "train")
@@ -631,15 +665,41 @@ class _TorchPinnedRuntime:
             self._probe_batch = next(iter(self._probe_loader))
         self._model.eval()
         self._optimizer.zero_grad(set_to_none=True)
-        loss, _densities = self._forward_training(self._probe_batch, amp_enabled=False)
-        loss.backward()
-        gradient_norm = self.torch_module.nn.utils.clip_grad_norm_(
-            self._model.parameters(), float("inf")
-        )
-        if not math.isfinite(float(gradient_norm.item())):
-            raise FloatingPointError("non-finite gradient norm detected")
-        self._optimizer.zero_grad(set_to_none=True)
-        self._model.train()
+        try:
+            loss, _densities = self._forward_training(
+                self._probe_batch, amp_enabled=False
+            )
+            scaler = self._ensure_scaler(False)
+            scaler.scale(loss).backward()
+            scaler.unscale_(self._optimizer)
+            gradient_norm = self.torch_module.nn.utils.clip_grad_norm_(
+                self._model.parameters(), float("inf")
+            )
+            if not math.isfinite(float(gradient_norm.item())):
+                raise FloatingPointError("non-finite gradient norm detected")
+            scaler.step(self._optimizer)
+            scaler.update()
+            self._scheduler.step_update(self.global_step)
+            self.global_step += 1
+        finally:
+            self._optimizer.zero_grad(set_to_none=True)
+            self._model.train()
+
+    def probe_snapshot(self) -> dict[str, object]:
+        def cpu_clone(value: object) -> object:
+            if isinstance(value, dict):
+                return {key: cpu_clone(item) for key, item in value.items()}
+            if isinstance(value, list):
+                return [cpu_clone(item) for item in value]
+            if isinstance(value, tuple):
+                return tuple(cpu_clone(item) for item in value)
+            detach = getattr(value, "detach", None)
+            if callable(detach):
+                cloned = detach().cpu().clone()
+                return cloned
+            return copy.deepcopy(value)
+
+        return cpu_clone(self.checkpoint_state())  # type: ignore[return-value]
 
     def compare_amp_to_fp32(self) -> AmpComparison:
         if self._probe_batch is None:
@@ -720,12 +780,17 @@ class _TorchPinnedRuntime:
         densities: list[float] = []
         gradients: list[float] = []
         rates: list[float] = []
-        for _ in range(self._updates_per_epoch):
-            observation = self.run_update(amp_enabled=amp_enabled)
-            losses.append(observation.loss)
-            densities.extend(observation.density_values)
-            gradients.append(observation.gradient_norm)
-            rates.append(observation.learning_rate)
+        self._current_sample_tokens = []
+        self._train_iterator = iter(self._make_train_loader(epoch))
+        try:
+            for _ in range(self._updates_per_epoch):
+                observation = self.run_update(amp_enabled=amp_enabled)
+                losses.append(observation.loss)
+                densities.extend(observation.density_values)
+                gradients.append(observation.gradient_norm)
+                rates.append(observation.learning_rate)
+        finally:
+            self._train_iterator = None
         if epoch > 5:
             self._train_dataset.AI_resize = False
         return EpochObservation(
@@ -735,6 +800,7 @@ class _TorchPinnedRuntime:
             density_values=tuple(densities),
             gradient_norms=tuple(gradients),
             learning_rates=tuple(rates),
+            sample_tokens=tuple(self._current_sample_tokens),
         )
 
     def validate(self) -> ValidationObservation:
@@ -743,6 +809,7 @@ class _TorchPinnedRuntime:
         losses: list[float] = []
         errors: list[float] = []
         counts: list[float] = []
+        density_values: list[float] = []
         with torch.no_grad(), self._official_scope():
             for batch in self._validation_loader:
                 images, labels = self._prepared_batch(batch)
@@ -756,6 +823,20 @@ class _TorchPinnedRuntime:
                 loss = result["losses"].mean()
                 predicted = result["pre_den"]["1"].sum()
                 target = labels[0].sum()
+                for group_name in ("pre_den", "gt_den"):
+                    group = result.get(group_name)
+                    if not isinstance(group, Mapping) or not group:
+                        raise ValueError(
+                            f"validation result {group_name} must be a density mapping"
+                        )
+                    for tensor in group.values():
+                        if not bool(torch.isfinite(tensor).all().item()):
+                            raise FloatingPointError(
+                                "non-finite validation density tensor detected"
+                            )
+                        density_values.append(
+                            float(tensor.detach().float().sum().item())
+                        )
                 for name, tensor in (
                     ("validation loss", loss),
                     ("validation count", predicted),
@@ -774,6 +855,7 @@ class _TorchPinnedRuntime:
             sample_count=len(counts),
             loss=float(sum(losses) / len(losses)),
             counts=tuple(counts),
+            density_values=tuple(density_values),
             mae=float(sum(abs(error) for error in errors) / len(errors)),
             rmse=float(math.sqrt(sum(error * error for error in errors) / len(errors))),
         )
@@ -838,6 +920,7 @@ def _validate_validation(observation: ValidationObservation) -> None:
         raise ValueError("validation sample count cannot be negative")
     _finite_values((observation.loss,), name="validation loss")
     _finite_values(observation.counts, name="validation count")
+    _finite_values(observation.density_values, name="validation density tensor")
     _finite_values((observation.mae, observation.rmse), name="validation metric")
 
 
@@ -845,7 +928,38 @@ def _is_cuda_oom(error: BaseException) -> bool:
     return isinstance(error, RuntimeError) and "CUDA out of memory" in str(error)
 
 
-def _atomic_json(path: Path, payload: Mapping[str, object]) -> None:
+def _probe_batch_without_update(engine: TrainingEngine) -> None:
+    snapshot_factory = getattr(engine, "probe_snapshot", None)
+    state = (
+        snapshot_factory()
+        if callable(snapshot_factory)
+        else copy.deepcopy(engine.checkpoint_state())
+    )
+    if not isinstance(state, dict):
+        raise TypeError("training probe snapshot must be a checkpoint state mapping")
+    torch_module = getattr(engine, "torch_module", None)
+    rng = capture_rng_state(_SEED, torch_module=torch_module)
+    completed_epoch = int(engine.completed_epoch)
+    global_step = int(engine.global_step)
+    try:
+        engine.probe_batch()
+    finally:
+        engine.restore_checkpoint_state(state)
+        restore_rng_state(rng, torch_module=torch_module)
+        set_progress = getattr(engine, "set_progress", None)
+        if callable(set_progress):
+            set_progress(
+                completed_epoch=completed_epoch,
+                global_step=global_step,
+            )
+        else:
+            engine.completed_epoch = completed_epoch
+            engine.global_step = global_step
+
+
+def _atomic_json(
+    path: Path, payload: Mapping[str, object], *, replace_existing: bool = False
+) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     if path.is_symlink():
         raise ValueError("environment manifest cannot be a symlink")
@@ -854,8 +968,10 @@ def _atomic_json(path: Path, payload: Mapping[str, object]) -> None:
     ).encode("utf-8")
     if path.exists():
         if path.read_bytes() != encoded:
-            raise ValueError("existing environment manifest differs from current run")
-        return
+            if not replace_existing:
+                raise ValueError("existing environment manifest differs from current run")
+        else:
+            return
     temporary = path.with_suffix(path.suffix + ".tmp")
     try:
         with temporary.open("xb") as stream:
@@ -877,6 +993,7 @@ def _write_environment(
     accumulation_steps: int,
     oom_evidence: str | None,
     amp_comparison: AmpComparison,
+    replace_existing: bool = False,
 ) -> str:
     def finite_or_none(value: float) -> float | None:
         return float(value) if math.isfinite(value) else None
@@ -904,7 +1021,11 @@ def _write_environment(
             "required_relative_count_difference_below": 1.0e-3,
         },
     }
-    _atomic_json(engine.environment_path, payload)
+    _atomic_json(
+        engine.environment_path,
+        payload,
+        replace_existing=replace_existing,
+    )
     return sha256_file(engine.environment_path)
 
 
@@ -929,8 +1050,10 @@ def _persist_and_reload_checkpoint(
     rng_state: Mapping[str, object] | None = None,
 ) -> str:
     components = _checkpoint_components(engine)
-    best_mae = float(getattr(engine, "best_mae", 1.0e20))
-    best_rmse = float(getattr(engine, "best_rmse", 1.0e20))
+    previous_best_mae = float(getattr(engine, "best_mae", 1.0e20))
+    previous_best_rmse = float(getattr(engine, "best_rmse", 1.0e20))
+    best_mae = min(previous_best_mae, float(current_mae))
+    best_rmse = min(previous_best_rmse, float(current_rmse))
     torch_module = getattr(engine, "torch_module", None)
     payload: dict[str, object] = {
         "schema_version": CHECKPOINT_SCHEMA_VERSION,
@@ -958,6 +1081,8 @@ def _persist_and_reload_checkpoint(
         payload,
         current_mae=current_mae,
         current_rmse=current_rmse,
+        previous_best_mae=previous_best_mae,
+        previous_best_rmse=previous_best_rmse,
         parent_checkpoint_sha256=parent_checkpoint_sha256,
         torch_module=torch_module,
     )
@@ -980,12 +1105,16 @@ def _persist_and_reload_checkpoint(
     engine.restore_checkpoint_state(
         {key: restored[key] for key in ("model", "optimizer", "scheduler", "scaler")}
     )
+    if hasattr(engine, "best_mae"):
+        engine.best_mae = best_mae  # type: ignore[attr-defined]
+    if hasattr(engine, "best_rmse"):
+        engine.best_rmse = best_rmse  # type: ignore[attr-defined]
     return last.sha256
 
 
 def _resume_manifest_hash(
     engine: TrainingEngine, *, run_id: str, resume: Path
-) -> tuple[Path, str]:
+) -> tuple[Path, str, str]:
     checkpoint_dir = engine.checkpoint_dir.resolve(strict=False)
     supplied = Path(resume)
     if supplied.is_symlink():
@@ -1016,9 +1145,17 @@ def _resume_manifest_hash(
         for entry in manifest["checkpoints"]
         if isinstance(entry, dict) and entry.get("filename") == resolved.name
     ]
-    if len(matches) != 1 or not is_sha256(matches[0].get("sha256")):
+    if (
+        len(matches) != 1
+        or not is_sha256(matches[0].get("sha256"))
+        or not is_sha256(matches[0].get("environment_manifest_sha256"))
+    ):
         raise ValueError("resume checkpoint is not uniquely verified by the manifest")
-    return resolved, str(matches[0]["sha256"]).lower()
+    return (
+        resolved,
+        str(matches[0]["sha256"]).lower(),
+        str(matches[0]["environment_manifest_sha256"]).lower(),
+    )
 
 
 def _restore_resume(
@@ -1027,9 +1164,8 @@ def _restore_resume(
     stage: Stage,
     run_id: str,
     resume: Path,
-    environment_manifest_sha256: str,
 ) -> str:
-    path, expected_sha256 = _resume_manifest_hash(
+    path, expected_sha256, environment_manifest_sha256 = _resume_manifest_hash(
         engine, run_id=run_id, resume=resume
     )
     expectations = ResumeExpectations(
@@ -1089,6 +1225,7 @@ def run_epochs(
         raise ValueError("epoch stops must be unique increasing ceilings through epoch 50")
     snapshot = engine.snapshot()
     rates: list[float] = []
+    sample_tokens: list[str] = []
     optimizer_steps = 0
     completed_epoch = 0
     try:
@@ -1096,6 +1233,8 @@ def run_epochs(
         engine.global_step = 0
         if hasattr(engine, "learning_rates"):
             engine.learning_rates = []  # type: ignore[attr-defined]
+        if hasattr(engine, "sample_tokens"):
+            engine.sample_tokens = []  # type: ignore[attr-defined]
         for stop in stops:
             for epoch in range(completed_epoch + 1, stop + 1):
                 observation = engine.run_epoch(epoch, amp_enabled=False)
@@ -1105,6 +1244,7 @@ def run_epochs(
                 completed_epoch = epoch
                 optimizer_steps += observation.optimizer_steps
                 rates.extend(observation.learning_rates)
+                sample_tokens.extend(observation.sample_tokens)
             if stop != stops[-1]:
                 state = copy.deepcopy(engine.checkpoint_state())
                 engine.restore_checkpoint_state(state)
@@ -1114,6 +1254,7 @@ def run_epochs(
         completed_epoch=completed_epoch,
         optimizer_steps=optimizer_steps,
         learning_rates=tuple(rates),
+        sample_tokens=tuple(sample_tokens),
     )
 
 
@@ -1153,7 +1294,7 @@ def run_training_stage(
     physical_batch, accumulation_steps = 8, 1
     oom_evidence: str | None = None
     try:
-        engine.probe_batch()
+        _probe_batch_without_update(engine)
     except BaseException as error:
         if not _is_cuda_oom(error):
             raise
@@ -1161,7 +1302,15 @@ def run_training_stage(
         engine.empty_cuda_cache()
         physical_batch, accumulation_steps = 4, 2
         engine.configure_batch(physical_batch, accumulation_steps)
-        engine.probe_batch()
+        _probe_batch_without_update(engine)
+    parent_checkpoint_sha256: str | None = None
+    if resume is not None:
+        parent_checkpoint_sha256 = _restore_resume(
+            engine,
+            stage=stage,
+            run_id=run_id,
+            resume=resume,
+        )
     amp_comparison = engine.compare_amp_to_fp32()
     _finite_values((amp_comparison.fp32_loss,), name="FP32 comparison loss")
     _finite_values((amp_comparison.fp32_count,), name="FP32 comparison count")
@@ -1174,16 +1323,8 @@ def run_training_stage(
         accumulation_steps=accumulation_steps,
         oom_evidence=oom_evidence,
         amp_comparison=amp_comparison,
+        replace_existing=resume is not None,
     )
-    parent_checkpoint_sha256: str | None = None
-    if resume is not None:
-        parent_checkpoint_sha256 = _restore_resume(
-            engine,
-            stage=stage,
-            run_id=run_id,
-            resume=resume,
-            environment_manifest_sha256=environment_manifest_sha256,
-        )
 
     optimizer_steps = 0
     validation_samples = 0

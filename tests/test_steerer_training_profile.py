@@ -109,3 +109,26 @@ def test_initialization_rejects_non_pinned_backbone(backbone: ArtifactReference)
 
     with pytest.raises(PermissionError, match="ImageNet backbone"):
         validate_initialization(backbone=backbone, model_checkpoint=None)
+
+
+@pytest.mark.parametrize(
+    ("field", "alternative"),
+    [
+        (
+            "processed_root",
+            "/workspace/data/datasets/ucf-qnrf-kaggle-apache/Test/processed/steerer-training-v1",
+        ),
+        ("checkpoint_root", "/workspace/data/checkpoints/alternative-steerer"),
+        ("result_root", "/workspace/data/results/alternative-steerer"),
+    ],
+)
+def test_profile_rejects_alternative_storage_roots_under_workspace_data(
+    field: str, alternative: str
+) -> None:
+    """Containment under /workspace/data must not replace exact storage authority."""
+
+    payload = json.loads(PROFILE.read_text(encoding="utf-8"))
+    payload["storage"][field] = alternative
+
+    with pytest.raises(ValueError, match="storage|approved|root"):
+        validate_training_profile(payload)

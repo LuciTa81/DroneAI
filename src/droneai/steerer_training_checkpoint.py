@@ -361,7 +361,12 @@ def _load_manifest(path: Path, *, run_id: str) -> list[dict[str, object]]:
 
 
 def _manifest_entry(
-    artifact: CheckpointArtifact, *, epoch: int, reason: str, parent_checkpoint_sha256: str | None
+    artifact: CheckpointArtifact,
+    *,
+    epoch: int,
+    reason: str,
+    parent_checkpoint_sha256: str | None,
+    environment_manifest_sha256: str,
 ) -> dict[str, object]:
     return {
         "filename": artifact.path.name,
@@ -370,6 +375,7 @@ def _manifest_entry(
         "epoch": epoch,
         "metric_reason": reason,
         "parent_checkpoint_sha256": parent_checkpoint_sha256,
+        "environment_manifest_sha256": environment_manifest_sha256,
     }
 
 
@@ -379,6 +385,8 @@ def save_checkpoint_with_policy(
     *,
     current_mae: float,
     current_rmse: float,
+    previous_best_mae: float | None = None,
+    previous_best_rmse: float | None = None,
     parent_checkpoint_sha256: str | None = None,
     torch_module: Any | None = None,
 ) -> CheckpointPolicyResult:
@@ -390,6 +398,30 @@ def save_checkpoint_with_policy(
     for name, value in (("current MAE", current_mae), ("current RMSE", current_rmse)):
         if not isinstance(value, (int, float)) or isinstance(value, bool) or not math.isfinite(value):
             raise ValueError(f"{name} must be finite")
+    previous_mae = (
+        float(validated["best_mae"])
+        if previous_best_mae is None
+        else previous_best_mae
+    )
+    previous_rmse = (
+        float(validated["best_rmse"])
+        if previous_best_rmse is None
+        else previous_best_rmse
+    )
+    for name, value in (
+        ("previous best MAE", previous_mae),
+        ("previous best RMSE", previous_rmse),
+    ):
+        if not isinstance(value, (int, float)) or isinstance(value, bool) or not math.isfinite(value):
+            raise ValueError(f"{name} must be finite")
+    if previous_best_mae is not None and float(validated["best_mae"]) != min(
+        float(previous_mae), float(current_mae)
+    ):
+        raise ValueError("checkpoint best_mae must contain the updated best metric")
+    if previous_best_rmse is not None and float(validated["best_rmse"]) != min(
+        float(previous_rmse), float(current_rmse)
+    ):
+        raise ValueError("checkpoint best_rmse must contain the updated best metric")
 
     directory = Path(checkpoint_dir)
     manifest_path = directory / _MANIFEST_FILENAME
@@ -399,13 +431,13 @@ def save_checkpoint_with_policy(
         directory / "last.pth", validated, torch_module=torch_module
     )
     writes: list[tuple[str, CheckpointArtifact, str]] = [("last", artifacts["last"], "last")]
-    if current_mae < float(validated["best_mae"]):
+    if current_mae < float(previous_mae):
         artifact = save_training_checkpoint(
             directory / "best-mae.pth", validated, torch_module=torch_module
         )
         artifacts["best-mae"] = artifact
         writes.append(("best-mae", artifact, "best_mae"))
-    if current_rmse < float(validated["best_rmse"]):
+    if current_rmse < float(previous_rmse):
         artifact = save_training_checkpoint(
             directory / "best-rmse.pth", validated, torch_module=torch_module
         )
@@ -428,6 +460,7 @@ def save_checkpoint_with_policy(
             epoch=int(validated["epoch"]),
             reason=reason,
             parent_checkpoint_sha256=parent_checkpoint_sha256,
+            environment_manifest_sha256=str(validated["environment_manifest_sha256"]),
         )
         for _, artifact, reason in writes
     )

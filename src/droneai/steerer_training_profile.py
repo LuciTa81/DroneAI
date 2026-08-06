@@ -11,6 +11,11 @@ from droneai.integrity import is_sha256
 
 
 _STORAGE_ROOT = PurePosixPath("/workspace/data")
+_PROCESSED_ROOT = Path(
+    "/workspace/data/datasets/ucf-qnrf-kaggle-apache/processed/steerer-training-v1"
+)
+_CHECKPOINT_ROOT = Path("/workspace/data/checkpoints/steerer-ucf-training")
+_RESULT_ROOT = Path("/workspace/data/results/steerer-ucf-training")
 _MODEL_URL = "https://github.com/taohan10200/STEERER.git"
 _MODEL_COMMIT = "5b1854dbc2d280f2326d67c65515d8baf9083810"
 _MODEL_LICENSE_SHA256 = "5c3649a9ac14d2839d2580710c10bdbc9c70cb6a79c07c06a3858952223b6733"
@@ -227,6 +232,12 @@ def validate_training_profile(payload: Any) -> SteererTrainingProfile:
     processed_root = _storage_path(storage["processed_root"], name="storage.processed_root")
     checkpoint_root = _storage_path(storage["checkpoint_root"], name="storage.checkpoint_root")
     result_root = _storage_path(storage["result_root"], name="storage.result_root")
+    if (processed_root, checkpoint_root, result_root) != (
+        _PROCESSED_ROOT,
+        _CHECKPOINT_ROOT,
+        _RESULT_ROOT,
+    ):
+        raise ValueError("storage roots do not match the approved training lane")
 
     rights = _mapping(root["rights"], name="rights", keys={"success_scope", "production_approved", "sealed_test_access"})
     success_scope = _string(rights["success_scope"], name="rights.success_scope")

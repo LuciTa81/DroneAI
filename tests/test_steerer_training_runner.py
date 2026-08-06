@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import replace
 import json
 import pickle
+import random
 from pathlib import Path
 
 import numpy as np
@@ -17,6 +18,7 @@ from droneai.steerer_training_runner import (
     TrainingLineage,
     PinnedUpstreamTrainingEngine,
     _record_resize_memory,
+    _epoch_data_seed,
     UpdateObservation,
     ValidationObservation,
     run_epochs,
@@ -35,9 +37,15 @@ class FakeTrainingEngine:
         self.validation_count = 240
         self.validation_loss = 0.75
         self.validation_counts = (10.0, 12.0)
+        self.validation_pre_den = {"1": 10.0, "2": 5.0, "4": 2.5, "8": 1.25}
+        self.validation_gt_den = {"1": 12.0, "2": 6.0, "4": 3.0, "8": 1.5}
+        self.validation_mae = 2.0
+        self.validation_rmse = 2.0
         self.completed_epoch = 0
         self.global_step = 0
+        self.model_weight = 0
         self.learning_rates: list[float] = []
+        self.sample_tokens: list[str] = []
         self.batch_plans: list[tuple[int, int]] = []
         self.checkpoint_dir = tmp_path / "checkpoints" / "run-3035"
         self.environment_path = tmp_path / "results" / "run-3035" / "environment.json"
@@ -50,6 +58,8 @@ class FakeTrainingEngine:
         )
         self.seed = None
         self.oom_on_batch8 = False
+        self.oom_on_optimizer_step_batch8 = False
+        self.probe_optimizer_steps = 0
         self.probe_error: Exception | None = None
         self.empty_cache_calls = 0
         self.amp_flags: list[bool] = []
@@ -59,6 +69,8 @@ class FakeTrainingEngine:
             fp32_count=100.0,
             amp_count=100.05,
         )
+        self.resumed_amp_comparison: AmpComparison | None = None
+        self.amp_compare_model_weights: list[int] = []
         self.torch_module = _FakeTorch()
         self.best_mae = 1.0e20
         self.best_rmse = 1.0e20
@@ -75,17 +87,29 @@ class FakeTrainingEngine:
             raise self.probe_error
         if self.oom_on_batch8 and self.batch_plans[-1] == (8, 1):
             raise RuntimeError("CUDA out of memory while probing batch 8")
+        self.probe_optimizer_steps += 1
+        self.global_step += 1
+        self.model_weight += 1
+        if (
+            self.oom_on_optimizer_step_batch8
+            and self.batch_plans[-1] == (8, 1)
+        ):
+            raise RuntimeError("CUDA out of memory allocating AdamW state")
         return None
 
     def empty_cuda_cache(self) -> None:
         self.empty_cache_calls += 1
 
     def compare_amp_to_fp32(self) -> AmpComparison:
+        self.amp_compare_model_weights.append(self.model_weight)
+        if self.model_weight > 0 and self.resumed_amp_comparison is not None:
+            return self.resumed_amp_comparison
         return self.amp_comparison
 
     def run_update(self, *, amp_enabled: bool) -> UpdateObservation:
         self.amp_flags.append(amp_enabled)
         self.global_step += 1
+        self.model_weight += 1
         lr = self._lr(self.global_step)
         self.learning_rates.append(lr)
         return UpdateObservation(
@@ -102,6 +126,13 @@ class FakeTrainingEngine:
             observation = self.run_update(amp_enabled=False)
             rates.append(observation.learning_rate)
         self.completed_epoch = epoch
+        epoch_rng = random.Random(_epoch_data_seed(3035, epoch))
+        samples = [f"sample-{index}" for index in range(6)]
+        epoch_rng.shuffle(samples)
+        tokens = tuple(
+            f"{epoch}:{sample}:aug-{epoch_rng.randrange(1000)}" for sample in samples
+        )
+        self.sample_tokens.extend(tokens)
         return EpochObservation(
             epoch=epoch,
             optimizer_steps=2,
@@ -109,6 +140,7 @@ class FakeTrainingEngine:
             density_values=self.density_values,
             gradient_norms=(self.gradient_norm, self.gradient_norm),
             learning_rates=tuple(rates),
+            sample_tokens=tokens,
         )
 
     def validate(self) -> ValidationObservation:
@@ -118,13 +150,15 @@ class FakeTrainingEngine:
             sample_count=self.validation_count,
             loss=self.validation_loss,
             counts=self.validation_counts,
-            mae=2.0,
-            rmse=2.0,
+            mae=self.validation_mae,
+            rmse=self.validation_rmse,
+            density_values=tuple(self.validation_pre_den.values())
+            + tuple(self.validation_gt_den.values()),
         )
 
     def checkpoint_state(self) -> dict[str, object]:
         return {
-            "model": {"weight": self.global_step},
+            "model": {"weight": self.model_weight},
             "optimizer": {"step": self.global_step},
             "scheduler": {"global_step": self.global_step, "horizon": 800},
             "scaler": {"enabled": True},
@@ -135,14 +169,33 @@ class FakeTrainingEngine:
         scheduler = state["scheduler"]
         assert isinstance(optimizer, dict) and isinstance(scheduler, dict)
         self.global_step = int(optimizer["step"])
+        model = state["model"]
+        assert isinstance(model, dict)
+        self.model_weight = int(model["weight"])
         assert scheduler["horizon"] == 800
 
-    def snapshot(self) -> tuple[int, int, tuple[float, ...]]:
-        return self.completed_epoch, self.global_step, tuple(self.learning_rates)
+    def snapshot(self) -> tuple[int, int, int, tuple[float, ...], tuple[str, ...]]:
+        return (
+            self.completed_epoch,
+            self.global_step,
+            self.model_weight,
+            tuple(self.learning_rates),
+            tuple(self.sample_tokens),
+        )
 
-    def restore_snapshot(self, snapshot: tuple[int, int, tuple[float, ...]]) -> None:
-        self.completed_epoch, self.global_step, rates = snapshot
+    def restore_snapshot(
+        self,
+        snapshot: tuple[int, int, int, tuple[float, ...], tuple[str, ...]],
+    ) -> None:
+        (
+            self.completed_epoch,
+            self.global_step,
+            self.model_weight,
+            rates,
+            sample_tokens,
+        ) = snapshot
         self.learning_rates = list(rates)
+        self.sample_tokens = list(sample_tokens)
 
     @staticmethod
     def _lr(global_step: int) -> float:
@@ -243,6 +296,18 @@ def test_t1_to_t5_resume_matches_uninterrupted_lr_sequence(fake_engine) -> None:
     assert staged.learning_rates[:2] == pytest.approx((0.0001, 0.0000999375))
 
 
+def test_staged_epochs_match_uninterrupted_sample_and_augmentation_order(
+    fake_engine,
+) -> None:
+    """Epoch restart must reproduce both shuffle and augmentation decisions."""
+
+    staged = run_epochs(fake_engine, stops=(1, 5), schedule_horizon=800)
+    uninterrupted = run_epochs(fake_engine, stops=(5,), schedule_horizon=800)
+
+    assert staged.sample_tokens
+    assert staged.sample_tokens == uninterrupted.sample_tokens
+
+
 def test_runner_stops_on_non_finite_loss(profile, fake_engine) -> None:
     """A NaN loss must stop before a checkpoint can legitimize the run."""
 
@@ -294,6 +359,25 @@ def test_runner_stops_on_every_non_finite_validation_value(
         )
 
 
+@pytest.mark.parametrize(("group", "scale"), [("pre", "2"), ("pre", "4"), ("gt", "8")])
+def test_runner_checks_every_multiscale_validation_density(
+    profile, fake_engine, group: str, scale: str
+) -> None:
+    """Finite x1 loss/count must not hide NaN/Inf in x2/x4/x8 density maps."""
+
+    mapping = (
+        fake_engine.validation_pre_den
+        if group == "pre"
+        else fake_engine.validation_gt_den
+    )
+    mapping[scale] = float("nan") if scale != "4" else float("inf")
+
+    with pytest.raises(FloatingPointError, match="validation density tensor"):
+        run_training_stage(
+            profile, stage="T1", run_id="run-3035", engine=fake_engine
+        )
+
+
 def test_cuda_oom_probe_uses_only_approved_effective_batch_fallback(
     profile, fake_engine
 ) -> None:
@@ -315,6 +399,37 @@ def test_cuda_oom_probe_uses_only_approved_effective_batch_fallback(
         "effective_batch": 8,
     }
     assert "CUDA out of memory" in environment["cuda_oom_evidence"]
+
+
+def test_probe_full_optimizer_step_leaves_no_update_in_t0(profile, fake_engine) -> None:
+    """The AdamW allocation probe must not become an unreported training update."""
+
+    result = run_training_stage(
+        profile, stage="T0", run_id="run-3035", engine=fake_engine
+    )
+
+    assert fake_engine.probe_optimizer_steps == 1
+    assert result.optimizer_steps == 1
+    assert fake_engine.global_step == 1
+    assert fake_engine.model_weight == 1
+
+
+def test_optimizer_step_only_oom_triggers_clean_4x2_rebuild(
+    profile, fake_engine
+) -> None:
+    """OOM first seen during AdamW state allocation must use the one approved fallback."""
+
+    fake_engine.oom_on_optimizer_step_batch8 = True
+
+    result = run_training_stage(
+        profile, stage="T0", run_id="run-3035", engine=fake_engine
+    )
+
+    assert fake_engine.batch_plans == [(8, 1), (4, 2)]
+    assert fake_engine.probe_optimizer_steps == 2
+    assert (result.physical_batch, result.accumulation_steps) == (4, 2)
+    assert fake_engine.global_step == 1
+    assert fake_engine.model_weight == 1
 
 
 def test_non_oom_cuda_error_is_not_reclassified_as_batch_fallback(
@@ -381,7 +496,55 @@ def test_stage_checkpoint_is_task5_payload_and_round_trips_from_disk(
         "environment_manifest_sha256",
     }
     assert payload["scheduler"]["horizon"] == 800
+    assert payload["best_mae"] == pytest.approx(2.0)
+    assert payload["best_rmse"] == pytest.approx(2.0)
+    assert fake_engine.best_mae == pytest.approx(2.0)
+    assert fake_engine.best_rmse == pytest.approx(2.0)
     assert any(row["filename"] == "last.pth" for row in manifest["checkpoints"])
+
+
+def test_worse_t5_metrics_preserve_t1_best_artifacts_and_payload_best(
+    profile, tmp_path: Path
+) -> None:
+    """A worse later stage must not overwrite the true T1 best checkpoint."""
+
+    t1_engine = FakeTrainingEngine(tmp_path)
+    run_training_stage(profile, stage="T1", run_id="run-3035", engine=t1_engine)
+    best_path = t1_engine.checkpoint_dir / "best-mae.pth"
+    best_bytes = best_path.read_bytes()
+    t1_manifest = json.loads(
+        (t1_engine.checkpoint_dir / "checkpoint-manifest.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    best_entry = next(
+        row for row in t1_manifest["checkpoints"] if row["filename"] == "best-mae.pth"
+    )
+
+    t5_engine = FakeTrainingEngine(tmp_path)
+    t5_engine.validation_mae = 5.0
+    t5_engine.validation_rmse = 6.0
+    run_training_stage(
+        profile,
+        stage="T5",
+        run_id="run-3035",
+        resume=t1_engine.checkpoint_dir / "last.pth",
+        engine=t5_engine,
+    )
+
+    assert best_path.read_bytes() == best_bytes
+    manifest = json.loads(
+        (t5_engine.checkpoint_dir / "checkpoint-manifest.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert next(
+        row for row in manifest["checkpoints"] if row["filename"] == "best-mae.pth"
+    ) == best_entry
+    with (t5_engine.checkpoint_dir / "last.pth").open("rb") as stream:
+        last_payload = pickle.load(stream)
+    assert last_payload["best_mae"] == pytest.approx(2.0)
+    assert last_payload["best_rmse"] == pytest.approx(2.0)
 
 
 def test_t5_resumes_verified_t1_state_without_restarting_scheduler(
@@ -415,6 +578,32 @@ def test_t5_resumes_verified_t1_state_without_restarting_scheduler(
     last = next(row for row in manifest["checkpoints"] if row["filename"] == "last.pth")
     assert last["parent_checkpoint_sha256"] is not None
     assert {2, 3, 4, 5}.issubset(t5_engine.torch_module.saved_epochs)
+
+
+def test_resume_is_restored_before_amp_comparison(profile, tmp_path: Path) -> None:
+    """AMP eligibility must be measured on resumed weights, not fresh ImageNet weights."""
+
+    t1_engine = FakeTrainingEngine(tmp_path)
+    run_training_stage(profile, stage="T1", run_id="run-3035", engine=t1_engine)
+    t5_engine = FakeTrainingEngine(tmp_path)
+    t5_engine.resumed_amp_comparison = AmpComparison(
+        fp32_loss=1.0,
+        amp_loss=1.0,
+        fp32_count=100.0,
+        amp_count=101.0,
+    )
+
+    run_training_stage(
+        profile,
+        stage="T5",
+        run_id="run-3035",
+        resume=t1_engine.checkpoint_dir / "last.pth",
+        engine=t5_engine,
+    )
+
+    assert t5_engine.amp_compare_model_weights == [2]
+    environment = json.loads(t5_engine.environment_path.read_text(encoding="utf-8"))
+    assert environment["amp"]["enabled"] is False
 
 
 def test_resume_hash_is_taken_from_manifest_before_deserialization(
@@ -642,6 +831,44 @@ def test_cli_backbone_hash_is_only_confirmation_of_profile_authority() -> None:
     )
 
     assert exit_code == 2
+
+
+def test_cli_rejects_test_backed_processed_root_even_when_profile_is_mutated(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A caller-supplied config must not redefine the canonical processed root to Test."""
+
+    payload = json.loads(PROFILE_PATH.read_text(encoding="utf-8"))
+    alternative = (
+        "/workspace/data/datasets/ucf-qnrf-kaggle-apache/"
+        "Test/processed/steerer-training-v1"
+    )
+    payload["storage"]["processed_root"] = alternative
+    config = tmp_path / "mutated-profile.json"
+    config.write_text(json.dumps(payload), encoding="utf-8")
+    constructed = False
+
+    class ForbiddenEngine:
+        def __init__(self, **_kwargs: object) -> None:
+            nonlocal constructed
+            constructed = True
+
+    monkeypatch.setattr(training_cli, "PinnedUpstreamTrainingEngine", ForbiddenEngine)
+
+    exit_code = training_cli.main(
+        [
+            "--config", str(config),
+            "--stage", "T0",
+            "--run-id", "run-3035",
+            "--processed-root", alternative,
+            "--upstream-dir", "/workspace/upstreams/STEERER",
+            "--backbone", "/workspace/data/checkpoints/backbones/hrnetv2_w48_imagenet_pretrained.pth",
+            "--backbone-sha256", "0efec102d97f2ef58f0e258b2c3076b3704b93ffc2b73f64c8da5462c0037ef8",
+        ]
+    )
+
+    assert exit_code == 2
+    assert constructed is False
 
 
 def test_cli_t0_constructs_pinned_engine_and_runs_hard_ceiling(
