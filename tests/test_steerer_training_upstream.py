@@ -255,9 +255,12 @@ def test_config_uses_validation_and_keeps_official_800_epoch_horizon(
         run_id="run-a",
     )
 
-    assert config["dataset"]["root"] == str(tmp_path / "processed")
+    assert config["dataset"]["root"] == f"{tmp_path / 'processed'}/"
     assert config["dataset"]["train_set"] == "train.txt"
     assert config["dataset"]["test_set"] == "val.txt"
+    assert Path(config["dataset"]["root"] + config["dataset"]["train_set"]) == (
+        tmp_path / "processed" / "train.txt"
+    )
     assert config["network"]["pretrained_backbone"] == str(
         profile.imagenet_backbone.path.resolve()
     )

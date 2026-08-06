@@ -334,7 +334,7 @@ def synthesize_official_config(
     dataset = _require_mapping(config, "dataset")
     train = _require_mapping(config, "train")
     network["pretrained_backbone"] = str(backbone)
-    dataset["root"] = str(Path(processed_root))
+    dataset["root"] = str(Path(processed_root)).rstrip("/\\") + "/"
     dataset["train_set"] = "train.txt"
     dataset["test_set"] = "val.txt"
     config["gpus"] = (0,)
