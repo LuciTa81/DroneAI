@@ -13,6 +13,7 @@ import re
 import subprocess
 import time
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Literal, Mapping, Protocol, Sequence
 
@@ -36,6 +37,11 @@ from droneai.steerer_training_evidence import (
     build_t1_metrics,
     localization_match_counts,
     strict_metrics_payload,
+)
+from droneai.steerer_training_longrun import (
+    TARGET_EPOCH,
+    validation_boundaries,
+    write_longrun_status,
 )
 from droneai.evaluation_metrics import _game_l1
 from droneai.steerer_adapter import extract_steerer_points
@@ -1424,15 +1430,23 @@ def _write_stage_metrics(
     run_id: str,
     stage: Stage,
     metrics: Mapping[str, float],
+    boundary_epoch: int | None = None,
 ) -> tuple[Path, str]:
     payload = strict_metrics_payload(run_id=run_id, stage=stage, metrics=metrics)
     result_root = engine.environment_path.parent
-    metrics_path = result_root / "metrics.json"
-    if metrics_path.exists() and metrics_path.read_bytes() != (
-        json.dumps(payload, indent=2, sort_keys=True, allow_nan=False) + "\n"
-    ).encode("utf-8"):
-        metrics_path = result_root / f"metrics.{stage.lower()}.json"
+    if boundary_epoch is not None:
+        if stage != "T800" or boundary_epoch not in validation_boundaries(0):
+            raise ValueError("boundary metrics are reserved for T800 25-epoch ceilings")
+        metrics_path = result_root / f"metrics.epoch-{boundary_epoch:03d}.json"
+    else:
+        metrics_path = result_root / "metrics.json"
+        if metrics_path.exists() and metrics_path.read_bytes() != (
+            json.dumps(payload, indent=2, sort_keys=True, allow_nan=False) + "\n"
+        ).encode("utf-8"):
+            metrics_path = result_root / f"metrics.{stage.lower()}.json"
     _atomic_json(metrics_path, payload)
+    if stage == "T800" and boundary_epoch == TARGET_EPOCH:
+        _atomic_json(result_root / "metrics.t800.json", payload)
     digest = sha256_file(metrics_path)
     if digest != _json_digest(payload):
         raise RuntimeError("runner metrics artifact hash mismatch")
@@ -1514,6 +1528,7 @@ def _persist_and_reload_checkpoint(
     environment_manifest_sha256: str,
     parent_checkpoint_sha256: str | None = None,
     rng_state: Mapping[str, object] | None = None,
+    preserve_milestone: bool | None = None,
 ) -> str:
     components = _checkpoint_components(engine)
     previous_best_mae = float(getattr(engine, "best_mae", 1.0e20))
@@ -1550,6 +1565,7 @@ def _persist_and_reload_checkpoint(
         previous_best_mae=previous_best_mae,
         previous_best_rmse=previous_best_rmse,
         parent_checkpoint_sha256=parent_checkpoint_sha256,
+        preserve_milestone=preserve_milestone,
         torch_module=torch_module,
     )
     last = saved.artifacts["last"]
@@ -1666,10 +1682,27 @@ def _restore_resume(
     ) or (
         stage == "T50"
         and ((resume_stage == "T5" and epoch == 5) or (resume_stage == "T50" and 5 <= epoch < 50))
+    ) or (
+        stage == "T800"
+        and (
+            (resume_stage == "T5" and epoch == 5)
+            or (resume_stage == "T50" and epoch == 50)
+            or (
+                resume_stage == "T800"
+                and 25 <= epoch < TARGET_EPOCH
+                and epoch % 25 == 0
+            )
+        )
     )
     if not accepted:
-        predecessor = "T1" if stage == "T5" else "T5"
-        raise ValueError(f"{stage} requires its verified {predecessor} predecessor checkpoint")
+        predecessor = {
+            "T5": "T1",
+            "T50": "T5",
+            "T800": "T5, T50, or T800 validation-boundary",
+        }.get(stage, "approved")
+        raise ValueError(
+            f"{stage} requires its verified {predecessor} predecessor checkpoint"
+        )
     engine.restore_checkpoint_core_state(
         {key: state[key] for key in ("model", "optimizer", "scheduler")}
     )
@@ -1732,6 +1765,66 @@ def run_epochs(
     )
 
 
+def _combine_epoch_observations(
+    observations: Sequence[EpochObservation], *, completed_epoch: int
+) -> EpochObservation:
+    if not observations:
+        raise ValueError("at least one epoch observation is required")
+    return EpochObservation(
+        epoch=completed_epoch,
+        optimizer_steps=sum(item.optimizer_steps for item in observations),
+        losses=tuple(value for item in observations for value in item.losses),
+        density_values=tuple(
+            value for item in observations for value in item.density_values
+        ),
+        gradient_norms=tuple(
+            value for item in observations for value in item.gradient_norms
+        ),
+        learning_rates=tuple(
+            value for item in observations for value in item.learning_rates
+        ),
+        sample_tokens=tuple(
+            value for item in observations for value in item.sample_tokens
+        ),
+    )
+
+
+def _write_t800_status(
+    engine: TrainingEngine,
+    *,
+    run_id: str,
+    state: str,
+    epoch: int,
+    recent_loss: float | None,
+    validation_boundary: bool,
+    checkpoint_sha256: str | None,
+    started: float,
+    starting_epoch: int,
+) -> None:
+    elapsed = max(time.perf_counter() - started, 0.0)
+    completed_work = max(epoch - starting_epoch, 0)
+    eta = None
+    if completed_work > 0 and epoch < TARGET_EPOCH:
+        eta = elapsed / completed_work * (TARGET_EPOCH - epoch)
+    write_longrun_status(
+        engine.environment_path.parent / "status.json",
+        {
+            "schema_version": 1,
+            "run_id": run_id,
+            "stage": "T800",
+            "state": state,
+            "epoch": epoch,
+            "global_step": int(engine.global_step),
+            "recent_loss": recent_loss,
+            "validation_boundary": validation_boundary,
+            "checkpoint_sha256": checkpoint_sha256,
+            "elapsed_seconds": elapsed,
+            "eta_seconds": eta,
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+        },
+    )
+
+
 def run_training_stage(
     profile: SteererTrainingProfile,
     *,
@@ -1781,6 +1874,8 @@ def run_training_stage(
         _probe_batch_without_update(engine)
     except BaseException as error:
         if not _is_cuda_oom(error):
+            raise
+        if stage == "T800":
             raise
         oom_evidence = f"{type(error).__name__}: CUDA out of memory"
         engine.empty_cuda_cache()
@@ -1841,78 +1936,158 @@ def run_training_stage(
         completed_epoch = 0
     else:
         target_epoch = _STAGE_STOP_EPOCH[stage]
-        for epoch in range(engine.completed_epoch + 1, target_epoch + 1):
-            observation = engine.run_epoch(epoch, amp_enabled=amp_enabled)
-            _validate_epoch(observation)
-            if observation.epoch != epoch:
-                raise RuntimeError("training engine crossed the requested epoch ceiling")
-            optimizer_steps += observation.optimizer_steps
-            epoch_observations.append(observation)
-        completed_epoch = engine.completed_epoch
+        starting_epoch = int(engine.completed_epoch)
+        boundaries = (
+            validation_boundaries(starting_epoch)
+            if stage == "T800"
+            else (target_epoch,)
+        )
+        recent_loss: float | None = None
+        if stage == "T800":
+            _write_t800_status(
+                engine,
+                run_id=run_id,
+                state="starting",
+                epoch=starting_epoch,
+                recent_loss=None,
+                validation_boundary=False,
+                checkpoint_sha256=parent_checkpoint_sha256,
+                started=started,
+                starting_epoch=starting_epoch,
+            )
+        try:
+            for boundary_epoch in boundaries:
+                epoch_observations = []
+                for epoch in range(engine.completed_epoch + 1, boundary_epoch + 1):
+                    observation = engine.run_epoch(epoch, amp_enabled=amp_enabled)
+                    _validate_epoch(observation)
+                    if observation.epoch != epoch:
+                        raise RuntimeError(
+                            "training engine crossed the requested epoch ceiling"
+                        )
+                    optimizer_steps += observation.optimizer_steps
+                    epoch_observations.append(observation)
+                    recent_loss = float(observation.losses[-1])
+                    if stage == "T800":
+                        _write_t800_status(
+                            engine,
+                            run_id=run_id,
+                            state="training",
+                            epoch=epoch,
+                            recent_loss=recent_loss,
+                            validation_boundary=False,
+                            checkpoint_sha256=parent_checkpoint_sha256,
+                            started=started,
+                            starting_epoch=starting_epoch,
+                        )
+                completed_epoch = int(engine.completed_epoch)
+                if completed_epoch != boundary_epoch:
+                    raise RuntimeError(
+                        "training engine did not stop at the requested epoch ceiling"
+                    )
+                training_boundary_rng = capture_rng_state(
+                    _SEED, torch_module=getattr(engine, "torch_module", None)
+                )
+                if stage == "T800":
+                    _write_t800_status(
+                        engine,
+                        run_id=run_id,
+                        state="validating",
+                        epoch=completed_epoch,
+                        recent_loss=recent_loss,
+                        validation_boundary=True,
+                        checkpoint_sha256=parent_checkpoint_sha256,
+                        started=started,
+                        starting_epoch=starting_epoch,
+                    )
+                validation = engine.validate()
+                _validate_validation(validation)
+                if validation.sample_count != profile.validation_count:
+                    raise RuntimeError(
+                        "validation must cover the complete approved validation split: "
+                        f"expected={profile.validation_count} "
+                        f"observed={validation.sample_count}"
+                    )
+                validation_samples = validation.sample_count
+                combined_epoch = _combine_epoch_observations(
+                    epoch_observations, completed_epoch=completed_epoch
+                )
+                metrics = build_t1_metrics(
+                    combined_epoch,
+                    validation,
+                    expected_samples=profile.validation_count,
+                )
+                metrics_path, metrics_sha256 = _write_stage_metrics(
+                    engine,
+                    run_id=run_id,
+                    stage=stage,
+                    metrics=metrics,
+                    boundary_epoch=(completed_epoch if stage == "T800" else None),
+                )
+                environment_path, environment_manifest_sha256 = (
+                    _write_authoritative_environment(
+                        engine,
+                        stage=stage,
+                        run_id=run_id,
+                        container_image_digest=container_digest,
+                        physical_batch=physical_batch,
+                        accumulation_steps=accumulation_steps,
+                        metrics_path=metrics_path,
+                        metrics_sha256=metrics_sha256,
+                    )
+                )
+                checkpoint_sha256 = _persist_and_reload_checkpoint(
+                    engine,
+                    run_id=run_id,
+                    stage=stage,
+                    epoch=completed_epoch,
+                    current_mae=validation.mae,
+                    current_rmse=validation.rmse,
+                    environment_manifest_sha256=environment_manifest_sha256,
+                    parent_checkpoint_sha256=parent_checkpoint_sha256,
+                    rng_state=training_boundary_rng,
+                    preserve_milestone=(
+                        completed_epoch % 100 == 0 if stage == "T800" else None
+                    ),
+                )
+                parent_checkpoint_sha256 = checkpoint_sha256
+                checkpoint_round_trip = bool(checkpoint_sha256)
+                if stage == "T800":
+                    _write_t800_status(
+                        engine,
+                        run_id=run_id,
+                        state=(
+                            "completed"
+                            if completed_epoch == TARGET_EPOCH
+                            else "validated"
+                        ),
+                        epoch=completed_epoch,
+                        recent_loss=recent_loss,
+                        validation_boundary=True,
+                        checkpoint_sha256=checkpoint_sha256,
+                        started=started,
+                        starting_epoch=starting_epoch,
+                    )
+        except BaseException:
+            if stage == "T800":
+                try:
+                    _write_t800_status(
+                        engine,
+                        run_id=run_id,
+                        state="failed",
+                        epoch=int(engine.completed_epoch),
+                        recent_loss=recent_loss,
+                        validation_boundary=False,
+                        checkpoint_sha256=parent_checkpoint_sha256,
+                        started=started,
+                        starting_epoch=starting_epoch,
+                    )
+                except BaseException:
+                    pass
+            raise
+        completed_epoch = int(engine.completed_epoch)
         if completed_epoch != target_epoch:
             raise RuntimeError("training engine did not stop at the requested epoch ceiling")
-        training_boundary_rng = capture_rng_state(
-            _SEED, torch_module=getattr(engine, "torch_module", None)
-        )
-        validation = engine.validate()
-        _validate_validation(validation)
-        if validation.sample_count != profile.validation_count:
-            raise RuntimeError(
-                "validation must cover the complete approved validation split: "
-                f"expected={profile.validation_count} observed={validation.sample_count}"
-            )
-        validation_samples = validation.sample_count
-        combined_epoch = EpochObservation(
-            epoch=completed_epoch,
-            optimizer_steps=sum(item.optimizer_steps for item in epoch_observations),
-            losses=tuple(
-                value for item in epoch_observations for value in item.losses
-            ),
-            density_values=tuple(
-                value for item in epoch_observations for value in item.density_values
-            ),
-            gradient_norms=tuple(
-                value for item in epoch_observations for value in item.gradient_norms
-            ),
-            learning_rates=tuple(
-                value for item in epoch_observations for value in item.learning_rates
-            ),
-            sample_tokens=tuple(
-                value for item in epoch_observations for value in item.sample_tokens
-            ),
-        )
-        metrics = build_t1_metrics(
-            combined_epoch,
-            validation,
-            expected_samples=profile.validation_count,
-        )
-        metrics_path, metrics_sha256 = _write_stage_metrics(
-            engine, run_id=run_id, stage=stage, metrics=metrics
-        )
-        environment_path, environment_manifest_sha256 = (
-            _write_authoritative_environment(
-                engine,
-                stage=stage,
-                run_id=run_id,
-                container_image_digest=container_digest,
-                physical_batch=physical_batch,
-                accumulation_steps=accumulation_steps,
-                metrics_path=metrics_path,
-                metrics_sha256=metrics_sha256,
-            )
-        )
-        checkpoint_sha256 = _persist_and_reload_checkpoint(
-            engine,
-            run_id=run_id,
-            stage=stage,
-            epoch=completed_epoch,
-            current_mae=validation.mae,
-            current_rmse=validation.rmse,
-            environment_manifest_sha256=environment_manifest_sha256,
-            parent_checkpoint_sha256=parent_checkpoint_sha256,
-            rng_state=training_boundary_rng,
-        )
-        checkpoint_round_trip = bool(checkpoint_sha256)
 
     checkpoint_path = engine.checkpoint_dir / "last.pth"
     if sha256_file(checkpoint_path) != checkpoint_sha256:

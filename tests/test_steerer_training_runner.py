@@ -106,6 +106,8 @@ class FakeTrainingEngine:
         self.best_mae = 1.0e20
         self.best_rmse = 1.0e20
         self.validation_consumes_rng = False
+        self.validation_epochs: list[int] = []
+        self.fail_epoch: int | None = None
         self.container_image_digest = "sha256:" + "c" * 64
 
     def authoritative_environment_payload(
@@ -211,6 +213,8 @@ class FakeTrainingEngine:
         )
 
     def run_epoch(self, epoch: int, *, amp_enabled: bool) -> EpochObservation:
+        if self.fail_epoch == epoch:
+            raise RuntimeError(f"injected epoch failure: {epoch}")
         rates = []
         for _ in range(2):
             observation = self.run_update(amp_enabled=amp_enabled)
@@ -234,6 +238,7 @@ class FakeTrainingEngine:
         )
 
     def validate(self) -> ValidationObservation:
+        self.validation_epochs.append(self.completed_epoch)
         if self.validation_consumes_rng:
             self.torch_module.cpu_state = b"validation-consumed"
         return ValidationObservation(
@@ -963,6 +968,139 @@ def test_t5_resumes_verified_t1_state_without_restarting_scheduler(
     last = next(row for row in manifest["checkpoints"] if row["filename"] == "last.pth")
     assert last["parent_checkpoint_sha256"] is not None
     assert set(t5_engine.torch_module.saved_epochs) == {5}
+
+
+def test_t800_runs_every_25_epoch_boundary_and_preserves_100_epoch_milestones(
+    profile, tmp_path: Path
+) -> None:
+    """One end-only validation would erase restart safety and best-model evidence."""
+
+    t1_engine = FakeTrainingEngine(tmp_path)
+    run_training_stage(profile, stage="T1", run_id="run-3035", engine=t1_engine)
+    t5_engine = FakeTrainingEngine(tmp_path)
+    run_training_stage(
+        profile,
+        stage="T5",
+        run_id="run-3035",
+        resume=t1_engine.checkpoint_dir / "last.pth",
+        engine=t5_engine,
+    )
+    t800_engine = FakeTrainingEngine(tmp_path)
+
+    result = run_training_stage(
+        profile,
+        stage="T800",
+        run_id="run-3035",
+        resume=t5_engine.checkpoint_dir / "last.pth",
+        engine=t800_engine,
+    )
+
+    expected_boundaries = list(range(25, 801, 25))
+    assert result.completed_epoch == 800
+    assert t800_engine.validation_epochs == expected_boundaries
+    assert sorted(
+        path.name for path in t800_engine.environment_path.parent.glob("metrics.epoch-*.json")
+    ) == [f"metrics.epoch-{epoch:03d}.json" for epoch in expected_boundaries]
+    assert (t800_engine.environment_path.parent / "metrics.t800.json").read_bytes() == (
+        t800_engine.environment_path.parent / "metrics.epoch-800.json"
+    ).read_bytes()
+    assert sorted(
+        path.name for path in t800_engine.checkpoint_dir.glob("milestone-*.pth")
+    ) == ["milestone-001.pth", "milestone-005.pth"] + [
+        f"milestone-{epoch:03d}.pth" for epoch in range(100, 801, 100)
+    ]
+    status = json.loads(
+        (t800_engine.environment_path.parent / "status.json").read_text(encoding="utf-8")
+    )
+    assert status["state"] == "completed"
+    assert status["epoch"] == 800
+    assert status["checkpoint_sha256"] == result.checkpoint_sha256
+
+
+def test_t800_interruption_resumes_from_last_verified_boundary(
+    profile, tmp_path: Path
+) -> None:
+    """An interrupted partial epoch segment must restart from the last validated boundary."""
+
+    t1_engine = FakeTrainingEngine(tmp_path)
+    run_training_stage(profile, stage="T1", run_id="run-3035", engine=t1_engine)
+    t5_engine = FakeTrainingEngine(tmp_path)
+    run_training_stage(
+        profile,
+        stage="T5",
+        run_id="run-3035",
+        resume=t1_engine.checkpoint_dir / "last.pth",
+        engine=t5_engine,
+    )
+    interrupted = FakeTrainingEngine(tmp_path)
+    interrupted.fail_epoch = 26
+
+    with pytest.raises(RuntimeError, match="injected epoch failure"):
+        run_training_stage(
+            profile,
+            stage="T800",
+            run_id="run-3035",
+            resume=t5_engine.checkpoint_dir / "last.pth",
+            engine=interrupted,
+        )
+
+    with (interrupted.checkpoint_dir / "last.pth").open("rb") as stream:
+        boundary = pickle.load(stream)
+    assert boundary["stage"] == "T800"
+    assert boundary["epoch"] == 25
+    retry = FakeTrainingEngine(tmp_path)
+    result = run_training_stage(
+        profile,
+        stage="T800",
+        run_id="run-3035",
+        resume=interrupted.checkpoint_dir / "last.pth",
+        engine=retry,
+    )
+
+    assert result.completed_epoch == 800
+    assert retry.validation_epochs == list(range(50, 801, 25))
+
+
+def test_t800_rejects_t1_as_an_unapproved_predecessor(profile, tmp_path: Path) -> None:
+    t1_engine = FakeTrainingEngine(tmp_path)
+    run_training_stage(profile, stage="T1", run_id="run-3035", engine=t1_engine)
+
+    with pytest.raises(ValueError, match="T800.*T5.*T50.*T800"):
+        run_training_stage(
+            profile,
+            stage="T800",
+            run_id="run-3035",
+            resume=t1_engine.checkpoint_dir / "last.pth",
+            engine=FakeTrainingEngine(tmp_path),
+        )
+
+
+def test_t800_cuda_oom_stops_instead_of_changing_the_approved_batch(
+    profile, tmp_path: Path
+) -> None:
+    t1_engine = FakeTrainingEngine(tmp_path)
+    run_training_stage(profile, stage="T1", run_id="run-3035", engine=t1_engine)
+    t5_engine = FakeTrainingEngine(tmp_path)
+    run_training_stage(
+        profile,
+        stage="T5",
+        run_id="run-3035",
+        resume=t1_engine.checkpoint_dir / "last.pth",
+        engine=t5_engine,
+    )
+    t800_engine = FakeTrainingEngine(tmp_path)
+    t800_engine.oom_on_batch8 = True
+
+    with pytest.raises(RuntimeError, match="CUDA out of memory"):
+        run_training_stage(
+            profile,
+            stage="T800",
+            run_id="run-3035",
+            resume=t5_engine.checkpoint_dir / "last.pth",
+            engine=t800_engine,
+        )
+
+    assert t800_engine.batch_plans == [(8, 1)]
 
 
 def test_resume_is_restored_before_amp_comparison(profile, tmp_path: Path) -> None:
