@@ -34,6 +34,7 @@ from droneai.steerer_training_runner import (
 
 
 PROFILE_PATH = Path("configs/training/steerer_ucf_qnrf_imagenet.home5090.json")
+CONTAINER_DIGEST = "sha256:" + "c" * 64
 
 
 def test_random_reference_uses_an_upstream_safe_empty_backbone_path() -> None:
@@ -105,6 +106,64 @@ class FakeTrainingEngine:
         self.best_mae = 1.0e20
         self.best_rmse = 1.0e20
         self.validation_consumes_rng = False
+        self.container_image_digest = "sha256:" + "c" * 64
+
+    def authoritative_environment_payload(
+        self,
+        *,
+        stage: str,
+        run_id: str,
+        container_image_digest: str,
+        physical_batch: int,
+        accumulation_steps: int,
+        metrics_path: Path,
+        metrics_sha256: str,
+    ) -> dict[str, object]:
+        return {
+            "schema_version": 2,
+            "run_id": run_id,
+            "stage": stage,
+            "project": {"git_commit": "1" * 40, "profile_sha256": "2" * 64},
+            "upstream": {
+                "origin_url": "https://github.com/taohan10200/STEERER.git",
+                "commit": self.lineage.upstream_commit,
+                "clean": True,
+                "license_sha256": "3" * 64,
+                "config_sha256": "4" * 64,
+            },
+            "dataset": {
+                "processed_root": "/workspace/data/datasets/fixture",
+                "source_partition": "official_train_only",
+                "official_test_accessed": False,
+                "train_sha256": self.lineage.split_sha256s["train"],
+                "validation_sha256": self.lineage.split_sha256s["validation"],
+                "dataset_inventory_sha256": self.lineage.dataset_inventory_sha256,
+                "population_sha256": "5" * 64,
+                "test_sealed_sha256": "6" * 64,
+                "split_manifest_sha256": "7" * 64,
+            },
+            "initialization": {
+                "mode": "imagenet_backbone_only",
+                "model_checkpoint_loaded": False,
+                "backbone_path": "/workspace/data/checkpoints/backbone.pth",
+                "backbone_sha256": self.lineage.backbone_sha256,
+                "backbone_byte_size": 1,
+            },
+            "training": {"config_sha256": self.lineage.config_sha256},
+            "runtime": {
+                "container_image_digest": container_image_digest,
+                "python": "3.12.3",
+                "torch": "2.9.0a0",
+                "cuda": "12.8",
+                "gpu": "NVIDIA GeForce RTX 5090",
+            },
+            "batch": {
+                "physical_batch": physical_batch,
+                "accumulation_steps": accumulation_steps,
+                "effective_batch": physical_batch * accumulation_steps,
+            },
+            "metrics": {"path": str(metrics_path), "sha256": metrics_sha256},
+        }
 
     def set_seed(self, seed: int) -> None:
         self.seed = seed
@@ -344,6 +403,43 @@ def test_t0_runs_one_update_and_checkpoint_reload(profile, fake_engine) -> None:
     assert result.checkpoint_round_trip is True
     assert result.validation_samples == 0
     assert fake_engine.seed == 3035
+
+
+def test_t0_binds_measured_metrics_environment_and_checkpoint(
+    profile, fake_engine
+) -> None:
+    """Reordering or self-attesting any of the three authoritative artifacts is a bug."""
+
+    result = run_training_stage(
+        profile,
+        stage="T0",
+        run_id="run-3035",
+        container_image_digest=fake_engine.container_image_digest,
+        engine=fake_engine,
+    )
+
+    metrics_path = fake_engine.environment_path.parent / "metrics.json"
+    metrics = json.loads(metrics_path.read_text(encoding="utf-8"))
+    assert metrics == {
+        "schema_version": 1,
+        "run_id": "run-3035",
+        "stage": "T0",
+        "metrics": {"train_loss": 1.25},
+    }
+    metrics_sha = hashlib.sha256(metrics_path.read_bytes()).hexdigest()
+    environment = json.loads(result.environment_path.read_text(encoding="utf-8"))
+    assert environment["schema_version"] == 2
+    assert environment["metrics"] == {
+        "path": str(metrics_path),
+        "sha256": metrics_sha,
+    }
+    environment_sha = hashlib.sha256(result.environment_path.read_bytes()).hexdigest()
+    with result.checkpoint_path.open("rb") as stream:
+        checkpoint = pickle.load(stream)
+    assert checkpoint["environment_manifest_sha256"] == environment_sha
+    assert result.metrics_path == metrics_path
+    assert result.metrics_sha256 == metrics_sha
+    assert result.environment_sha256 == environment_sha
 
 
 def test_t1_runs_exactly_one_epoch_and_full_validation(profile, fake_engine) -> None:
@@ -605,7 +701,7 @@ def test_cuda_oom_probe_uses_only_approved_effective_batch_fallback(
         "accumulation_steps": 2,
         "effective_batch": 8,
     }
-    assert "CUDA out of memory" in environment["cuda_oom_evidence"]
+    assert "CUDA out of memory" in result.cuda_oom_evidence
 
 
 def test_probe_full_optimizer_step_leaves_no_update_in_t0(profile, fake_engine) -> None:
@@ -671,11 +767,12 @@ def test_amp_is_used_only_after_finite_strict_numerical_gate(
 
     fake_engine.amp_comparison = comparison
 
-    run_training_stage(profile, stage="T0", run_id="run-3035", engine=fake_engine)
+    result = run_training_stage(
+        profile, stage="T0", run_id="run-3035", engine=fake_engine
+    )
 
     assert fake_engine.amp_flags == [accepted]
-    environment = json.loads(fake_engine.environment_path.read_text(encoding="utf-8"))
-    assert environment["amp"]["enabled"] is accepted
+    assert result.amp_enabled is accepted
 
 
 def test_amp_approved_fresh_stage_selects_enabled_scaler_only_after_probe(
@@ -838,7 +935,7 @@ def test_t5_resumes_verified_t1_state_without_restarting_scheduler(
     )
     last = next(row for row in manifest["checkpoints"] if row["filename"] == "last.pth")
     assert last["parent_checkpoint_sha256"] is not None
-    assert {2, 3, 4, 5}.issubset(t5_engine.torch_module.saved_epochs)
+    assert set(t5_engine.torch_module.saved_epochs) == {5}
 
 
 def test_resume_is_restored_before_amp_comparison(profile, tmp_path: Path) -> None:
@@ -855,7 +952,7 @@ def test_resume_is_restored_before_amp_comparison(profile, tmp_path: Path) -> No
         amp_count=101.0,
     )
 
-    run_training_stage(
+    result = run_training_stage(
         profile,
         stage="T5",
         run_id="run-3035",
@@ -864,8 +961,7 @@ def test_resume_is_restored_before_amp_comparison(profile, tmp_path: Path) -> No
     )
 
     assert t5_engine.amp_compare_model_weights == [2]
-    environment = json.loads(t5_engine.environment_path.read_text(encoding="utf-8"))
-    assert environment["amp"]["enabled"] is False
+    assert result.amp_enabled is False
 
 
 def test_resume_hash_is_taken_from_manifest_before_deserialization(
@@ -1026,17 +1122,13 @@ def test_crash_after_new_environment_write_keeps_old_checkpoint_resumable(
             resume=old_resume,
             engine=crashed,
         )
-    new_summary = crashed.environment_path.read_bytes()
-    new_digest = hashlib.sha256(new_summary).hexdigest()
-    new_evidence = crashed.environment_path.parent / f"environment.{new_digest}.json"
-    assert new_digest != old_digest
-    assert new_evidence.read_bytes() == new_summary
+    assert crashed.environment_path.read_bytes() == old_bytes
     assert old_evidence.read_bytes() == old_bytes
 
     retry = FakeTrainingEngine(tmp_path)
     retry.resumed_amp_comparison = rejected_amp
     retry.oom_on_batch8 = True
-    run_training_stage(
+    retry_result = run_training_stage(
         profile,
         stage="T5",
         run_id="run-3035",
@@ -1046,6 +1138,10 @@ def test_crash_after_new_environment_write_keeps_old_checkpoint_resumable(
     new_resume = retry.checkpoint_dir / "last.pth"
     with new_resume.open("rb") as stream:
         new_payload = pickle.load(stream)
+    new_digest = retry_result.environment_sha256
+    new_evidence = retry_result.environment_path
+    assert new_digest != old_digest
+    assert new_evidence.read_bytes() == retry.environment_path.read_bytes()
     assert new_payload["environment_manifest_sha256"] == new_digest
 
     old_evidence.unlink()
@@ -1241,6 +1337,7 @@ def test_cli_has_no_test_switch_and_requires_explicit_later_stage_approval() -> 
             "--upstream-dir", "/workspace/upstreams/STEERER",
             "--backbone", "/workspace/data/checkpoints/backbones/hrnetv2_w48_imagenet_pretrained.pth",
             "--backbone-sha256", "0efec102d97f2ef58f0e258b2c3076b3704b93ffc2b73f64c8da5462c0037ef8",
+            "--container-image-digest", CONTAINER_DIGEST,
             "--resume", "/workspace/data/checkpoints/steerer-ucf-training/run-3035/last.pth",
         ]
     )
@@ -1260,6 +1357,7 @@ def test_cli_backbone_hash_is_only_confirmation_of_profile_authority() -> None:
             "--upstream-dir", "/workspace/upstreams/STEERER",
             "--backbone", "/workspace/data/checkpoints/backbones/hrnetv2_w48_imagenet_pretrained.pth",
             "--backbone-sha256", "f" * 64,
+            "--container-image-digest", CONTAINER_DIGEST,
         ]
     )
 
@@ -1297,6 +1395,7 @@ def test_cli_rejects_test_backed_processed_root_even_when_profile_is_mutated(
             "--upstream-dir", "/workspace/upstreams/STEERER",
             "--backbone", "/workspace/data/checkpoints/backbones/hrnetv2_w48_imagenet_pretrained.pth",
             "--backbone-sha256", "0efec102d97f2ef58f0e258b2c3076b3704b93ffc2b73f64c8da5462c0037ef8",
+            "--container-image-digest", CONTAINER_DIGEST,
         ]
     )
 
@@ -1322,7 +1421,14 @@ def test_cli_t0_constructs_pinned_engine_and_runs_hard_ceiling(
             "stage": "T0", "completed_epoch": 0, "optimizer_steps": 1,
             "validation_samples": 0, "finite_loss": True,
             "checkpoint_round_trip": True, "physical_batch": 8,
-            "accumulation_steps": 1, "elapsed_seconds": 0.1,
+            "accumulation_steps": 1, "amp_enabled": True,
+            "cuda_oom_evidence": None, "elapsed_seconds": 0.1,
+            "metrics_path": Path("/workspace/data/results/run/metrics.json"),
+            "metrics_sha256": "1" * 64,
+            "environment_path": Path("/workspace/data/results/run/environment.json"),
+            "environment_sha256": "2" * 64,
+            "checkpoint_path": Path("/workspace/data/checkpoints/run/last.pth"),
+            "checkpoint_sha256": "3" * 64,
         },
     )()
 
@@ -1342,12 +1448,30 @@ def test_cli_t0_constructs_pinned_engine_and_runs_hard_ceiling(
             "--upstream-dir", "/workspace/upstreams/STEERER",
             "--backbone", "/workspace/data/checkpoints/backbones/hrnetv2_w48_imagenet_pretrained.pth",
             "--backbone-sha256", "0efec102d97f2ef58f0e258b2c3076b3704b93ffc2b73f64c8da5462c0037ef8",
+            "--container-image-digest", CONTAINER_DIGEST,
         ]
     )
 
     assert exit_code == 0
     assert calls["engine"]["stage"] == "T0"  # type: ignore[index]
     assert calls["run"][1]["stage"] == "T0"  # type: ignore[index]
+    assert calls["run"][1]["container_image_digest"] == CONTAINER_DIGEST  # type: ignore[index]
+
+
+def test_cli_requires_an_actual_container_image_digest() -> None:
+    """A Docker tag or missing digest cannot identify the runtime that produced weights."""
+
+    action = next(
+        action
+        for action in training_cli._parser()._actions
+        if action.dest == "container_image_digest"
+    )
+    assert action.required is True
+
+    with pytest.raises(SystemExit):
+        training_cli._parser().parse_args(
+            ["--config", str(PROFILE_PATH), "--stage", "T0", "--run-id", "run"]
+        )
 
 
 def test_environment_json_records_rejected_nonfinite_amp_without_nan_token(
@@ -1366,7 +1490,8 @@ def test_environment_json_records_rejected_nonfinite_amp_without_nan_token(
 
     text = fake_engine.environment_path.read_text(encoding="utf-8")
     assert "NaN" not in text
-    assert json.loads(text)["amp"]["amp_loss"] is None
+    assert json.loads(text)["schema_version"] == 2
+    assert "amp" not in json.loads(text)
 
 
 def test_runner_rejects_engine_constructed_for_another_stage_or_run(

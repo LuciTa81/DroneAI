@@ -12,10 +12,12 @@ From the Windows notebook:
 ```powershell
 ssh -o BatchMode=yes -o ConnectTimeout=10 home5090-pop "uname -s"
 ssh home5090-pop "nvidia-smi; docker ps --filter name=crowd-jupyter"
+ssh home5090-pop "docker inspect --format '{{.Image}}' crowd-jupyter"
 ```
 
-The expected OS is `Linux`; the expected GPU is the RTX 5090. Do not create or
-replace the container.
+The expected OS is `Linux`; the expected GPU is the RTX 5090. Save the last
+command's exact `sha256:<64 hex>` image ID as `CONTAINER_IMAGE_DIGEST`. A tag is
+not acceptable evidence. Do not create or replace the container.
 
 ## 2. Create the isolated remote worktree
 
@@ -99,14 +101,17 @@ UPSTREAM=/workspace/upstreams/STEERER
 PROCESSED=/workspace/data/datasets/ucf-qnrf-kaggle-apache/processed/steerer-training-v1
 BACKBONE=/workspace/data/checkpoints/backbones/hrnetv2_w48_imagenet_pretrained.pth
 BACKBONE_SHA=0efec102d97f2ef58f0e258b2c3076b3704b93ffc2b73f64c8da5462c0037ef8
-RUN_ID=steerer-qnrf-imagenet-20260806-a
+RUN_ID=steerer-qnrf-imagenet-20260806-t0-b
+CONTAINER_IMAGE_DIGEST=sha256:90dfcacf0d65fec4357a37db72624b42febf8d3d9056924cdec3499237ed2691
 
 cd "$WT"
 $PY scripts/run_steerer_ucf_training.py \
   --config configs/training/steerer_ucf_qnrf_imagenet.home5090.json \
   --stage T0 --run-id "$RUN_ID" --processed-root "$PROCESSED" \
   --upstream-dir "$UPSTREAM" --backbone "$BACKBONE" \
-  --backbone-sha256 "$BACKBONE_SHA" --device cuda:0
+  --backbone-sha256 "$BACKBONE_SHA" \
+  --container-image-digest "$CONTAINER_IMAGE_DIGEST" --device cuda:0 \
+  | tee "/workspace/data/results/steerer-ucf-training/$RUN_ID/run-result.jsonl"
 ```
 
 Require `optimizer_steps=1`, finite loss, and `checkpoint_round_trip=true`.
@@ -114,12 +119,17 @@ Review the checkpoint manifest before any next stage:
 
 ```bash
 cat "/workspace/data/checkpoints/steerer-ucf-training/$RUN_ID/checkpoint-manifest.json"
-cat "/workspace/data/results/steerer-ucf-training/$RUN_ID/environment.json"
+cat "/workspace/data/results/steerer-ucf-training/$RUN_ID/run-result.jsonl"
 ```
 
-Score only after the runner has produced authoritative T0 metrics evidence:
+Score only after the runner has produced authoritative T0 metrics evidence. Use
+the content-addressed paths printed by the runner, not the mutable convenience
+`environment.json` name:
 
 ```bash
+RESULT_JSON=/workspace/data/results/steerer-ucf-training/$RUN_ID/run-result.jsonl
+METRICS_PATH=$($PY -c 'import json,sys; result=json.loads(open(sys.argv[1]).read().splitlines()[-1]); print(result["metrics_path"])' "$RESULT_JSON")
+ENVIRONMENT_PATH=$($PY -c 'import json,sys; result=json.loads(open(sys.argv[1]).read().splitlines()[-1]); print(result["environment_path"])' "$RESULT_JSON")
 $PY scripts/score_steerer_ucf_training.py \
   --stage T0 --run-id "$RUN_ID" \
   --profile "$WT/configs/training/steerer_ucf_qnrf_imagenet.home5090.json" \
@@ -127,10 +137,9 @@ $PY scripts/score_steerer_ucf_training.py \
   --processed-root "$PROCESSED" --backbone "$BACKBONE" \
   --checkpoint "/workspace/data/checkpoints/steerer-ucf-training/$RUN_ID/last.pth" \
   --checkpoint-manifest "/workspace/data/checkpoints/steerer-ucf-training/$RUN_ID/checkpoint-manifest.json" \
-  --environment "/workspace/data/results/steerer-ucf-training/$RUN_ID/environment.json" \
-  --metrics "/workspace/data/results/steerer-ucf-training/$RUN_ID/T0/metrics-evidence.json" \
-  --output-dir "/workspace/data/results/steerer-ucf-training/$RUN_ID/T0/score-bundle"
-cat "/workspace/data/results/steerer-ucf-training/$RUN_ID/T0/score-bundle/score.json"
+  --environment "$ENVIRONMENT_PATH" --metrics "$METRICS_PATH" \
+  --output-dir "/workspace/data/results/steerer-ucf-training/$RUN_ID/score-bundle"
+cat "/workspace/data/results/steerer-ucf-training/$RUN_ID/score-bundle/score.json"
 ```
 
 Stop if scoring reports `BLOCKED` or if required evidence is absent.
@@ -141,17 +150,21 @@ T1 starts a clean one-epoch run from the same ImageNet backbone; it does not
 resume the T0 probe.
 
 ```bash
+RUN_ID=steerer-qnrf-imagenet-20260806-t1-b
 $PY scripts/run_steerer_ucf_training.py \
   --config configs/training/steerer_ucf_qnrf_imagenet.home5090.json \
   --stage T1 --run-id "$RUN_ID" --processed-root "$PROCESSED" \
   --upstream-dir "$UPSTREAM" --backbone "$BACKBONE" \
-  --backbone-sha256 "$BACKBONE_SHA" --device cuda:0
+  --backbone-sha256 "$BACKBONE_SHA" \
+  --container-image-digest "$CONTAINER_IMAGE_DIGEST" --device cuda:0 \
+  | tee "/workspace/data/results/steerer-ucf-training/$RUN_ID/run-result.jsonl"
 ```
 
 Require epoch 1, all 240 validation samples, finite metrics, and a reloadable
-checkpoint. Score T1 with the same scoring command after replacing `T0` with
-`T1` and using the T1 metrics evidence path. Inspect `score.json`, `metrics.json`,
-`environment.json`, and `lineage.json` before proceeding.
+checkpoint. Re-read `result["metrics_path"]` and `result["environment_path"]`
+from the T1 run result and invoke the scoring command with `--stage T1`. Inspect
+`score.json`, `metrics.json`, `environment.json`, and `lineage.json` before
+proceeding.
 
 ## 7. Status, interruption, and reboot recovery
 

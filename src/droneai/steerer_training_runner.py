@@ -7,8 +7,10 @@ import hashlib
 import json
 import math
 import os
+import platform
 import random
 import re
+import subprocess
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -27,8 +29,13 @@ from droneai.steerer_training_checkpoint import (
     save_checkpoint_with_policy,
     verify_resume,
 )
-from droneai.steerer_training_upstream import synthesize_official_config
-from droneai.steerer_training_evidence import ValidationSampleObservation
+from droneai.steerer_training_upstream import audit_upstream, synthesize_official_config
+from droneai.steerer_training_evidence import (
+    ValidationSampleObservation,
+    build_t0_metrics,
+    build_t1_metrics,
+    strict_metrics_payload,
+)
 from droneai.evaluation_metrics import _game_l1, _point_metrics
 from droneai.steerer_adapter import extract_steerer_points
 
@@ -254,7 +261,15 @@ class StageResult:
     checkpoint_round_trip: bool
     physical_batch: int
     accumulation_steps: int
+    amp_enabled: bool
+    cuda_oom_evidence: str | None
     elapsed_seconds: float
+    metrics_path: Path
+    metrics_sha256: str
+    environment_path: Path
+    environment_sha256: str
+    checkpoint_path: Path
+    checkpoint_sha256: str
 
 
 class TrainingEngine(Protocol):
@@ -277,6 +292,18 @@ class TrainingEngine(Protocol):
     def run_epoch(self, epoch: int, *, amp_enabled: bool) -> EpochObservation: ...
 
     def validate(self) -> ValidationObservation: ...
+
+    def authoritative_environment_payload(
+        self,
+        *,
+        stage: str,
+        run_id: str,
+        container_image_digest: str,
+        physical_batch: int,
+        accumulation_steps: int,
+        metrics_path: Path,
+        metrics_sha256: str,
+    ) -> Mapping[str, object]: ...
 
     def checkpoint_state(self) -> dict[str, object]: ...
 
@@ -545,6 +572,117 @@ class PinnedUpstreamTrainingEngine:
 
     def validate(self) -> ValidationObservation:
         return getattr(self._require_runtime(), "validate")()
+
+    def authoritative_environment_payload(
+        self,
+        *,
+        stage: str,
+        run_id: str,
+        container_image_digest: str,
+        physical_batch: int,
+        accumulation_steps: int,
+        metrics_path: Path,
+        metrics_sha256: str,
+    ) -> Mapping[str, object]:
+        """Recompute the schema-v2 identity bound to one measured stage."""
+
+        if re.fullmatch(r"sha256:[0-9a-fA-F]{64}", container_image_digest) is None:
+            raise ValueError("container image digest must be sha256 plus 64 hexadecimal characters")
+        project_root = Path(__file__).resolve().parents[2]
+        profile_path = (
+            project_root
+            / "configs"
+            / "training"
+            / "steerer_ucf_qnrf_imagenet.home5090.json"
+        ).resolve(strict=True)
+        commit = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            cwd=project_root,
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.strip()
+        dirty = subprocess.run(
+            ["git", "status", "--porcelain", "--untracked-files=all"],
+            cwd=project_root,
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.strip()
+        if re.fullmatch(r"[0-9a-fA-F]{40}", commit) is None or dirty:
+            raise ValueError("project worktree must be clean at one exact Git commit")
+        upstream = audit_upstream(self.profile, self.upstream_dir)
+        split_manifest_path = self.processed_root / "split-manifest.json"
+        sealed_path = self.processed_root / "test-sealed.json"
+        inventory_path = self.processed_root / "manifests" / "output-inventory.jsonl"
+        train_path = self.processed_root / "train.txt"
+        validation_path = self.processed_root / "val.txt"
+        for path in (
+            split_manifest_path,
+            sealed_path,
+            inventory_path,
+            train_path,
+            validation_path,
+            metrics_path,
+        ):
+            if not path.is_file() or path.is_symlink():
+                raise ValueError(f"authoritative environment input is invalid: {path.name}")
+        split_manifest = json.loads(split_manifest_path.read_text(encoding="utf-8"))
+        population_sha256 = split_manifest.get("population_sha256")
+        if not is_sha256(population_sha256):
+            raise ValueError("split manifest population SHA-256 is invalid")
+        torch = self.torch_module
+        cuda_version = getattr(getattr(torch, "version", None), "cuda", None)
+        gpu_name = torch.cuda.get_device_name(torch.device(self.device))
+        backbone = self.backbone_path.resolve(strict=True)
+        return {
+            "schema_version": 2,
+            "run_id": run_id,
+            "stage": stage,
+            "project": {
+                "git_commit": commit.lower(),
+                "profile_sha256": sha256_file(profile_path),
+            },
+            "upstream": {
+                "origin_url": upstream.origin_url,
+                "commit": upstream.commit,
+                "clean": True,
+                "license_sha256": upstream.license_sha256,
+                "config_sha256": upstream.config_sha256,
+            },
+            "dataset": {
+                "processed_root": str(self.processed_root),
+                "source_partition": "official_train_only",
+                "official_test_accessed": False,
+                "train_sha256": sha256_file(train_path),
+                "validation_sha256": sha256_file(validation_path),
+                "dataset_inventory_sha256": sha256_file(inventory_path),
+                "population_sha256": population_sha256,
+                "test_sealed_sha256": sha256_file(sealed_path),
+                "split_manifest_sha256": sha256_file(split_manifest_path),
+            },
+            "initialization": {
+                "mode": "imagenet_backbone_only",
+                "model_checkpoint_loaded": False,
+                "backbone_path": str(backbone),
+                "backbone_sha256": sha256_file(backbone),
+                "backbone_byte_size": backbone.stat().st_size,
+            },
+            "training": {"config_sha256": self.lineage.config_sha256},
+            "runtime": {
+                "container_image_digest": container_image_digest.lower(),
+                "python": platform.python_version(),
+                "torch": str(torch.__version__),
+                "cuda": str(cuda_version or "unavailable"),
+                "gpu": str(gpu_name),
+            },
+            "batch": {
+                "physical_batch": physical_batch,
+                "accumulation_steps": accumulation_steps,
+                "effective_batch": physical_batch * accumulation_steps,
+            },
+            "metrics": {"path": str(metrics_path), "sha256": metrics_sha256},
+        }
 
     def checkpoint_state(self) -> dict[str, object]:
         return getattr(self._require_runtime(), "checkpoint_state")()
@@ -1273,57 +1411,88 @@ def _atomic_json(
         raise
 
 
-def _write_environment(
-    engine: TrainingEngine,
-    *,
-    run_id: str,
-    device: str,
-    physical_batch: int,
-    accumulation_steps: int,
-    oom_evidence: str | None,
-    amp_comparison: AmpComparison,
-    replace_existing: bool = False,
-) -> str:
-    def finite_or_none(value: float) -> float | None:
-        return float(value) if math.isfinite(value) else None
-
-    relative_difference = amp_comparison.relative_count_difference
-    payload: dict[str, object] = {
-        "schema_version": 1,
-        "run_id": run_id,
-        "seed": _SEED,
-        "device": device,
-        "schedule_horizon_epochs": _SCHEDULE_HORIZON,
-        "batch": {
-            "physical_batch": physical_batch,
-            "accumulation_steps": accumulation_steps,
-            "effective_batch": physical_batch * accumulation_steps,
-        },
-        "cuda_oom_evidence": oom_evidence,
-        "amp": {
-            "enabled": amp_comparison.accepted,
-            "fp32_loss": finite_or_none(amp_comparison.fp32_loss),
-            "amp_loss": finite_or_none(amp_comparison.amp_loss),
-            "fp32_count": finite_or_none(amp_comparison.fp32_count),
-            "amp_count": finite_or_none(amp_comparison.amp_count),
-            "relative_count_difference": finite_or_none(relative_difference),
-            "required_relative_count_difference_below": 1.0e-3,
-        },
-    }
+def _json_digest(payload: Mapping[str, object]) -> str:
     encoded = (
         json.dumps(payload, indent=2, sort_keys=True, allow_nan=False) + "\n"
     ).encode("utf-8")
-    digest = hashlib.sha256(encoded).hexdigest()
-    evidence_path = engine.environment_path.parent / f"environment.{digest}.json"
-    _atomic_json(evidence_path, payload)
-    if sha256_file(evidence_path) != digest:
-        raise RuntimeError("content-addressed environment evidence hash mismatch")
-    _atomic_json(
-        engine.environment_path,
-        payload,
-        replace_existing=replace_existing,
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def _write_stage_metrics(
+    engine: TrainingEngine,
+    *,
+    run_id: str,
+    stage: Stage,
+    metrics: Mapping[str, float],
+) -> tuple[Path, str]:
+    payload = strict_metrics_payload(run_id=run_id, stage=stage, metrics=metrics)
+    result_root = engine.environment_path.parent
+    metrics_path = result_root / "metrics.json"
+    if metrics_path.exists() and metrics_path.read_bytes() != (
+        json.dumps(payload, indent=2, sort_keys=True, allow_nan=False) + "\n"
+    ).encode("utf-8"):
+        metrics_path = result_root / f"metrics.{stage.lower()}.json"
+    _atomic_json(metrics_path, payload)
+    digest = sha256_file(metrics_path)
+    if digest != _json_digest(payload):
+        raise RuntimeError("runner metrics artifact hash mismatch")
+    return metrics_path, digest
+
+
+def _write_authoritative_environment(
+    engine: TrainingEngine,
+    *,
+    stage: Stage,
+    run_id: str,
+    container_image_digest: str,
+    physical_batch: int,
+    accumulation_steps: int,
+    metrics_path: Path,
+    metrics_sha256: str,
+) -> tuple[Path, str]:
+    builder = getattr(engine, "authoritative_environment_payload", None)
+    if not callable(builder):
+        raise TypeError("training engine must provide authoritative environment identity")
+    payload = dict(
+        builder(
+            stage=stage,
+            run_id=run_id,
+            container_image_digest=container_image_digest,
+            physical_batch=physical_batch,
+            accumulation_steps=accumulation_steps,
+            metrics_path=metrics_path,
+            metrics_sha256=metrics_sha256,
+        )
     )
-    return digest
+    required = {
+        "schema_version",
+        "run_id",
+        "stage",
+        "project",
+        "upstream",
+        "dataset",
+        "initialization",
+        "training",
+        "runtime",
+        "batch",
+        "metrics",
+    }
+    if (
+        set(payload) != required
+        or payload.get("schema_version") != 2
+        or payload.get("run_id") != run_id
+        or payload.get("stage") != stage
+        or payload.get("metrics")
+        != {"path": str(metrics_path), "sha256": metrics_sha256}
+    ):
+        raise ValueError("authoritative environment payload has the wrong schema or lineage")
+    digest = _json_digest(payload)
+    environment_path = engine.environment_path.parent / f"environment.{digest}.json"
+    _atomic_json(environment_path, payload)
+    if sha256_file(environment_path) != digest:
+        raise RuntimeError("content-addressed environment evidence hash mismatch")
+    _atomic_json(engine.environment_path, payload, replace_existing=True)
+    return environment_path, digest
 
 
 def _checkpoint_components(engine: TrainingEngine) -> dict[str, Mapping[str, object]]:
@@ -1570,6 +1739,7 @@ def run_training_stage(
     run_id: str,
     resume: Path | None = None,
     device: str = "cuda:0",
+    container_image_digest: str | None = None,
     engine: TrainingEngine,
 ) -> StageResult:
     """Execute only the optimizer and validation work authorized by ``stage``."""
@@ -1592,6 +1762,15 @@ def run_training_stage(
         raise ValueError("T0 and T1 cannot use a resume checkpoint")
     if stage in {"T5", "T50"} and resume is None:
         raise ValueError(f"{stage} requires a verified resume checkpoint")
+    container_digest = container_image_digest or getattr(
+        engine, "container_image_digest", None
+    )
+    if not isinstance(container_digest, str) or re.fullmatch(
+        r"sha256:[0-9a-fA-F]{64}", container_digest
+    ) is None:
+        raise ValueError(
+            "container image digest must be sha256 plus 64 hexadecimal characters"
+        )
 
     started = time.perf_counter()
     _set_process_seeds(_SEED, engine)
@@ -1623,25 +1802,32 @@ def run_training_stage(
     amp_enabled = amp_comparison.accepted
     if resume is not None:
         engine.restore_scaler_state(resumed_scaler_state, enabled=amp_enabled)
-    environment_manifest_sha256 = _write_environment(
-        engine,
-        run_id=run_id,
-        device=device,
-        physical_batch=physical_batch,
-        accumulation_steps=accumulation_steps,
-        oom_evidence=oom_evidence,
-        amp_comparison=amp_comparison,
-        replace_existing=resume is not None,
-    )
 
     optimizer_steps = 0
     validation_samples = 0
     checkpoint_round_trip = False
+    epoch_observations: list[EpochObservation] = []
     if stage == "T0":
         update = engine.run_update(amp_enabled=amp_enabled)
         _validate_update(update)
         optimizer_steps = 1
-        checkpoint_round_trip = bool(_persist_and_reload_checkpoint(
+        metrics = build_t0_metrics(update)
+        metrics_path, metrics_sha256 = _write_stage_metrics(
+            engine, run_id=run_id, stage=stage, metrics=metrics
+        )
+        environment_path, environment_manifest_sha256 = (
+            _write_authoritative_environment(
+                engine,
+                stage=stage,
+                run_id=run_id,
+                container_image_digest=container_digest,
+                physical_batch=physical_batch,
+                accumulation_steps=accumulation_steps,
+                metrics_path=metrics_path,
+                metrics_sha256=metrics_sha256,
+            )
+        )
+        checkpoint_sha256 = _persist_and_reload_checkpoint(
             engine,
             run_id=run_id,
             stage=stage,
@@ -1650,7 +1836,8 @@ def run_training_stage(
             current_rmse=float(getattr(engine, "best_rmse", 1.0e20)),
             environment_manifest_sha256=environment_manifest_sha256,
             parent_checkpoint_sha256=parent_checkpoint_sha256,
-        ))
+        )
+        checkpoint_round_trip = bool(checkpoint_sha256)
         completed_epoch = 0
     else:
         target_epoch = _STAGE_STOP_EPOCH[stage]
@@ -1660,22 +1847,7 @@ def run_training_stage(
             if observation.epoch != epoch:
                 raise RuntimeError("training engine crossed the requested epoch ceiling")
             optimizer_steps += observation.optimizer_steps
-            if epoch < target_epoch:
-                epoch_rng = capture_rng_state(
-                    _SEED, torch_module=getattr(engine, "torch_module", None)
-                )
-                parent_checkpoint_sha256 = _persist_and_reload_checkpoint(
-                    engine,
-                    run_id=run_id,
-                    stage=stage,
-                    epoch=epoch,
-                    current_mae=float(getattr(engine, "best_mae", 1.0e20)),
-                    current_rmse=float(getattr(engine, "best_rmse", 1.0e20)),
-                    environment_manifest_sha256=environment_manifest_sha256,
-                    parent_checkpoint_sha256=parent_checkpoint_sha256,
-                    rng_state=epoch_rng,
-                )
-                checkpoint_round_trip = True
+            epoch_observations.append(observation)
         completed_epoch = engine.completed_epoch
         if completed_epoch != target_epoch:
             raise RuntimeError("training engine did not stop at the requested epoch ceiling")
@@ -1690,7 +1862,46 @@ def run_training_stage(
                 f"expected={profile.validation_count} observed={validation.sample_count}"
             )
         validation_samples = validation.sample_count
-        checkpoint_round_trip = bool(_persist_and_reload_checkpoint(
+        combined_epoch = EpochObservation(
+            epoch=completed_epoch,
+            optimizer_steps=sum(item.optimizer_steps for item in epoch_observations),
+            losses=tuple(
+                value for item in epoch_observations for value in item.losses
+            ),
+            density_values=tuple(
+                value for item in epoch_observations for value in item.density_values
+            ),
+            gradient_norms=tuple(
+                value for item in epoch_observations for value in item.gradient_norms
+            ),
+            learning_rates=tuple(
+                value for item in epoch_observations for value in item.learning_rates
+            ),
+            sample_tokens=tuple(
+                value for item in epoch_observations for value in item.sample_tokens
+            ),
+        )
+        metrics = build_t1_metrics(
+            combined_epoch,
+            validation,
+            expected_samples=profile.validation_count,
+        )
+        metrics_path, metrics_sha256 = _write_stage_metrics(
+            engine, run_id=run_id, stage=stage, metrics=metrics
+        )
+        environment_path, environment_manifest_sha256 = (
+            _write_authoritative_environment(
+                engine,
+                stage=stage,
+                run_id=run_id,
+                container_image_digest=container_digest,
+                physical_batch=physical_batch,
+                accumulation_steps=accumulation_steps,
+                metrics_path=metrics_path,
+                metrics_sha256=metrics_sha256,
+            )
+        )
+        checkpoint_sha256 = _persist_and_reload_checkpoint(
             engine,
             run_id=run_id,
             stage=stage,
@@ -1700,7 +1911,12 @@ def run_training_stage(
             environment_manifest_sha256=environment_manifest_sha256,
             parent_checkpoint_sha256=parent_checkpoint_sha256,
             rng_state=training_boundary_rng,
-        ))
+        )
+        checkpoint_round_trip = bool(checkpoint_sha256)
+
+    checkpoint_path = engine.checkpoint_dir / "last.pth"
+    if sha256_file(checkpoint_path) != checkpoint_sha256:
+        raise RuntimeError("authoritative checkpoint SHA-256 changed after reload")
 
     return StageResult(
         stage=stage,
@@ -1711,7 +1927,15 @@ def run_training_stage(
         checkpoint_round_trip=checkpoint_round_trip,
         physical_batch=physical_batch,
         accumulation_steps=accumulation_steps,
+        amp_enabled=amp_enabled,
+        cuda_oom_evidence=oom_evidence,
         elapsed_seconds=max(time.perf_counter() - started, 0.0),
+        metrics_path=metrics_path,
+        metrics_sha256=metrics_sha256,
+        environment_path=environment_path,
+        environment_sha256=environment_manifest_sha256,
+        checkpoint_path=checkpoint_path,
+        checkpoint_sha256=checkpoint_sha256,
     )
 
 

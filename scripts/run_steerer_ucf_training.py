@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
 from typing import Sequence
@@ -32,6 +33,7 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--upstream-dir", type=Path, required=True)
     parser.add_argument("--backbone", type=Path, required=True)
     parser.add_argument("--backbone-sha256", required=True)
+    parser.add_argument("--container-image-digest", required=True)
     parser.add_argument("--resume", type=Path)
     parser.add_argument("--device", default="cuda:0")
     return parser
@@ -65,6 +67,12 @@ def main(argv: Sequence[str] | None = None) -> int:
             raise ValueError(
                 "--backbone-sha256 must confirm the authoritative profile hash"
             )
+        if re.fullmatch(
+            r"sha256:[0-9a-fA-F]{64}", args.container_image_digest
+        ) is None:
+            raise ValueError(
+                "--container-image-digest must be sha256 plus 64 hexadecimal characters"
+            )
         engine = PinnedUpstreamTrainingEngine(
             profile=profile,
             stage=args.stage,
@@ -81,6 +89,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             run_id=args.run_id,
             resume=args.resume,
             device=args.device,
+            container_image_digest=args.container_image_digest,
             engine=engine,
         )
     except (
@@ -109,7 +118,15 @@ def main(argv: Sequence[str] | None = None) -> int:
                 "checkpoint_round_trip": result.checkpoint_round_trip,
                 "physical_batch": result.physical_batch,
                 "accumulation_steps": result.accumulation_steps,
+                "amp_enabled": result.amp_enabled,
+                "cuda_oom_evidence": result.cuda_oom_evidence,
                 "elapsed_seconds": result.elapsed_seconds,
+                "metrics_path": str(result.metrics_path),
+                "metrics_sha256": result.metrics_sha256,
+                "environment_path": str(result.environment_path),
+                "environment_sha256": result.environment_sha256,
+                "checkpoint_path": str(result.checkpoint_path),
+                "checkpoint_sha256": result.checkpoint_sha256,
             },
             sort_keys=True,
         )
