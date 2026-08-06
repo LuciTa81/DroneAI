@@ -8,6 +8,9 @@ from dataclasses import dataclass
 from typing import Any, Mapping, Sequence
 
 import numpy as np
+from scipy.sparse import csr_matrix
+from scipy.sparse.csgraph import maximum_bipartite_matching
+from scipy.spatial import cKDTree
 
 
 T0_METRICS = frozenset({"train_loss"})
@@ -70,6 +73,67 @@ def build_t0_metrics(update: object) -> dict[str, float]:
     """Return the exact T0 metric set from the real optimizer update."""
 
     return {"train_loss": _finite_number(getattr(update, "loss", None), name="train_loss")}
+
+
+def _point_array(
+    points: Sequence[tuple[float, float]], *, name: str
+) -> np.ndarray:
+    array = np.asarray(points, dtype=np.float64)
+    if array.size == 0:
+        return np.empty((0, 2), dtype=np.float64)
+    if array.ndim != 2 or array.shape[1] != 2 or not np.isfinite(array).all():
+        raise ValueError(f"{name} must contain finite 2D coordinates")
+    return array
+
+
+def localization_match_counts(
+    ground_truth_points: Sequence[tuple[float, float]],
+    predicted_points: Sequence[tuple[float, float]],
+    *,
+    radius: float,
+) -> tuple[int, int, int]:
+    """Return 1:1 TP/FP/FN counts using only point pairs inside ``radius``.
+
+    A sparse maximum-cardinality matching preserves the radius-threshold
+    localization semantics without allocating an O((GT + prediction)^2)
+    Hungarian cost matrix for dense crowd scenes.
+    """
+
+    threshold = _finite_number(radius, name="localization radius")
+    if threshold <= 0:
+        raise ValueError("localization radius must be positive")
+    ground_truth = _point_array(ground_truth_points, name="ground_truth_points")
+    predicted = _point_array(predicted_points, name="predicted_points")
+    ground_truth_count = int(ground_truth.shape[0])
+    predicted_count = int(predicted.shape[0])
+    if ground_truth_count == 0 or predicted_count == 0:
+        return 0, predicted_count, ground_truth_count
+
+    candidate_columns = cKDTree(predicted).query_ball_point(
+        ground_truth, r=threshold
+    )
+    rows: list[int] = []
+    columns: list[int] = []
+    for row, candidates in enumerate(candidate_columns):
+        rows.extend([row] * len(candidates))
+        columns.extend(int(candidate) for candidate in candidates)
+    if not rows:
+        return 0, predicted_count, ground_truth_count
+
+    adjacency = csr_matrix(
+        (
+            np.ones(len(rows), dtype=np.int8),
+            (np.asarray(rows, dtype=np.int64), np.asarray(columns, dtype=np.int64)),
+        ),
+        shape=(ground_truth_count, predicted_count),
+    )
+    matching = maximum_bipartite_matching(adjacency, perm_type="column")
+    true_positive = int(np.count_nonzero(matching >= 0))
+    return (
+        true_positive,
+        predicted_count - true_positive,
+        ground_truth_count - true_positive,
+    )
 
 
 def _localization_metrics(samples: Sequence[ValidationSampleObservation]) -> tuple[float, float, float]:
@@ -209,5 +273,6 @@ __all__ = [
     "ValidationSampleObservation",
     "build_t0_metrics",
     "build_t1_metrics",
+    "localization_match_counts",
     "strict_metrics_payload",
 ]

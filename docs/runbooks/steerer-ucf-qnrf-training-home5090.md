@@ -153,8 +153,12 @@ Run ID `steerer-qnrf-imagenet-20260806-t1-b` is reserved for the preserved
 failed integration attempt that stopped before validation evidence and did not
 promote a checkpoint. Do not reuse it.
 
+Run ID `steerer-qnrf-imagenet-20260806-t1-c` is reserved for the preserved
+T1-c attempt interrupted before promotion after dense localization matching
+caused excessive validation memory use. Do not reuse it.
+
 ```bash
-RUN_ID=steerer-qnrf-imagenet-20260806-t1-c
+RUN_ID=steerer-qnrf-imagenet-20260806-t1-d
 $PY scripts/run_steerer_ucf_training.py \
   --config configs/training/steerer_ucf_qnrf_imagenet.home5090.json \
   --stage T1 --run-id "$RUN_ID" --processed-root "$PROCESSED" \

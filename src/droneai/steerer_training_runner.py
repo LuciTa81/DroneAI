@@ -34,9 +34,10 @@ from droneai.steerer_training_evidence import (
     ValidationSampleObservation,
     build_t0_metrics,
     build_t1_metrics,
+    localization_match_counts,
     strict_metrics_payload,
 )
-from droneai.evaluation_metrics import _game_l1, _point_metrics
+from droneai.evaluation_metrics import _game_l1
 from droneai.steerer_adapter import extract_steerer_points
 
 
@@ -216,17 +217,11 @@ def _validation_spatial_observation(
         raise FloatingPointError("non-finite validation observation detected")
     if min(target_count, density_count, predicted_count, latency_ms, peak_vram_mb) < 0:
         raise ValueError("validation observations must be non-negative")
-    point_metrics = _point_metrics(
-        tuple(ground_truth_points), tuple(predicted_points), localization_radius
+    true_positive, false_positive, false_negative = localization_match_counts(
+        ground_truth_points,
+        predicted_points,
+        radius=localization_radius,
     )
-    if not ground_truth_points and not predicted_points:
-        true_positive = 0
-    else:
-        true_positive = int(
-            round(float(point_metrics["localization_precision"]) * len(predicted_points))
-        )
-    false_positive = len(predicted_points) - true_positive
-    false_negative = len(ground_truth_points) - true_positive
     game_l1 = _game_l1(target, predicted)
     return ValidationSampleObservation(
         sample_id=sample_id,

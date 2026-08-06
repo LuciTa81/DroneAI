@@ -9,6 +9,7 @@ from droneai.steerer_training_evidence import (
     ValidationSampleObservation,
     build_t0_metrics,
     build_t1_metrics,
+    localization_match_counts,
     strict_metrics_payload,
 )
 from droneai.steerer_training_gate import REQUIRED_T1_METRICS
@@ -26,6 +27,41 @@ def test_t0_metrics_use_actual_optimizer_update_loss() -> None:
     )
 
     assert build_t0_metrics(update) == {"train_loss": 1.25}
+
+
+def test_localization_matching_finds_maximum_cardinality_not_greedy_pairing() -> None:
+    """One ambiguous GT must not consume the only edge available to another GT."""
+
+    ground_truth = ((0.0, 0.0), (2.0, 0.0))
+    predicted = ((1.0, 0.0), (-1.0, 0.0))
+
+    assert localization_match_counts(ground_truth, predicted, radius=1.1) == (2, 0, 0)
+
+
+def test_localization_matching_handles_5000_sparse_points_without_dense_matrix() -> None:
+    """High-count validation must scale with nearby pairs, not every possible pair."""
+
+    ground_truth = tuple((float(index * 40), 0.0) for index in range(5_000))
+    predicted = tuple((float(index * 40 + 1), 0.0) for index in range(5_000))
+
+    assert localization_match_counts(ground_truth, predicted, radius=16.0) == (5_000, 0, 0)
+
+
+@pytest.mark.parametrize(
+    ("ground_truth", "predicted", "radius"),
+    (
+        (((float("nan"), 0.0),), (), 16.0),
+        (((0.0, 0.0, 1.0),), (), 16.0),
+        ((), (), 0.0),
+    ),
+)
+def test_localization_matching_rejects_invalid_coordinates_or_radius(
+    ground_truth: tuple[tuple[float, ...], ...],
+    predicted: tuple[tuple[float, ...], ...],
+    radius: float,
+) -> None:
+    with pytest.raises(ValueError):
+        localization_match_counts(ground_truth, predicted, radius=radius)
 
 
 def test_t1_metrics_match_hand_calculated_stage_observations() -> None:
