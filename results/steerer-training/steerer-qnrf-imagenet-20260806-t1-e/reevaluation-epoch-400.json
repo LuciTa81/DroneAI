@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "run_id": "steerer-qnrf-imagenet-20260806-t1-e",
+  "evaluated_split": "fixed UCF-QNRF Train-derived validation holdout",
+  "validation_samples": 240,
+  "official_test_accessed": false,
+  "method": "Each checkpoint was hash-verified, restored into a fresh PinnedUpstreamTrainingEngine instance, and evaluated over the complete fixed validation split.",
+  "metric_definition": "Report MAE/RMSE use predicted density count against the float64 density-map target sum, matching the immutable boundary metrics.",
+  "checkpoints": [
+    {
+      "filename": "best-mae.pth",
+      "epoch": 350,
+      "sha256": "e6c491dee00b1ce8aebc281e65f1aeee9956c3ca25476e73a383e874d7865db2",
+      "restored_sha256": "e6c491dee00b1ce8aebc281e65f1aeee9956c3ca25476e73a383e874d7865db2",
+      "mae": 120.40864681502184,
+      "rmse": 429.21159777642663,
+      "validation_loss": 0.014491517631783305,
+      "matches_boundary_metrics": true
+    },
+    {
+      "filename": "best-rmse.pth",
+      "epoch": 175,
+      "sha256": "ab1f65573c7f18f115e711998f4f4fb252e816bc5b9ae3564d5b379f22f981e6",
+      "restored_sha256": "ab1f65573c7f18f115e711998f4f4fb252e816bc5b9ae3564d5b379f22f981e6",
+      "mae": 129.80840112070243,
+      "rmse": 379.43360599712304,
+      "validation_loss": 0.015942030268827997,
+      "matches_boundary_metrics": true
+    },
+    {
+      "filename": "milestone-400.pth",
+      "epoch": 400,
+      "sha256": "af9399f392170602fa359a9fe5f30c3bb0b0e8a3563163c7356ce074d1db3197",
+      "restored_sha256": "af9399f392170602fa359a9fe5f30c3bb0b0e8a3563163c7356ce074d1db3197",
+      "mae": 122.82998937467734,
+      "rmse": 460.39165552134887,
+      "validation_loss": 0.014898887348681455,
+      "matches_boundary_metrics": true
+    },
+    {
+      "filename": "last.pth",
+      "epoch": 400,
+      "sha256": "d7b510d2ea2d0c0f6a9b79900045b6cf22b441114ecab8350a25045a63c26c3a",
+      "restored_sha256": "d7b510d2ea2d0c0f6a9b79900045b6cf22b441114ecab8350a25045a63c26c3a",
+      "mae": 122.82998937467734,
+      "rmse": 460.39165552134887,
+      "validation_loss": 0.014898887348681455,
+      "matches_boundary_metrics": true,
+      "matches_milestone_400_model_metrics": true
+    }
+  ],
+  "state": "PASS_INDEPENDENT_VALIDATION_REEVALUATION"
+}
