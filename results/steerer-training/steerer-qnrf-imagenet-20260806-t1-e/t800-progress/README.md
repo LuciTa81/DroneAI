@@ -16,3 +16,7 @@ official Test after full training.
 At epoch 200, MAE/RMSE were 154.786/537.058, so the epoch-175 best
 129.808/379.434 remained selected. `milestone-200.pth` was still preserved as
 an independent, hash-verified recovery point.
+
+At epoch 300, MAE/RMSE were 130.746/464.236. The selected count checkpoints
+therefore remained best-MAE epoch 250 and best-RMSE epoch 175, while
+`milestone-300.pth` was preserved and hash verified.

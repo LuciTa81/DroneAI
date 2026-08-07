@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "run_id": "steerer-qnrf-imagenet-20260806-t1-e",
+  "stage": "T800",
+  "epoch": 300,
+  "validation_samples": 240,
+  "official_test_accessed": false,
+  "precision": "fp32",
+  "metrics": {
+    "mae": 130.74637924532095,
+    "rmse": 464.2359678082327,
+    "reference_mape": 14.211033864930005,
+    "game_l1": 140.35436661540263,
+    "localization_f1_16px": 0.7452989727151114,
+    "localization_precision_16px": 0.8033649477355709,
+    "localization_recall_16px": 0.695061036753871,
+    "signed_bias": 44.22361174325148,
+    "validation_loss": 0.014114530267882704
+  },
+  "selected_best": {
+    "mae_epoch": 250,
+    "mae": 126.54186767041683,
+    "best_mae_sha256": "4dde21b34b8eb01520a35b254c6a561586f2269d5951314d3bee6f2cb353997b",
+    "rmse_epoch": 175,
+    "rmse": 379.43360599712304,
+    "best_rmse_sha256": "ab1f65573c7f18f115e711998f4f4fb252e816bc5b9ae3564d5b379f22f981e6"
+  },
+  "artifacts": {
+    "metrics_epoch_300_sha256": "8defa21c9295969f3bb8058b2cf857b7e318a7aaa3a3200bb2628958d7e6fb87",
+    "last_sha256": "c600a41a506417bbeaf72e32bcc5f2ec176adb59440c32f9f1b61b89a4f5e66e",
+    "milestone_300_sha256": "a8fc3d237fe295f355f510335d1b5e0bcccca59eb30573728fc403b462e16a55",
+    "parent_checkpoint_sha256": "b5033f69e00d74be9115cb38c24c065ffe9be92769aaa0511bb28d40f192ee08"
+  },
+  "state": "PASS_VALIDATION_MILESTONE_ONLY"
+}
