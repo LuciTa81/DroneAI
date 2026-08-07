@@ -1,0 +1,51 @@
+{
+  "checkpoints": [
+    {
+      "byte_count": 775135729,
+      "environment_manifest_sha256": "9fdaf0b7408f9d0ca861e3dbbcd6b79b331e0c2d64445dca552d923f50a923a6",
+      "epoch": 5,
+      "filename": "best-mae.pth",
+      "metric_reason": "best_mae",
+      "parent_checkpoint_sha256": "98940d57c8dfd532a3b78077421fe95443b20c0888a2f49255accc956220a509",
+      "sha256": "1b26de9185b06dcccb9735c8f211a01f78f257952bfa68577b6a1854f03b7626"
+    },
+    {
+      "byte_count": 775140438,
+      "environment_manifest_sha256": "9fdaf0b7408f9d0ca861e3dbbcd6b79b331e0c2d64445dca552d923f50a923a6",
+      "epoch": 5,
+      "filename": "best-rmse.pth",
+      "metric_reason": "best_rmse",
+      "parent_checkpoint_sha256": "98940d57c8dfd532a3b78077421fe95443b20c0888a2f49255accc956220a509",
+      "sha256": "8fed0a5aa9f6456d59999bfec163a9819a4afb776e597f51fadfc2aa2aa37660"
+    },
+    {
+      "byte_count": 775116893,
+      "environment_manifest_sha256": "9fdaf0b7408f9d0ca861e3dbbcd6b79b331e0c2d64445dca552d923f50a923a6",
+      "epoch": 5,
+      "filename": "last.pth",
+      "metric_reason": "last",
+      "parent_checkpoint_sha256": "98940d57c8dfd532a3b78077421fe95443b20c0888a2f49255accc956220a509",
+      "sha256": "d62b3e01727cd7f6bc245a1b3398fed0350a55c55d0238f26b437f81cf33ec72"
+    },
+    {
+      "byte_count": 775149034,
+      "environment_manifest_sha256": "5d796fc2ef3ac8df1955c87bfb0970247a5f4887dd14c8ce1c43fbaf34461c64",
+      "epoch": 1,
+      "filename": "milestone-001.pth",
+      "metric_reason": "milestone-001",
+      "parent_checkpoint_sha256": null,
+      "sha256": "98940d57c8dfd532a3b78077421fe95443b20c0888a2f49255accc956220a509"
+    },
+    {
+      "byte_count": 775159274,
+      "environment_manifest_sha256": "9fdaf0b7408f9d0ca861e3dbbcd6b79b331e0c2d64445dca552d923f50a923a6",
+      "epoch": 5,
+      "filename": "milestone-005.pth",
+      "metric_reason": "milestone-005",
+      "parent_checkpoint_sha256": "98940d57c8dfd532a3b78077421fe95443b20c0888a2f49255accc956220a509",
+      "sha256": "2ce6800bcbbdaace881e5f2ecc9f481616a67b9b96254232b7e8e5285ceeafc4"
+    }
+  ],
+  "run_id": "steerer-qnrf-imagenet-20260806-t1-e",
+  "schema_version": 1
+}

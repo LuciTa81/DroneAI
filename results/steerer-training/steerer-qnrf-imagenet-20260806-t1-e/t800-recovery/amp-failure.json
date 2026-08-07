@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "run_id": "steerer-qnrf-imagenet-20260806-t1-e",
+  "stage": "T800",
+  "attempt": "amp-from-milestone-005",
+  "state": "failed_before_checkpoint_promotion",
+  "failure": "non-finite gradient norm detected",
+  "last_completed_epoch": 9,
+  "global_step": 1080,
+  "recent_loss": 0.025448746979236603,
+  "failed_status_updated_at": "2026-08-06T20:39:38.466828+00:00",
+  "resume_checkpoint": "/workspace/data/checkpoints/steerer-ucf-training/steerer-qnrf-imagenet-20260806-t1-e/milestone-005.pth",
+  "resume_checkpoint_sha256": "2ce6800bcbbdaace881e5f2ecc9f481616a67b9b96254232b7e8e5285ceeafc4",
+  "failed_log": "/workspace/data/results/steerer-ucf-training/steerer-qnrf-imagenet-20260806-t1-e/run-result-t800.jsonl",
+  "recovery_policy": {
+    "precision": "fp32",
+    "restore_model": true,
+    "restore_optimizer": true,
+    "restore_scheduler": true,
+    "restore_rng": true,
+    "restore_best_metrics": true,
+    "restore_amp_scaler": false,
+    "recovery_log": "/workspace/data/results/steerer-ucf-training/steerer-qnrf-imagenet-20260806-t1-e/run-result-t800-fp32.jsonl"
+  },
+  "recovery_verification": {
+    "epoch_10_completed": true,
+    "epoch_10_global_step": 1200,
+    "epoch_10_recent_loss": 0.027263397350907326,
+    "epoch_11_completed": true,
+    "epoch_11_global_step": 1320,
+    "epoch_11_recent_loss": 0.02513902634382248
+  },
+  "diagnosis": "confirmed_amp_gradient_overflow; explicit_fp32_crossed_failure_boundary"
+}

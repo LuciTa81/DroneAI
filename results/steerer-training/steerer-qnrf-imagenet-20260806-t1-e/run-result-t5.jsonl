@@ -1,0 +1,77 @@
+/workspace/.venvs/steerer/lib/python3.12/site-packages/mmcv/__init__.py:20: UserWarning: On January 1, 2023, MMCV will release v2.0.0, in which it will remove components related to the training process and add a data transformation module. In addition, it will rename the package names mmcv to mmcv-lite and mmcv-full to mmcv. See https://github.com/open-mmlab/mmcv/blob/master/docs/en/compatibility.md for more details.
+  warnings.warn(
+/workspace/.venvs/steerer/lib/python3.12/site-packages/timm/models/layers/__init__.py:48: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
+/workspace/upstreams/STEERER/lib/models/build_counter.py:175: UserWarning: `nn.functional.upsample_nearest` is deprecated. Use `nn.functional.interpolate` instead.
+  loss_mask = F.upsample_nearest(mask_add,   size=(out_list[i].size()[2:]))
+/workspace/upstreams/STEERER/lib/models/build_counter.py:183: UserWarning: `nn.functional.upsample_nearest` is deprecated. Use `nn.functional.interpolate` instead.
+  label_patch += (label_list[0] * F.upsample_nearest(mask_gt[:,i].unsqueeze(1),
+/workspace/upstreams/STEERER/lib/datasets/utils/collate.py:65: UserWarning: TypedStorage is deprecated. It will be removed in the future and UntypedStorage will be the only storage class. This should only matter to you if you are using storages directly.  To access UntypedStorage directly, use tensor.untyped_storage() instead of tensor.storage()
+  storage = elem.storage()._new_shared(numel, device=elem.device)
+/workspace/upstreams/STEERER/lib/datasets/utils/collate.py:65: UserWarning: TypedStorage is deprecated. It will be removed in the future and UntypedStorage will be the only storage class. This should only matter to you if you are using storages directly.  To access UntypedStorage directly, use tensor.untyped_storage() instead of tensor.storage()
+  storage = elem.storage()._new_shared(numel, device=elem.device)
+/workspace/upstreams/STEERER/lib/datasets/utils/collate.py:65: UserWarning: TypedStorage is deprecated. It will be removed in the future and UntypedStorage will be the only storage class. This should only matter to you if you are using storages directly.  To access UntypedStorage directly, use tensor.untyped_storage() instead of tensor.storage()
+  storage = elem.storage()._new_shared(numel, device=elem.device)
+/workspace/upstreams/STEERER/lib/datasets/utils/collate.py:65: UserWarning: TypedStorage is deprecated. It will be removed in the future and UntypedStorage will be the only storage class. This should only matter to you if you are using storages directly.  To access UntypedStorage directly, use tensor.untyped_storage() instead of tensor.storage()
+  storage = elem.storage()._new_shared(numel, device=elem.device)
+/workspace/upstreams/STEERER/lib/datasets/utils/collate.py:65: UserWarning: TypedStorage is deprecated. It will be removed in the future and UntypedStorage will be the only storage class. This should only matter to you if you are using storages directly.  To access UntypedStorage directly, use tensor.untyped_storage() instead of tensor.storage()
+  storage = elem.storage()._new_shared(numel, device=elem.device)
+/workspace/upstreams/STEERER/lib/datasets/utils/collate.py:65: UserWarning: TypedStorage is deprecated. It will be removed in the future and UntypedStorage will be the only storage class. This should only matter to you if you are using storages directly.  To access UntypedStorage directly, use tensor.untyped_storage() instead of tensor.storage()
+  storage = elem.storage()._new_shared(numel, device=elem.device)
+Corrupt JPEG data: 21 extraneous bytes before marker 0xd9
+Corrupt JPEG data: 61 extraneous bytes before marker 0xd9
+/workspace/upstreams/STEERER/lib/datasets/utils/collate.py:65: UserWarning: TypedStorage is deprecated. It will be removed in the future and UntypedStorage will be the only storage class. This should only matter to you if you are using storages directly.  To access UntypedStorage directly, use tensor.untyped_storage() instead of tensor.storage()
+  storage = elem.storage()._new_shared(numel, device=elem.device)
+/workspace/upstreams/STEERER/lib/datasets/utils/collate.py:65: UserWarning: TypedStorage is deprecated. It will be removed in the future and UntypedStorage will be the only storage class. This should only matter to you if you are using storages directly.  To access UntypedStorage directly, use tensor.untyped_storage() instead of tensor.storage()
+  storage = elem.storage()._new_shared(numel, device=elem.device)
+/workspace/upstreams/STEERER/lib/datasets/utils/collate.py:65: UserWarning: TypedStorage is deprecated. It will be removed in the future and UntypedStorage will be the only storage class. This should only matter to you if you are using storages directly.  To access UntypedStorage directly, use tensor.untyped_storage() instead of tensor.storage()
+  storage = elem.storage()._new_shared(numel, device=elem.device)
+/workspace/upstreams/STEERER/lib/datasets/utils/collate.py:65: UserWarning: TypedStorage is deprecated. It will be removed in the future and UntypedStorage will be the only storage class. This should only matter to you if you are using storages directly.  To access UntypedStorage directly, use tensor.untyped_storage() instead of tensor.storage()
+  storage = elem.storage()._new_shared(numel, device=elem.device)
+/workspace/upstreams/STEERER/lib/datasets/utils/collate.py:65: UserWarning: TypedStorage is deprecated. It will be removed in the future and UntypedStorage will be the only storage class. This should only matter to you if you are using storages directly.  To access UntypedStorage directly, use tensor.untyped_storage() instead of tensor.storage()
+  storage = elem.storage()._new_shared(numel, device=elem.device)
+/workspace/upstreams/STEERER/lib/datasets/utils/collate.py:65: UserWarning: TypedStorage is deprecated. It will be removed in the future and UntypedStorage will be the only storage class. This should only matter to you if you are using storages directly.  To access UntypedStorage directly, use tensor.untyped_storage() instead of tensor.storage()
+  storage = elem.storage()._new_shared(numel, device=elem.device)
+Corrupt JPEG data: 61 extraneous bytes before marker 0xd9
+Corrupt JPEG data: 21 extraneous bytes before marker 0xd9
+/workspace/upstreams/STEERER/lib/datasets/utils/collate.py:65: UserWarning: TypedStorage is deprecated. It will be removed in the future and UntypedStorage will be the only storage class. This should only matter to you if you are using storages directly.  To access UntypedStorage directly, use tensor.untyped_storage() instead of tensor.storage()
+  storage = elem.storage()._new_shared(numel, device=elem.device)
+/workspace/upstreams/STEERER/lib/datasets/utils/collate.py:65: UserWarning: TypedStorage is deprecated. It will be removed in the future and UntypedStorage will be the only storage class. This should only matter to you if you are using storages directly.  To access UntypedStorage directly, use tensor.untyped_storage() instead of tensor.storage()
+  storage = elem.storage()._new_shared(numel, device=elem.device)
+/workspace/upstreams/STEERER/lib/datasets/utils/collate.py:65: UserWarning: TypedStorage is deprecated. It will be removed in the future and UntypedStorage will be the only storage class. This should only matter to you if you are using storages directly.  To access UntypedStorage directly, use tensor.untyped_storage() instead of tensor.storage()
+  storage = elem.storage()._new_shared(numel, device=elem.device)
+/workspace/upstreams/STEERER/lib/datasets/utils/collate.py:65: UserWarning: TypedStorage is deprecated. It will be removed in the future and UntypedStorage will be the only storage class. This should only matter to you if you are using storages directly.  To access UntypedStorage directly, use tensor.untyped_storage() instead of tensor.storage()
+  storage = elem.storage()._new_shared(numel, device=elem.device)
+/workspace/upstreams/STEERER/lib/datasets/utils/collate.py:65: UserWarning: TypedStorage is deprecated. It will be removed in the future and UntypedStorage will be the only storage class. This should only matter to you if you are using storages directly.  To access UntypedStorage directly, use tensor.untyped_storage() instead of tensor.storage()
+  storage = elem.storage()._new_shared(numel, device=elem.device)
+/workspace/upstreams/STEERER/lib/datasets/utils/collate.py:65: UserWarning: TypedStorage is deprecated. It will be removed in the future and UntypedStorage will be the only storage class. This should only matter to you if you are using storages directly.  To access UntypedStorage directly, use tensor.untyped_storage() instead of tensor.storage()
+  storage = elem.storage()._new_shared(numel, device=elem.device)
+Corrupt JPEG data: 61 extraneous bytes before marker 0xd9
+Corrupt JPEG data: 21 extraneous bytes before marker 0xd9
+/workspace/upstreams/STEERER/lib/datasets/utils/collate.py:65: UserWarning: TypedStorage is deprecated. It will be removed in the future and UntypedStorage will be the only storage class. This should only matter to you if you are using storages directly.  To access UntypedStorage directly, use tensor.untyped_storage() instead of tensor.storage()
+  storage = elem.storage()._new_shared(numel, device=elem.device)
+/workspace/upstreams/STEERER/lib/datasets/utils/collate.py:65: UserWarning: TypedStorage is deprecated. It will be removed in the future and UntypedStorage will be the only storage class. This should only matter to you if you are using storages directly.  To access UntypedStorage directly, use tensor.untyped_storage() instead of tensor.storage()
+  storage = elem.storage()._new_shared(numel, device=elem.device)
+/workspace/upstreams/STEERER/lib/datasets/utils/collate.py:65: UserWarning: TypedStorage is deprecated. It will be removed in the future and UntypedStorage will be the only storage class. This should only matter to you if you are using storages directly.  To access UntypedStorage directly, use tensor.untyped_storage() instead of tensor.storage()
+  storage = elem.storage()._new_shared(numel, device=elem.device)
+/workspace/upstreams/STEERER/lib/datasets/utils/collate.py:65: UserWarning: TypedStorage is deprecated. It will be removed in the future and UntypedStorage will be the only storage class. This should only matter to you if you are using storages directly.  To access UntypedStorage directly, use tensor.untyped_storage() instead of tensor.storage()
+  storage = elem.storage()._new_shared(numel, device=elem.device)
+/workspace/upstreams/STEERER/lib/datasets/utils/collate.py:65: UserWarning: TypedStorage is deprecated. It will be removed in the future and UntypedStorage will be the only storage class. This should only matter to you if you are using storages directly.  To access UntypedStorage directly, use tensor.untyped_storage() instead of tensor.storage()
+  storage = elem.storage()._new_shared(numel, device=elem.device)
+/workspace/upstreams/STEERER/lib/datasets/utils/collate.py:65: UserWarning: TypedStorage is deprecated. It will be removed in the future and UntypedStorage will be the only storage class. This should only matter to you if you are using storages directly.  To access UntypedStorage directly, use tensor.untyped_storage() instead of tensor.storage()
+  storage = elem.storage()._new_shared(numel, device=elem.device)
+Corrupt JPEG data: 61 extraneous bytes before marker 0xd9
+Corrupt JPEG data: 21 extraneous bytes before marker 0xd9
+/workspace/upstreams/STEERER/lib/datasets/utils/collate.py:65: UserWarning: TypedStorage is deprecated. It will be removed in the future and UntypedStorage will be the only storage class. This should only matter to you if you are using storages directly.  To access UntypedStorage directly, use tensor.untyped_storage() instead of tensor.storage()
+  storage = elem.storage()._new_shared(numel, device=elem.device)
+/workspace/upstreams/STEERER/lib/datasets/utils/collate.py:65: UserWarning: TypedStorage is deprecated. It will be removed in the future and UntypedStorage will be the only storage class. This should only matter to you if you are using storages directly.  To access UntypedStorage directly, use tensor.untyped_storage() instead of tensor.storage()
+  storage = elem.storage()._new_shared(numel, device=elem.device)
+/workspace/upstreams/STEERER/lib/datasets/utils/collate.py:65: UserWarning: TypedStorage is deprecated. It will be removed in the future and UntypedStorage will be the only storage class. This should only matter to you if you are using storages directly.  To access UntypedStorage directly, use tensor.untyped_storage() instead of tensor.storage()
+  storage = elem.storage()._new_shared(numel, device=elem.device)
+/workspace/upstreams/STEERER/lib/datasets/utils/collate.py:65: UserWarning: TypedStorage is deprecated. It will be removed in the future and UntypedStorage will be the only storage class. This should only matter to you if you are using storages directly.  To access UntypedStorage directly, use tensor.untyped_storage() instead of tensor.storage()
+  storage = elem.storage()._new_shared(numel, device=elem.device)
+/workspace/upstreams/STEERER/lib/datasets/utils/collate.py:65: UserWarning: TypedStorage is deprecated. It will be removed in the future and UntypedStorage will be the only storage class. This should only matter to you if you are using storages directly.  To access UntypedStorage directly, use tensor.untyped_storage() instead of tensor.storage()
+  storage = elem.storage()._new_shared(numel, device=elem.device)
+/workspace/upstreams/STEERER/lib/datasets/utils/collate.py:65: UserWarning: TypedStorage is deprecated. It will be removed in the future and UntypedStorage will be the only storage class. This should only matter to you if you are using storages directly.  To access UntypedStorage directly, use tensor.untyped_storage() instead of tensor.storage()
+  storage = elem.storage()._new_shared(numel, device=elem.device)
+{"accumulation_steps": 1, "amp_enabled": true, "checkpoint_path": "/workspace/data/checkpoints/steerer-ucf-training/steerer-qnrf-imagenet-20260806-t1-e/last.pth", "checkpoint_round_trip": true, "checkpoint_sha256": "d62b3e01727cd7f6bc245a1b3398fed0350a55c55d0238f26b437f81cf33ec72", "completed_epoch": 5, "cuda_oom_evidence": null, "elapsed_seconds": 202.43706565297907, "environment_path": "/workspace/data/results/steerer-ucf-training/steerer-qnrf-imagenet-20260806-t1-e/environment.9fdaf0b7408f9d0ca861e3dbbcd6b79b331e0c2d64445dca552d923f50a923a6.json", "environment_sha256": "9fdaf0b7408f9d0ca861e3dbbcd6b79b331e0c2d64445dca552d923f50a923a6", "finite_loss": true, "metrics_path": "/workspace/data/results/steerer-ucf-training/steerer-qnrf-imagenet-20260806-t1-e/metrics.t5.json", "metrics_sha256": "8bf4c8f38f06f057914fc3dc12faf65a0fcc94d91b3690817c1d37edd0e22aa2", "optimizer_steps": 480, "physical_batch": 8, "stage": "T5", "status": "completed", "validation_samples": 240}

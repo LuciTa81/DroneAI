@@ -1,0 +1,16 @@
+{
+  "environment_evidence": {
+    "path": "/workspace/data/results/steerer-ucf-training/steerer-qnrf-imagenet-20260806-t1-e/environment.5d796fc2ef3ac8df1955c87bfb0970247a5f4887dd14c8ce1c43fbaf34461c64.json",
+    "sha256": "5d796fc2ef3ac8df1955c87bfb0970247a5f4887dd14c8ce1c43fbaf34461c64"
+  },
+  "run_id": "steerer-qnrf-imagenet-20260806-t1-e",
+  "runtime": {
+    "container_image_digest": "sha256:90dfcacf0d65fec4357a37db72624b42febf8d3d9056924cdec3499237ed2691",
+    "cuda": "13.0",
+    "gpu": "NVIDIA GeForce RTX 5090",
+    "python": "3.12.3",
+    "torch": "2.9.0a0+145a3a7bda.nv25.10"
+  },
+  "schema_version": 1,
+  "stage": "T1"
+}

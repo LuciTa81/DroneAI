@@ -8,7 +8,7 @@ import sys
 import time
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Protocol, Sequence
+from typing import Literal, Protocol, Sequence
 
 import numpy as np
 from PIL import Image
@@ -35,6 +35,31 @@ _REVIEWED_PATHS = (
     "lib/datasets/nwpu.py",
 )
 _UPSTREAM_NAMESPACE_ROOTS = ("lib", "mmcv_custom")
+
+CheckpointOrigin = Literal["research_checkpoint", "project_training"]
+
+
+def _unwrap_steerer_checkpoint(
+    payload: object, *, checkpoint_origin: CheckpointOrigin = "research_checkpoint"
+) -> object:
+    """Select model weights without changing the frozen research payload behavior."""
+
+    if checkpoint_origin == "research_checkpoint":
+        if isinstance(payload, dict) and "state_dict" in payload:
+            return payload["state_dict"]
+        return payload
+    if checkpoint_origin != "project_training":
+        raise ValueError("checkpoint_origin is unsupported")
+    if not isinstance(payload, dict):
+        raise ValueError(
+            "project training checkpoint must contain exactly one of state_dict or model"
+        )
+    supported = [key for key in ("state_dict", "model") if key in payload]
+    if len(supported) != 1:
+        raise ValueError(
+            "project training checkpoint must contain exactly one of state_dict or model"
+        )
+    return payload[supported[0]]
 
 
 class STEERERBackend(Protocol):
@@ -132,6 +157,60 @@ def _local_maximum_points_numpy(
     return points * density_scale
 
 
+def _nearest_point_distances(
+    reference_points: np.ndarray, candidate_points: np.ndarray
+) -> np.ndarray:
+    """Return exact nearest distances without a full pairwise distance matrix."""
+
+    reference = np.asarray(reference_points, dtype=np.float64)
+    candidates = np.asarray(candidate_points, dtype=np.float64)
+    if reference.size == 0:
+        reference = np.empty((0, 2), dtype=np.float64)
+    if candidates.size == 0:
+        candidates = np.empty((0, 2), dtype=np.float64)
+    if (
+        reference.ndim != 2
+        or candidates.ndim != 2
+        or reference.shape[1] != 2
+        or candidates.shape[1] != 2
+        or not np.isfinite(reference).all()
+        or not np.isfinite(candidates).all()
+    ):
+        raise ValueError("point sets must contain finite 2D coordinates")
+    if not len(candidates):
+        return np.empty(0, dtype=np.float64)
+    if not len(reference):
+        return np.full(len(candidates), np.inf, dtype=np.float64)
+
+    try:
+        from scipy.spatial import cKDTree
+    except ImportError:  # pragma: no cover - training/evaluation installs SciPy
+        nearest_squared = np.full(len(candidates), np.inf, dtype=np.float64)
+        block_size = 1_024
+        for candidate_start in range(0, len(candidates), block_size):
+            candidate_block = candidates[
+                candidate_start : candidate_start + block_size
+            ]
+            block_minimum = np.full(len(candidate_block), np.inf, dtype=np.float64)
+            for reference_start in range(0, len(reference), block_size):
+                reference_block = reference[
+                    reference_start : reference_start + block_size
+                ]
+                delta = (
+                    reference_block[:, np.newaxis, :]
+                    - candidate_block[np.newaxis, :, :]
+                )
+                squared = np.einsum("ijk,ijk->ij", delta, delta)
+                np.minimum(block_minimum, squared.min(axis=0), out=block_minimum)
+            nearest_squared[
+                candidate_start : candidate_start + len(candidate_block)
+            ] = block_minimum
+        return np.sqrt(nearest_squared)
+
+    distances, _ = cKDTree(reference).query(candidates, k=1, workers=1)
+    return np.asarray(distances, dtype=np.float64)
+
+
 def _merge_multiscale_points(point_sets: Sequence[np.ndarray]) -> np.ndarray:
     if len(point_sets) != 3:
         raise ValueError("STEERER point merging requires x1, x4, and x8 outputs")
@@ -143,11 +222,9 @@ def _merge_multiscale_points(point_sets: Sequence[np.ndarray]) -> np.ndarray:
             continue
         if additions.size == 0:
             continue
-        distances = np.linalg.norm(
-            merged[:, np.newaxis, :] - additions[np.newaxis, :, :], axis=2
-        )
+        distances = _nearest_point_distances(merged, additions)
         merged = np.concatenate(
-            (merged, additions[distances.min(axis=0) > distance_threshold]), axis=0
+            (merged, additions[distances > distance_threshold]), axis=0
         )
     return merged
 
@@ -395,7 +472,14 @@ def _load_official_components(upstream_dir: Path):
 class TorchSTEERERBackend:
     """Lazy CUDA backend for the pinned official STEERER implementation."""
 
-    def __init__(self, *, upstream_dir: Path, checkpoint_path: Path, device: str):
+    def __init__(
+        self,
+        *,
+        upstream_dir: Path,
+        checkpoint_path: Path,
+        device: str,
+        checkpoint_origin: CheckpointOrigin = "research_checkpoint",
+    ):
         try:
             import torch
         except ImportError as error:  # pragma: no cover - exercised on home5090
@@ -425,8 +509,9 @@ class TorchSTEERERBackend:
                 )
             except TypeError:  # pragma: no cover - old PyTorch compatibility
                 state = torch.load(checkpoint_path, map_location=self._device)
-            if isinstance(state, dict) and "state_dict" in state:
-                state = state["state_dict"]
+            state = _unwrap_steerer_checkpoint(
+                state, checkpoint_origin=checkpoint_origin
+            )
             incompatible = model.load_state_dict(state, strict=False)
             self.missing_keys = tuple(incompatible.missing_keys)
             self.unexpected_keys = tuple(incompatible.unexpected_keys)
@@ -496,6 +581,7 @@ class STEERERAdapter(ModelAdapter):
         device: str,
         backend: STEERERBackend | None = None,
         long_side_cap: int = 3072,
+        checkpoint_origin: CheckpointOrigin = "research_checkpoint",
     ):
         self.upstream_dir = Path(upstream_dir).resolve()
         self.checkpoint_path = Path(checkpoint_path).resolve()
@@ -503,6 +589,9 @@ class STEERERAdapter(ModelAdapter):
         self.checkpoint_sha256 = checkpoint_sha256.lower()
         self.device = device
         self.long_side_cap = long_side_cap
+        self.checkpoint_origin = checkpoint_origin
+        if checkpoint_origin not in {"research_checkpoint", "project_training"}:
+            raise ValueError("checkpoint_origin is unsupported")
         if not self.upstream_dir.is_dir() or not (
             self.upstream_dir / "configs" / "QNRF_final.py"
         ).is_file():
@@ -525,6 +614,7 @@ class STEERERAdapter(ModelAdapter):
             upstream_dir=self.upstream_dir,
             checkpoint_path=self.checkpoint_path,
             device=self.device,
+            checkpoint_origin=self.checkpoint_origin,
         )
 
     def _normalized_image(

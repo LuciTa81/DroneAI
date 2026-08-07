@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "run_id": "steerer-qnrf-imagenet-20260806-t1-e",
+  "executed_stage": "T800",
+  "user_authorized_ceiling_epoch": 400,
+  "epoch": 400,
+  "validation_samples": 240,
+  "official_test_accessed": false,
+  "precision": "fp32",
+  "metrics": {
+    "mae": 122.82998937467734,
+    "rmse": 460.39165552134887,
+    "reference_mape": 12.466113817033579,
+    "game_l1": 132.42663839404514,
+    "quadrant_zone_mae": 33.106659598511285,
+    "localization_f1_16px": 0.7423359735803298,
+    "localization_precision_16px": 0.8212322393921576,
+    "localization_recall_16px": 0.6772702235738868,
+    "signed_bias": -4.287886580824852,
+    "median_latency_ms": 215.01807199092582,
+    "p95_latency_ms": 249.11019683640916,
+    "fps": 4.6507718664792135,
+    "peak_vram_mb": 5353.15625,
+    "validation_loss": 0.014898887348681455
+  },
+  "selected_best": {
+    "mae_epoch": 350,
+    "mae": 120.40864681502184,
+    "paired_rmse": 429.21159777642663,
+    "best_mae_sha256": "e6c491dee00b1ce8aebc281e65f1aeee9956c3ca25476e73a383e874d7865db2",
+    "rmse_epoch": 175,
+    "rmse": 379.43360599712304,
+    "paired_mae": 129.80840112070243,
+    "best_rmse_sha256": "ab1f65573c7f18f115e711998f4f4fb252e816bc5b9ae3564d5b379f22f981e6"
+  },
+  "artifacts": {
+    "metrics_epoch_400_sha256": "6cbd79e4efb9ec09ad987893235725130fdec1e797c9caf8ab4b07aa3f341d1f",
+    "last_sha256": "d7b510d2ea2d0c0f6a9b79900045b6cf22b441114ecab8350a25045a63c26c3a",
+    "milestone_400_sha256": "af9399f392170602fa359a9fe5f30c3bb0b0e8a3563163c7356ce074d1db3197",
+    "checkpoint_manifest_sha256": "fa8bd12d7126d1f70ebc7c3b42c0589aa95464ae787053ea6722676932045c47",
+    "status_sha256": "9be1624ed972ab9760b19a09e01ed780b0b7990564275087c157f22db710ca0c",
+    "run_log_sha256": "51664ea5fa08df0e56f6b971f65ba6af090081bcaa611732b1b74d7746393817"
+  },
+  "termination": {
+    "checkpoint_ready_at": "2026-08-07T11:23:23+09:00",
+    "signal": "SIGTERM",
+    "training_processes_after_shutdown": 0,
+    "gpu_compute_processes_after_shutdown": 0,
+    "completed_or_checkpointed_past_epoch_400": false
+  },
+  "user_ceiling_evidence_audit": {
+    "score": 100,
+    "maximum": 100,
+    "provenance": 25,
+    "split_and_test_isolation": 20,
+    "finite_and_checkpoint_stability": 20,
+    "complete_validation_metrics": 20,
+    "artifact_hash_verification": 15,
+    "formal_t800_scorer_status": "NOT_APPLICABLE_REQUIRES_EPOCH_800"
+  },
+  "state": "PASS_RESEARCH_VALIDATION_USER_CEILING_400"
+}
