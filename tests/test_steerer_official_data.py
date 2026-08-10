@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
+import subprocess
+import sys
 
 import pytest
 from PIL import Image
@@ -27,6 +30,35 @@ A_TRAINING_PROFILE = (
     REPO_ROOT
     / "configs/training/steerer_ucf_qnrf_official_code_reproduction.home5090.json"
 )
+
+
+def test_data_preparation_import_does_not_require_evaluation_dependencies() -> None:
+    command = """
+import importlib.abc
+import sys
+
+class BlockSkimage(importlib.abc.MetaPathFinder):
+    def find_spec(self, fullname, path=None, target=None):
+        if fullname == 'skimage' or fullname.startswith('skimage.'):
+            raise ModuleNotFoundError('skimage intentionally unavailable')
+        return None
+
+sys.meta_path.insert(0, BlockSkimage())
+import droneai.steerer_official_data
+"""
+    environment = dict(os.environ)
+    environment["PYTHONPATH"] = str(REPO_ROOT / "src")
+
+    completed = subprocess.run(
+        [sys.executable, "-c", command],
+        cwd=REPO_ROOT,
+        env=environment,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert completed.returncode == 0, completed.stderr
 
 
 def _raw_sample(

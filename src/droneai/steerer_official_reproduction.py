@@ -11,9 +11,9 @@ from typing import Any, Iterator, Mapping, cast
 
 from droneai.evaluation_runner import EvaluationProtocol
 from droneai.integrity import is_sha256, sha256_file
+from droneai.steerer_constants import UPSTREAM_COMMIT
 
 
-UPSTREAM_COMMIT = "5b1854dbc2d280f2326d67c65515d8baf9083810"
 OFFICIAL_CHECKPOINT_SHA256 = (
     "85f71763595527e419257d459288e4a784766f41687ff0b859dcff65a151bbec"
 )

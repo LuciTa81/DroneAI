@@ -19,7 +19,7 @@ from PIL import Image, __version__ as PILLOW_VERSION
 
 from droneai.integrity import is_sha256, sha256_file
 from droneai.scoring import CheckResult, StageReport, score_stage
-from droneai.steerer_official_reproduction import UPSTREAM_COMMIT
+from droneai.steerer_constants import UPSTREAM_COMMIT
 from droneai.ucf_qnrf import (
     UCFQNRFRecord,
     density_band,
