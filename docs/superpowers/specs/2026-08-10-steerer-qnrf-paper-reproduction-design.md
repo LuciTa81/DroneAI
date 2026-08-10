@@ -1,9 +1,9 @@
-# STEERER UCF-QNRF Paper Reproduction Design
+# STEERER UCF-QNRF Official-Code Reproduction Design
 
 ## Goal
 
-Reproduce the official STEERER-HRNet-W48 UCF-QNRF protocol without changing or
-weakening the existing development lane. The reproduction lane trains on all
+Reproduce the pinned public STEERER-HRNet-W48 UCF-QNRF implementation without
+changing or weakening the existing development lane. The reproduction lane trains on all
 1,201 official UCF-QNRF Train images, evaluates on all 334 official Test images,
 and records that Test is used for checkpoint selection exactly as in the pinned
 upstream implementation.
@@ -43,6 +43,11 @@ Approach 3 is selected.
 - Training settings: crop 768x768, scale 0.5-2.0, horizontal flip, density factor
   100, AdamW, learning rate 1e-4, weight decay 1e-4, 10 warm-up epochs, cosine
   schedule to epoch 800, effective batch 8, and Test long side 3072.
+- Authority note: these optimizer settings come from the pinned public
+  `configs/QNRF_final.py`. The paper prose describes Adam with warm-up to 1e-5,
+  while the released configuration uses AdamW with base learning rate 1e-4.
+  Therefore this lane is reported as `official-code reproduction`, never as an
+  unqualified exact paper reproduction.
 - Evaluation cadence: the pinned upstream `val_span` behavior. The official Test
   set is used during training to select best-MAE and best-RMSE checkpoints. Every
   report must label these numbers `official Test, test-selected`; they are not an
@@ -55,13 +60,13 @@ Approach 3 is selected.
 ## Isolated storage and identities
 
 - Processed dataset:
-  `/workspace/data/datasets/ucf-qnrf-kaggle-apache/processed/steerer-paper-reproduction-v1`
+  `/workspace/data/datasets/ucf-qnrf-kaggle-apache/processed/steerer-official-code-reproduction-v1`
 - Checkpoints:
-  `/workspace/data/checkpoints/steerer-paper-reproduction/<run-id>`
+  `/workspace/data/checkpoints/steerer-official-code-reproduction/<run-id>`
 - Results:
-  `/workspace/data/results/steerer-paper-reproduction/<run-id>`
+  `/workspace/data/results/steerer-official-code-reproduction/<run-id>`
 - Official checkpoint validation result:
-  `/workspace/data/results/steerer-paper-reproduction/official-checkpoint-test334-v1`
+  `/workspace/data/results/steerer-official-code-reproduction/official-checkpoint-test334-v1`
 
 No existing B-lane directory is modified. Preparation refuses a non-empty
 destination. Git contains only code, configuration, manifests, summaries, and
@@ -95,7 +100,7 @@ curated figures under 25 MiB; raw data and weights remain on the SSD.
    optimizer update, finite loss, checkpoint round-trip, and manifest reload.
 7. **G4 — one-epoch smoke:** train one full epoch, run the approved official Test
    evaluation cadence, and verify all 334 observations and restart evidence.
-8. **G5 — 800-epoch reproduction:** launch a fresh FP32 run from the pinned
+8. **G5 — 800-epoch official-code reproduction:** launch a fresh FP32 run from the pinned
    ImageNet backbone in the existing `crowd` tmux session. Persist atomic status,
    checkpoint/RNG/optimizer/scheduler state, and resume only from a manifested
    completed boundary.

@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "run_id": "steerer-a-official-checkpoint-test334-v1",
+  "protocol_id": "steerer-official-code-reproduction-g1-v1",
+  "dataset_id": "ucf-qnrf-kaggle-apache",
+  "train_split_id": "ucf-qnrf-official-train1201-v1",
+  "test_split_id": "ucf-qnrf-official-test334-v1",
+  "train_samples": 1201,
+  "test_samples": 334,
+  "upstream_commit": "5b1854dbc2d280f2326d67c65515d8baf9083810",
+  "checkpoint_origin": "research_checkpoint",
+  "checkpoint": {
+    "artifact_id": "steerer-official-ucf-qnrf-checkpoint",
+    "filename": "QNRF_mae_77.8_mse_138.0_85f71763.pth",
+    "sha256": "85f71763595527e419257d459288e4a784766f41687ff0b859dcff65a151bbec",
+    "size_bytes": 259607784
+  },
+  "result_label": "official Test, test-selected",
+  "selection_basis": "Pinned upstream evaluates official Test during training and selects best checkpoints from that Test",
+  "test_access_approved": true,
+  "official_weight_scope": "PASS_RESEARCH_ONLY",
+  "roots": {
+    "processed": "/workspace/data/datasets/ucf-qnrf-kaggle-apache/processed/steerer-official-code-reproduction-v1",
+    "checkpoints": "/workspace/data/checkpoints/steerer-official-code-reproduction",
+    "results": "/workspace/data/results/steerer-official-code-reproduction"
+  },
+  "repository_claim": {
+    "mae": 77.8,
+    "rmse": 138.0
+  },
+  "compatibility_tolerance": {
+    "mae_absolute": 5.0,
+    "rmse_absolute": 10.0
+  },
+  "targets": {
+    "mae_max": 200.0,
+    "rmse_max": 300.0,
+    "bias_max": 500.0,
+    "band_bias_max": 1000.0,
+    "condition_bias_max": 1000.0,
+    "spatial_metric_name": "game_l1",
+    "spatial_direction": "minimize",
+    "spatial_target": 500.0,
+    "required_density_bands": ["low", "medium", "high"],
+    "density_band_rules": [
+      "low: count < 500",
+      "medium: 500 <= count < 1500",
+      "high: count >= 1500"
+    ],
+    "required_condition_keys": ["source_partition"],
+    "zone_warning_count": 50.0,
+    "zone_critical_count": 150.0,
+    "latency_max_ms": 2000.0,
+    "vram_max_mb": 24000.0
+  }
+}
