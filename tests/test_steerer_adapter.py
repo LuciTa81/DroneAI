@@ -82,7 +82,12 @@ def _git_repo(root: Path) -> str:
     ).stdout.strip()
 
 
-def _adapter(tmp_path: Path, backend: _Backend) -> STEERERAdapter:
+def _adapter(
+    tmp_path: Path,
+    backend: _Backend,
+    *,
+    checkpoint_origin: str = "research_checkpoint",
+) -> STEERERAdapter:
     upstream = tmp_path / "upstream"
     commit = _git_repo(upstream)
     checkpoint = tmp_path / "steerer_qnrf.pth"
@@ -94,7 +99,26 @@ def _adapter(tmp_path: Path, backend: _Backend) -> STEERERAdapter:
         checkpoint_sha256=sha256_file(checkpoint),
         device="cuda:0",
         backend=backend,
+        checkpoint_origin=checkpoint_origin,
     )
+
+
+def test_project_checkpoint_brief_uses_project_training_rights_and_protocol(
+    tmp_path: Path,
+) -> None:
+    density = np.ones((1, 1), dtype=np.float32)
+    adapter = _adapter(
+        tmp_path,
+        _Backend((density, density, density)),
+        checkpoint_origin="project_training",
+    )
+
+    brief = adapter.brief()
+
+    assert brief.rights_status == "PASS_COMMERCIAL_CANDIDATE"
+    assert brief.checkpoint_rights_status == "project-trained; official STEERER weight not loaded"
+    assert "project-trained" in brief.official_protocol
+    assert brief.deployment_rights_status.startswith("pending")
 
 
 def _synthetic_upstream(root: Path, *, external_origin: Path | None = None) -> None:

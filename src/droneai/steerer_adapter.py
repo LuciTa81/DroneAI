@@ -656,10 +656,19 @@ class STEERERAdapter(ModelAdapter):
         return normalized, metadata
 
     def brief(self) -> ModelBrief:
+        project_training = self.checkpoint_origin == "project_training"
         return ModelBrief(
-            model_id="steerer-official-ucf-qnrf",
+            model_id=(
+                "steerer-project-trained-ucf-qnrf"
+                if project_training
+                else "steerer-official-ucf-qnrf"
+            ),
             paper="STEERER: Resolving Scale Variations for Counting and Localization via Selective Inheritance Learning",
-            role="UCF-QNRF crowd-counting and localization research baseline",
+            role=(
+                "UCF-QNRF project-trained held-out evaluation candidate"
+                if project_training
+                else "UCF-QNRF crowd-counting and localization research baseline"
+            ),
             family="hybrid density and point localization",
             backbone="HRNet-W48",
             parameter_count=None,
@@ -693,7 +702,12 @@ class STEERERAdapter(ModelAdapter):
                 "uncertainty weighting where configured",
             ),
             official_protocol=(
-                "pinned QNRF_final.py, den_factor=100, batch size 1, frozen research checkpoint"
+                "pinned QNRF_final.py, den_factor=100, batch size 1, "
+                + (
+                    "project-trained checkpoint initialized from the pinned ImageNet backbone"
+                    if project_training
+                    else "frozen research checkpoint"
+                )
             ),
             official_reported_metrics=(
                 "UCF-QNRF MAE 77.8",
@@ -716,10 +730,18 @@ class STEERERAdapter(ModelAdapter):
                 "large high-resolution CUDA activations",
                 "legacy MMCV and upstream API compatibility",
             ),
-            rights_status="RESEARCH_CHECKPOINT_EVALUATION_ONLY",
+            rights_status=(
+                "PASS_COMMERCIAL_CANDIDATE"
+                if project_training
+                else "RESEARCH_CHECKPOINT_EVALUATION_ONLY"
+            ),
             code_rights_status="MIT verified at pinned upstream commit",
             dataset_rights_status="Apache-2.0 accepted by project owner with provenance risk recorded",
-            checkpoint_rights_status="unverified; internal approval permits frozen research comparison only",
+            checkpoint_rights_status=(
+                "project-trained; official STEERER weight not loaded"
+                if project_training
+                else "unverified; internal approval permits frozen research comparison only"
+            ),
             deployment_rights_status="pending; research comparison is not deployment approval",
             upstream_commit=self.expected_upstream_commit,
             checkpoint_path=str(self.checkpoint_path),

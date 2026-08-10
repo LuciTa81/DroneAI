@@ -95,39 +95,35 @@ def _normalized_points(
     return tuple(normalized), corrections
 
 
-def index_ucf_qnrf_train(
-    train_root: str | Path,
+def _index_ucf_qnrf_partition(
+    image_root: Path,
     *,
-    annotation_root: str | Path | None = None,
+    annotation_root: Path,
     thresholds: tuple[int, int] = DEFAULT_DENSITY_THRESHOLDS,
+    partition_name: str,
+    sample_prefix: str,
 ) -> tuple[UCFQNRFRecord, ...]:
-    """Index only the explicitly supplied training directory.
-
-    The function deliberately has no dataset-root or test-root argument, which
-    prevents validation preparation from discovering the official test tree.
-    """
-
-    image_root = Path(train_root)
-    annotations = Path(annotation_root) if annotation_root is not None else image_root
-    if not image_root.is_dir() or not annotations.is_dir():
-        raise FileNotFoundError("explicit UCF-QNRF train and annotation roots are required")
+    if not image_root.is_dir() or not annotation_root.is_dir():
+        raise FileNotFoundError(
+            f"explicit UCF-QNRF {partition_name} and annotation roots are required"
+        )
     images = sorted(
         path
         for path in image_root.iterdir()
         if path.is_file() and path.suffix.lower() in {".jpg", ".jpeg", ".png"}
     )
     if not images:
-        raise ValueError(f"no UCF-QNRF training images found under {image_root}")
+        raise ValueError(f"no UCF-QNRF {partition_name} images found under {image_root}")
     records: list[UCFQNRFRecord] = []
     for image_path in images:
-        annotation_path = _annotation_path(image_path, annotations)
+        annotation_path = _annotation_path(image_path, annotation_root)
         with Image.open(image_path) as image:
             width, height = image.size
         raw_points = read_ucf_qnrf_points(annotation_path)
         points, corrections = _normalized_points(raw_points, width=width, height=height)
         records.append(
             UCFQNRFRecord(
-                sample_id=image_path.stem,
+                sample_id=f"{sample_prefix}{image_path.stem}",
                 image_path=image_path.resolve(),
                 annotation_path=annotation_path.resolve(),
                 image_sha256=sha256_file(image_path),
@@ -143,6 +139,52 @@ def index_ucf_qnrf_train(
     if len(sample_ids) != len(set(sample_ids)):
         raise ValueError("duplicate UCF-QNRF sample identity")
     return tuple(records)
+
+
+def index_ucf_qnrf_train(
+    train_root: str | Path,
+    *,
+    annotation_root: str | Path | None = None,
+    thresholds: tuple[int, int] = DEFAULT_DENSITY_THRESHOLDS,
+) -> tuple[UCFQNRFRecord, ...]:
+    """Index only the explicitly supplied training directory.
+
+    The function deliberately has no dataset-root or test-root argument, which
+    prevents validation preparation from discovering the official test tree.
+    """
+
+    image_root = Path(train_root)
+    annotations = Path(annotation_root) if annotation_root is not None else image_root
+    return _index_ucf_qnrf_partition(
+        image_root,
+        annotation_root=annotations,
+        thresholds=thresholds,
+        partition_name="training",
+        sample_prefix="",
+    )
+
+
+def index_ucf_qnrf_test(
+    test_root: str | Path,
+    *,
+    annotation_root: str | Path | None = None,
+    thresholds: tuple[int, int] = DEFAULT_DENSITY_THRESHOLDS,
+) -> tuple[UCFQNRFRecord, ...]:
+    """Index an explicitly authorized official Test directory.
+
+    Test identities are partition-prefixed because UCF-QNRF reuses image stems
+    such as ``img_0001`` between the official Train and Test directories.
+    """
+
+    image_root = Path(test_root)
+    annotations = Path(annotation_root) if annotation_root is not None else image_root
+    return _index_ucf_qnrf_partition(
+        image_root,
+        annotation_root=annotations,
+        thresholds=thresholds,
+        partition_name="Test",
+        sample_prefix="test_",
+    )
 
 
 def _stable_key(sample_id: str, seed: int, namespace: str) -> tuple[str, str]:
