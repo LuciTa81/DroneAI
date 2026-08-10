@@ -10,7 +10,7 @@ import subprocess
 from contextlib import contextmanager
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any, Callable, Iterator, Literal, Mapping
+from typing import Any, Callable, Iterator, Literal, Mapping, Protocol
 from urllib.parse import urlsplit, urlunsplit
 
 import numpy as np
@@ -96,6 +96,31 @@ class ModelInitializationAudit:
         return payload
 
 
+class TrainingSourceProfile(Protocol):
+    """Minimum validated profile surface shared by the B and isolated A lanes."""
+
+    model_upstream: object
+    imagenet_backbone: object
+    seed: int
+    initialization: str
+
+
+def _require_training_source_profile(profile: object) -> TrainingSourceProfile:
+    upstream = getattr(profile, "model_upstream", None)
+    backbone = getattr(profile, "imagenet_backbone", None)
+    if (
+        not all(hasattr(upstream, name) for name in ("url", "commit", "license_sha256", "config_path"))
+        or not all(
+            hasattr(backbone, name)
+            for name in ("path", "filename", "sha256", "byte_size")
+        )
+        or not isinstance(getattr(profile, "seed", None), int)
+        or not isinstance(getattr(profile, "initialization", None), str)
+    ):
+        raise TypeError("validated STEERER training source profile is required")
+    return profile  # type: ignore[return-value]
+
+
 def _git_remote_origin(upstream_dir: Path) -> str:
     completed = subprocess.run(
         ["git", "remote", "get-url", "origin"],
@@ -143,13 +168,12 @@ def _audited_file(root: Path, relative_path: Path, *, name: str) -> Path:
 
 
 def audit_upstream(
-    profile: SteererTrainingProfile,
+    profile: TrainingSourceProfile,
     upstream_dir: str | Path,
 ) -> UpstreamAudit:
     """Require the profile-pinned origin, checkout, and immutable config snapshot."""
 
-    if not isinstance(profile, SteererTrainingProfile):
-        raise TypeError("validated STEERER training profile is required")
+    profile = _require_training_source_profile(profile)
     try:
         root = Path(upstream_dir).resolve(strict=True)
     except FileNotFoundError as exc:
@@ -260,9 +284,12 @@ def _is_within(path: Path, root: Path) -> bool:
     return True
 
 
-def _verified_profile_backbone(
-    profile: SteererTrainingProfile, backbone_path: str | Path
+def verify_imagenet_backbone(
+    profile: TrainingSourceProfile, backbone_path: str | Path
 ) -> Path:
+    """Verify the canonical ImageNet-only artifact for either approved lane."""
+
+    profile = _require_training_source_profile(profile)
     if profile.initialization != "imagenet_backbone_only":
         raise PermissionError("official model checkpoint initialization is forbidden")
     reference = profile.imagenet_backbone
@@ -316,7 +343,7 @@ def synthesize_official_config(
         raise ValueError("physical batch and accumulation must be approved 8x1 or 4x2")
 
     upstream_audit = audit_upstream(profile, upstream_dir)
-    backbone = _verified_profile_backbone(profile, backbone_path)
+    backbone = verify_imagenet_backbone(profile, backbone_path)
     config = _official_config(upstream_audit)
     _assert_official_contract(config)
 
@@ -446,7 +473,7 @@ def _parameter_digests(model: object) -> dict[str, str]:
 
 
 def initialize_steerer_model(
-    profile: SteererTrainingProfile,
+    profile: TrainingSourceProfile,
     model_factory: Callable[..., object],
     backbone_path: str | Path,
     *,
@@ -454,9 +481,8 @@ def initialize_steerer_model(
 ) -> ModelInitializationAudit:
     """Prove that constructor initialization changes only backbone parameters."""
 
-    if not isinstance(profile, SteererTrainingProfile):
-        raise TypeError("validated STEERER training profile is required")
-    backbone = _verified_profile_backbone(profile, backbone_path)
+    profile = _require_training_source_profile(profile)
+    backbone = verify_imagenet_backbone(profile, backbone_path)
     if not callable(model_factory):
         raise TypeError("model_factory must be callable")
 
@@ -509,3 +535,14 @@ def initialize_steerer_model(
         observed_weight_load_paths=tuple(observed_paths),
         observed_weight_load_count=len(observed_paths),
     )
+
+
+def load_audited_official_config(
+    profile: TrainingSourceProfile, upstream_dir: str | Path
+) -> tuple[dict[str, object], UpstreamAudit]:
+    """Load the exact pinned config bytes after Git/license/contract verification."""
+
+    audited = audit_upstream(profile, upstream_dir)
+    config = _official_config(audited)
+    _assert_official_contract(config)
+    return config, audited

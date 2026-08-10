@@ -40,7 +40,7 @@ CHECKPOINT_PAYLOAD_KEYS = frozenset(
         "environment_manifest_sha256",
     }
 )
-_STAGES = frozenset({"T0", "T1", "T5", "T50", "T800"})
+_STAGES = frozenset({"A0", "T0", "T1", "T5", "T50", "T800"})
 _MILESTONE_EPOCHS = {"T1": 1, "T5": 5, "T50": 50}
 _MANIFEST_FILENAME = "checkpoint-manifest.json"
 
@@ -142,6 +142,8 @@ def _validate_checkpoint_payload(payload: Mapping[str, object]) -> dict[str, obj
         value = state[field]
         if not isinstance(value, int) or isinstance(value, bool) or value < 0:
             raise ValueError(f"checkpoint {field} must be a non-negative integer")
+    if state["stage"] == "A0" and (state["epoch"], state["global_step"]) != (0, 1):
+        raise ValueError("A0 checkpoint must contain epoch zero and exactly one optimizer update")
     for field in ("model", "optimizer", "scheduler", "scaler"):
         if not isinstance(state[field], Mapping):
             raise ValueError(f"checkpoint {field} must be a state mapping")

@@ -20,6 +20,10 @@ from PIL import Image, __version__ as PILLOW_VERSION
 from droneai.integrity import is_sha256, sha256_file
 from droneai.scoring import CheckResult, StageReport, score_stage
 from droneai.steerer_constants import UPSTREAM_COMMIT
+from droneai.steerer_training_profile import (
+    ArtifactReference,
+    ModelUpstreamReference,
+)
 from droneai.ucf_qnrf import (
     UCFQNRFRecord,
     density_band,
@@ -52,6 +56,7 @@ class ConvertedOfficialSample:
 @dataclass(frozen=True)
 class OfficialTrainingDataProfile:
     run_family: str
+    model_upstream: ModelUpstreamReference
     upstream_commit: str
     train_samples: int
     validation_samples: int
@@ -69,9 +74,15 @@ class OfficialTrainingDataProfile:
     production_approved: bool
     official_checkpoint_training_allowed: bool
     training_settings: Mapping[str, object]
-    imagenet_backbone: Mapping[str, object]
+    imagenet_backbone: ArtifactReference
     dataset_license_basis: str
     code_license: str
+
+    @property
+    def initialization(self) -> str:
+        """Shared initialization contract used by the audited model loader."""
+
+        return self.initialization_mode
 
 
 _A_PROCESSED_ROOT = PurePosixPath(
@@ -320,6 +331,12 @@ def validate_official_training_data_profile(
 
     return OfficialTrainingDataProfile(
         run_family=root["run_family"],
+        model_upstream=ModelUpstreamReference(
+            url=upstream["url"],
+            commit=upstream["commit"],
+            license_sha256=upstream["license_sha256"],
+            config_path=Path(upstream["config_path"]),
+        ),
         upstream_commit=upstream["commit"],
         train_samples=1201,
         validation_samples=0,
@@ -337,7 +354,14 @@ def validate_official_training_data_profile(
         production_approved=False,
         official_checkpoint_training_allowed=False,
         training_settings=MappingProxyType(dict(training)),
-        imagenet_backbone=MappingProxyType(dict(backbone)),
+        imagenet_backbone=ArtifactReference(
+            path=Path(backbone["path"]),
+            filename=backbone["filename"],
+            source_url=backbone["source_url"],
+            provenance_url=backbone["provenance_url"],
+            sha256=backbone["sha256"],
+            byte_size=backbone["byte_size"],
+        ),
         dataset_license_basis=dataset["license_basis"],
         code_license=rights["code_license"],
     )

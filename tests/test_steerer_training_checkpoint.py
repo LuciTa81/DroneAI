@@ -129,6 +129,35 @@ def test_checkpoint_round_trip_accepts_t800_epoch_800(tmp_path: Path) -> None:
     assert restored["scheduler"] == {"last_epoch": 800, "horizon": 800}
 
 
+def test_checkpoint_round_trip_accepts_isolated_a0_one_update(tmp_path: Path) -> None:
+    state = _state(epoch=0, stage="A0")
+    state["global_step"] = 1
+
+    saved = save_training_checkpoint(
+        tmp_path / "last.pth", state, torch_module=_FakeTorch()
+    )
+    restored = load_training_checkpoint(
+        saved.path, expected_sha256=saved.sha256, torch_module=_FakeTorch()
+    )
+
+    assert restored["stage"] == "A0"
+    assert restored["epoch"] == 0
+    assert restored["global_step"] == 1
+
+
+@pytest.mark.parametrize(("epoch", "global_step"), [(1, 1), (0, 0), (0, 2)])
+def test_a0_checkpoint_requires_epoch_zero_and_one_update(
+    tmp_path: Path, epoch: int, global_step: int
+) -> None:
+    state = _state(epoch=epoch, stage="A0")
+    state["global_step"] = global_step
+
+    with pytest.raises(ValueError, match="A0.*one optimizer update"):
+        save_training_checkpoint(
+            tmp_path / "invalid-a0.pth", state, torch_module=_FakeTorch()
+        )
+
+
 def test_resume_rejects_hash_mismatch_and_wrong_lineage(tmp_path: Path) -> None:
     state = _state()
     checkpoint = save_training_checkpoint(tmp_path / "last.pth", state, torch_module=_FakeTorch())
