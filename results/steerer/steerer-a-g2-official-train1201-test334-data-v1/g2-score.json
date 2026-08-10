@@ -1,0 +1,73 @@
+{
+  "checks": [
+    {
+      "blocker": true,
+      "category": "split",
+      "check_id": "exact-split-counts",
+      "description": "Train1201, validation0, Test334 are exact",
+      "earned": 20,
+      "evidence": "/workspace/data/datasets/ucf-qnrf-kaggle-apache/processed/steerer-official-code-reproduction-v1/full-train-test-v1/manifests/dataset-preparation.json",
+      "expected": "1201/0/334",
+      "observed": "1201/0/334",
+      "passed": true,
+      "weight": 20
+    },
+    {
+      "blocker": true,
+      "category": "split",
+      "check_id": "split-disjointness",
+      "description": "Train and Test identities/content are disjoint",
+      "earned": 20,
+      "evidence": "/workspace/data/datasets/ucf-qnrf-kaggle-apache/processed/steerer-official-code-reproduction-v1/full-train-test-v1/manifests/dataset-preparation.json",
+      "expected": "no overlap",
+      "observed": "[]",
+      "passed": true,
+      "weight": 20
+    },
+    {
+      "blocker": true,
+      "category": "integrity",
+      "check_id": "artifact-hash-verification",
+      "description": "Every prepared image and annotation hash was recalculated",
+      "earned": 20,
+      "evidence": "/workspace/data/datasets/ucf-qnrf-kaggle-apache/processed/steerer-official-code-reproduction-v1/full-train-test-v1/manifests/dataset-preparation.json",
+      "expected": "all verified",
+      "observed": "True",
+      "passed": true,
+      "weight": 20
+    },
+    {
+      "blocker": true,
+      "category": "integrity",
+      "check_id": "content-addressed-inventories",
+      "description": "Dataset and manifest SHA-256 identities are valid",
+      "earned": 20,
+      "evidence": "/workspace/data/datasets/ucf-qnrf-kaggle-apache/processed/steerer-official-code-reproduction-v1/full-train-test-v1/manifests/dataset-preparation.json",
+      "expected": "two valid SHA-256 values",
+      "observed": "dataset=ac55c9fa3e381a5511dd7f63206e1e9883006562f02364bb1ec49dda975d4092; manifest=57c5b26205f8146a5593dfa98a17a007aaa7582cb91c85c4938f88f444706a35",
+      "passed": true,
+      "weight": 20
+    },
+    {
+      "blocker": true,
+      "category": "rights",
+      "check_id": "rights-and-initialization-scope",
+      "description": "MIT code, user-accepted dataset basis, ImageNet-only initialization, and no production approval",
+      "earned": 20,
+      "evidence": "/workspace/data/datasets/ucf-qnrf-kaggle-apache/processed/steerer-official-code-reproduction-v1/full-train-test-v1/manifests/dataset-preparation.json",
+      "expected": "PASS_COMMERCIAL_CANDIDATE without production approval",
+      "observed": "PASS_COMMERCIAL_CANDIDATE; production=False; official checkpoint forbidden",
+      "passed": true,
+      "weight": 20
+    }
+  ],
+  "decision_scope": "commercial_candidate",
+  "failed_blockers": [],
+  "generated_at": "2026-08-10T05:33:46.118644+00:00",
+  "schema_version": 2,
+  "score": 100,
+  "stage_id": "steerer-a-g2-official-train-test-data",
+  "stage_name": "STEERER A full official Train/Test preparation",
+  "status": "PASS_COMMERCIAL_CANDIDATE",
+  "threshold": 100
+}

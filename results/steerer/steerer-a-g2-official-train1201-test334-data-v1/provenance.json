@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "gate_id": "steerer-a-g2-official-train-test-data",
+  "status": "PASS_COMMERCIAL_CANDIDATE",
+  "score": 100,
+  "git": {
+    "branch": "agent/steerer-qnrf-official-code-repro-a",
+    "commit": "f1f872033b5c66cac0530b951b7788691b20479d"
+  },
+  "model_upstream": {
+    "repository": "https://github.com/taohan10200/STEERER.git",
+    "commit": "5b1854dbc2d280f2326d67c65515d8baf9083810",
+    "config": "configs/QNRF_final.py",
+    "code_license": "MIT"
+  },
+  "training_profile": {
+    "path": "configs/training/steerer_ucf_qnrf_official_code_reproduction.home5090.json",
+    "sha256": "0ebaeb81b4e53fc8c75ac7c2f94f8543cea9fe5f63b72e3444fc3c37192c3e6c",
+    "initialization": "ImageNet HRNet-W48 backbone only",
+    "official_steerer_checkpoint_training_allowed": false
+  },
+  "runtime": {
+    "backend": "home5090_docker",
+    "container": "crowd-jupyter",
+    "image": "nvcr.io/nvidia/pytorch:25.10-py3",
+    "image_id": "sha256:90dfcacf0d65fec4357a37db72624b42febf8d3d9056924cdec3499237ed2691",
+    "python": "3.12.3",
+    "torch": "2.9.0a0+145a3a7bda.nv25.10",
+    "cuda": "13.0",
+    "gpu": "NVIDIA GeForce RTX 5090",
+    "gpu_memory_mib": 32607,
+    "driver": "580.82.07"
+  },
+  "dataset": {
+    "dataset_id": "ucf-qnrf-kaggle-apache",
+    "license_basis": "Kaggle Apache-2.0 listing accepted by user",
+    "processed_root": "/workspace/data/datasets/ucf-qnrf-kaggle-apache/processed/steerer-official-code-reproduction-v1/full-train-test-v1",
+    "processed_size": "3.3G",
+    "train_samples": 1201,
+    "validation_samples": 0,
+    "test_samples": 334,
+    "train_ground_truth_total": 1011515,
+    "test_ground_truth_total": 240127,
+    "train_boundary_corrections": 4184,
+    "test_boundary_corrections": 50,
+    "split_overlap": [],
+    "artifact_hashes_verified_in_fresh_process": true,
+    "dataset_content_sha256": "ac55c9fa3e381a5511dd7f63206e1e9883006562f02364bb1ec49dda975d4092"
+  },
+  "artifacts": {
+    "dataset_manifest_sha256": "57c5b26205f8146a5593dfa98a17a007aaa7582cb91c85c4938f88f444706a35",
+    "train_inventory_sha256": "eaa1a4ea26a88db440677b7e569500154389eec0f76e2bc4efa04c2ed4db5f7e",
+    "test_inventory_sha256": "bb9ab0adb5e11c6cdcefedf1fc06e2c7d630e4d9760a92d76829793800556a3d",
+    "train_list_sha256": "8a113f562862f5617c76c8eda88f6cd095b5d04637262f3dd105e972e1c32937",
+    "test_list_sha256": "0b9ddcaed5853453c549a76f6caef5bb14cdd85c0815862734d48d095de4abc6"
+  },
+  "protocol_disclosure": "The approved long run uses all 1,201 official Train images and no validation split. This differs from the released preparation helper that randomly withholds about 20 percent; all selected model results must be labeled official Test, test-selected.",
+  "next_gate": "A0 CUDA/import, one optimizer update, finite loss, checkpoint and RNG/optimizer/scheduler round-trip"
+}

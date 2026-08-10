@@ -1,0 +1,13 @@
+{
+  "artifact_hashes_verified": true,
+  "dataset_content_sha256": "ac55c9fa3e381a5511dd7f63206e1e9883006562f02364bb1ec49dda975d4092",
+  "dataset_id": "ucf-qnrf-kaggle-apache",
+  "manifest_sha256": "57c5b26205f8146a5593dfa98a17a007aaa7582cb91c85c4938f88f444706a35",
+  "protocol_id": "steerer-qnrf-official-code-reproduction-a-v1",
+  "schema_version": 1,
+  "split_overlap": [],
+  "status": "verified",
+  "test_samples": 334,
+  "train_samples": 1201,
+  "validation_samples": 0
+}

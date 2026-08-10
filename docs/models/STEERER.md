@@ -82,6 +82,25 @@ RMSE, inside the preregistered 5.0/10.0 compatibility tolerance. G1 is
 `PASS_RESEARCH_ONLY`; it validates evaluator compatibility, not commercial use
 of the official checkpoint.
 
+## A-lane G2 full Train/Test data gate
+
+The isolated full-Train lane was prepared and independently reloaded on
+home5090 at commit `f1f872033b5c66cac0530b951b7788691b20479d`:
+
+- official Train: **1,201** images / **1,011,515** annotated people
+- validation: **0** images; no `val.txt`, `validation.txt`, or `train_val.txt`
+- official Test: **334** images / **240,127** annotated people
+- prepared artifacts: 1,535 JPEG images plus 1,535 JSON annotations, about 3.3 GB
+- Train/Test ID or source-image hash overlap: **none**
+- fresh-process source and prepared artifact SHA-256 verification: **passed**
+- G2 integrity score: **100/100, PASS_COMMERCIAL_CANDIDATE**
+
+This score measures evidence integrity, not model accuracy. The approved A run
+uses all official Train 1,201 images, unlike the released `divide_dataset`
+helper that randomly withholds about 20%. Results selected on official Test must
+therefore be labeled `official Test, test-selected`. Training remains blocked
+until the A0 one-update/checkpoint round-trip and A1 one-epoch/Test334 gates pass.
+
 ## Failure modes
 
 - tiny heads

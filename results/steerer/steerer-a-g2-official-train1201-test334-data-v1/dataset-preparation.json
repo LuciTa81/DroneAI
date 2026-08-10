@@ -1,0 +1,41 @@
+{
+  "dataset_content_sha256": "ac55c9fa3e381a5511dd7f63206e1e9883006562f02364bb1ec49dda975d4092",
+  "dataset_id": "ucf-qnrf-kaggle-apache",
+  "image_encoding": "Pillow bilinear JPEG quality=95",
+  "pillow_version": "12.0.0",
+  "preprocessing_reference": "lib/datasets/prepare/prepare_QNRF.py::resize_images/writer_jsons",
+  "protocol_id": "steerer-qnrf-official-code-reproduction-a-v1",
+  "protocol_note": "user-approved full official Train1201; no validation split; official Test334 is test-selected",
+  "schema_version": 2,
+  "source_roots": {
+    "test": "/workspace/data/datasets/ucf-qnrf-kaggle-apache/raw/UCF-QNRF_ECCV18/Test",
+    "train": "/workspace/data/datasets/ucf-qnrf-kaggle-apache/raw/UCF-QNRF_ECCV18/Train"
+  },
+  "split_overlap": [],
+  "test": {
+    "inventory_path": "manifests/test-inventory.json",
+    "inventory_sha256": "bb9ab0adb5e11c6cdcefedf1fc06e2c7d630e4d9760a92d76829793800556a3d",
+    "list_path": "test.txt",
+    "list_sha256": "0b9ddcaed5853453c549a76f6caef5bb14cdd85c0815862734d48d095de4abc6",
+    "partition": "official_test",
+    "sample_count": 334,
+    "selection": "test_selected",
+    "split_role": "test"
+  },
+  "total_samples": 1535,
+  "train": {
+    "inventory_path": "manifests/train-inventory.json",
+    "inventory_sha256": "eaa1a4ea26a88db440677b7e569500154389eec0f76e2bc4efa04c2ed4db5f7e",
+    "list_path": "train.txt",
+    "list_sha256": "8a113f562862f5617c76c8eda88f6cd095b5d04637262f3dd105e972e1c32937",
+    "partition": "official_train",
+    "sample_count": 1201,
+    "split_role": "train"
+  },
+  "upstream_commit": "5b1854dbc2d280f2326d67c65515d8baf9083810",
+  "validation": {
+    "list_path": null,
+    "sample_count": 0,
+    "split_role": "not_used"
+  }
+}
