@@ -1,0 +1,10 @@
+{
+  "checkpoint_selection_remains_frozen": true,
+  "comparison_sha256": "845648e5e32e3481b8081ce33b56f4df2f0fca0177bc6d98da0b8833338d5bb3",
+  "post_test_training_allowed": false,
+  "result_label": "official Test, validation-selected",
+  "run_id": "steerer-b-final-test334-20260810",
+  "schema_version": 1,
+  "status": "CLOSED_AFTER_OFFICIAL_TEST",
+  "test_sample_count": 334
+}
