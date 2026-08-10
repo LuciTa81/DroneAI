@@ -39,6 +39,35 @@ _UPSTREAM_NAMESPACE_ROOTS = ("lib", "mmcv_custom")
 CheckpointOrigin = Literal["research_checkpoint", "project_training"]
 
 
+def _load_steerer_checkpoint(
+    torch_module: object,
+    checkpoint_path: Path,
+    *,
+    map_location: object,
+    checkpoint_origin: CheckpointOrigin,
+) -> object:
+    """Load a checkpoint using the narrowest policy supported by its origin.
+
+    Project-training checkpoints are produced by our pinned runner and include
+    optimizer/RNG metadata containing NumPy objects. PyTorch 2.6 therefore
+    rejects them under the new ``weights_only=True`` default. The final-Test
+    runner verifies their frozen SHA-256 before constructing this backend, so
+    only that explicit origin may use full checkpoint deserialization.
+    """
+
+    if checkpoint_origin not in {"research_checkpoint", "project_training"}:
+        raise ValueError("checkpoint_origin is unsupported")
+    weights_only = checkpoint_origin != "project_training"
+    try:
+        return torch_module.load(
+            checkpoint_path,
+            map_location=map_location,
+            weights_only=weights_only,
+        )
+    except TypeError:  # pragma: no cover - old PyTorch compatibility
+        return torch_module.load(checkpoint_path, map_location=map_location)
+
+
 def _unwrap_steerer_checkpoint(
     payload: object, *, checkpoint_origin: CheckpointOrigin = "research_checkpoint"
 ) -> object:
@@ -503,12 +532,12 @@ class TorchSTEERERBackend:
                 config.train.route_size,
                 self._device,
             )
-            try:
-                state = torch.load(
-                    checkpoint_path, map_location=self._device, weights_only=True
-                )
-            except TypeError:  # pragma: no cover - old PyTorch compatibility
-                state = torch.load(checkpoint_path, map_location=self._device)
+            state = _load_steerer_checkpoint(
+                torch,
+                checkpoint_path,
+                map_location=self._device,
+                checkpoint_origin=checkpoint_origin,
+            )
             state = _unwrap_steerer_checkpoint(
                 state, checkpoint_origin=checkpoint_origin
             )
