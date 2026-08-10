@@ -3,11 +3,13 @@ from __future__ import annotations
 from pathlib import Path
 
 import numpy as np
+import pytest
 from PIL import Image
 from scipy.io import savemat
 
 from droneai.ucf_qnrf import (
     apply_official_train_validation_split,
+    index_ucf_qnrf_test,
     index_ucf_qnrf_train,
     prepare_evaluation_sample,
     read_ucf_qnrf_points,
@@ -52,6 +54,25 @@ def test_index_uses_only_explicit_train_root_and_hashes_both_assets(tmp_path: Pa
     assert len(records[0].image_sha256) == 64
     assert len(records[0].annotation_sha256) == 64
     assert all("Test" not in str(path) for path in (records[0].image_path, records[0].annotation_path))
+
+
+def test_test_index_prefixes_partition_identity_and_requires_annotation_pairs(
+    tmp_path: Path,
+) -> None:
+    test = tmp_path / "Test"
+    test.mkdir()
+    _write_sample(test, 1, 3)
+    _write_sample(test, 2, 4)
+
+    records = index_ucf_qnrf_test(test)
+
+    assert [row.sample_id for row in records] == ["test_img_0001", "test_img_0002"]
+    assert [row.count for row in records] == [3, 4]
+    assert all(row.image_path.parent == test.resolve() for row in records)
+
+    (test / "img_0002_ann.mat").unlink()
+    with pytest.raises(FileNotFoundError, match="annotation missing"):
+        index_ucf_qnrf_test(test)
 
 
 def test_index_matches_official_out_of_bounds_filter_and_keeps_edge_points(tmp_path: Path) -> None:
