@@ -172,6 +172,17 @@ def state_sha256(value: object) -> str:
     return digest.hexdigest()
 
 
+def initialize_cuda_memory_stats(torch_module: object, device: object) -> int:
+    """Initialize the CUDA context before the NGC nightly memory-stat reset."""
+
+    cuda = getattr(torch_module, "cuda", None)
+    if cuda is None:
+        raise RuntimeError("CUDA memory statistics are unavailable")
+    current_device = int(cuda.current_device())
+    cuda.reset_peak_memory_stats(device)
+    return current_device
+
+
 def _safe_run_id(run_id: str) -> str:
     if (
         not isinstance(run_id, str)
@@ -579,7 +590,7 @@ class TorchOfficialA0Runtime:
         torch.manual_seed(_SEED)
         torch.cuda.manual_seed_all(_SEED)
 
-        torch.cuda.reset_peak_memory_stats(self._device)
+        cuda_index = initialize_cuda_memory_stats(torch, self._device)
         left = torch.randn((256, 256), device=self._device)
         right = torch.randn((256, 256), device=self._device)
         product = left @ right
@@ -588,6 +599,7 @@ class TorchOfficialA0Runtime:
         self.cuda_evidence = {
             "available": True,
             "device": str(self._device),
+            "device_index": cuda_index,
             "device_name": torch.cuda.get_device_name(self._device),
             "matmul_shape": [256, 256],
             "matmul_finite": matmul_finite,
@@ -686,7 +698,7 @@ class TorchOfficialA0Runtime:
     def run_update(self) -> A0UpdateObservation:
         torch = self.torch_module
         started = time.perf_counter()
-        torch.cuda.reset_peak_memory_stats(self._device)
+        initialize_cuda_memory_stats(torch, self._device)
         batch = next(iter(self._loader))
         images, labels, _sizes, name_metadata = batch
         images = images.to(self._device, non_blocking=True)
@@ -756,6 +768,7 @@ __all__ = [
     "A0Lineage",
     "A0UpdateObservation",
     "TorchOfficialA0Runtime",
+    "initialize_cuda_memory_stats",
     "run_a0_gate",
     "state_sha256",
     "synthesize_a0_config",

@@ -16,6 +16,7 @@ from droneai.steerer_official_data import load_official_training_data_profile
 from droneai.steerer_official_training import (
     A0Lineage,
     A0UpdateObservation,
+    initialize_cuda_memory_stats,
     run_a0_gate,
     state_sha256,
 )
@@ -146,6 +147,28 @@ def test_state_sha256_is_order_stable_and_tensor_sensitive() -> None:
 
     assert state_sha256(left) == state_sha256(right)
     assert state_sha256(left) != state_sha256(changed)
+
+
+def test_cuda_memory_stats_initializes_context_before_reset() -> None:
+    calls: list[str] = []
+
+    class FakeCuda:
+        def current_device(self) -> int:
+            calls.append("current_device")
+            return 0
+
+        def reset_peak_memory_stats(self, device: object) -> None:
+            calls.append(f"reset:{device}")
+            if calls[0] != "current_device":
+                raise RuntimeError("Invalid device argument")
+
+    class FakeTorch:
+        cuda = FakeCuda()
+
+    observed = initialize_cuda_memory_stats(FakeTorch(), "cuda:0")
+
+    assert observed == 0
+    assert calls == ["current_device", "reset:cuda:0"]
 
 
 def test_a0_config_selects_train_only_and_keeps_effective_batch_eight(
