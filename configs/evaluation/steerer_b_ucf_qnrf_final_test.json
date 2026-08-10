@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "run_id": "steerer-b-final-test334-20260810",
+  "protocol_id": "steerer-b-validation-selected-official-test334-v1",
+  "dataset_id": "ucf-qnrf-kaggle-apache",
+  "test_split_id": "ucf-qnrf-official-test334-v1",
+  "expected_samples": 334,
+  "seed": 3035,
+  "upstream_commit": "5b1854dbc2d280f2326d67c65515d8baf9083810",
+  "training_run_id": "steerer-qnrf-imagenet-20260806-t1-e",
+  "checkpoint_origin": "project_training",
+  "selection_basis": "B-lane Train-derived validation only; frozen before official Test access",
+  "result_label": "official Test, validation-selected",
+  "checkpoints": [
+    {
+      "role": "primary-best-val-mae",
+      "epoch": 625,
+      "filename": "best-mae.pth",
+      "sha256": "e41df787f546a5195e078486ec6d1bd62ffcb2e3e77010436f74b65045667ad2"
+    },
+    {
+      "role": "secondary-best-val-rmse",
+      "epoch": 175,
+      "filename": "best-rmse.pth",
+      "sha256": "ab1f65573c7f18f115e711998f4f4fb252e816bc5b9ae3564d5b379f22f981e6"
+    },
+    {
+      "role": "final-reference",
+      "epoch": 800,
+      "filename": "milestone-800.pth",
+      "sha256": "d13316a818ddaa2ed0da680718b234bfd21377934c7ef3b33fa074746c93c8f0"
+    }
+  ],
+  "test_access_approved": true,
+  "post_test_training_allowed": false,
+  "rights_scope": "PASS_COMMERCIAL_CANDIDATE",
+  "targets": {
+    "mae_max": 150.0,
+    "rmse_max": 500.0,
+    "bias_max": 100.0,
+    "band_bias_max": 500.0,
+    "condition_bias_max": 100.0,
+    "spatial_metric_name": "game_l1",
+    "spatial_direction": "minimize",
+    "spatial_target": 500.0,
+    "required_density_bands": ["low", "medium", "high"],
+    "density_band_rules": [
+      "low: count < 500",
+      "medium: 500 <= count < 1500",
+      "high: count >= 1500"
+    ],
+    "required_condition_keys": ["source_partition"],
+    "zone_warning_count": 50.0,
+    "zone_critical_count": 150.0,
+    "latency_max_ms": 2000.0,
+    "vram_max_mb": 24000.0
+  }
+}

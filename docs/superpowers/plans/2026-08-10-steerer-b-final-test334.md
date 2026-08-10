@@ -55,7 +55,7 @@ Expected: collection failure because `droneai.steerer_final_test` does not exist
 
 - [ ] **Step 3: Implement the strict dataclasses, JSON loader, and protocol builder**
 
-The loader accepts only schema version 1, `official_test334`, exactly 334 samples, the pinned STEERER upstream commit, the three ordered checkpoint identities, `checkpoint_origin=project_training`, `test_access_approved=true`, and `post_test_training_allowed=false`. The protocol sets `split_role="test"`, `sealed_test_access_approved=True`, `checkpoint_training_split_status="VERIFIED_DISJOINT"`, and comparison scope `final_generalization_estimate`.
+The loader accepts only schema version 1, `official_test334`, exactly 334 samples, the pinned STEERER upstream commit, the three ordered checkpoint identities, `checkpoint_origin=project_training`, `test_access_approved=true`, and `post_test_training_allowed=false`. The protocol sets `split_role="test"`, `sealed_test_access_approved=True`, `checkpoint_training_split_status="VERIFIED_DISJOINT"`, and the existing comparison scope `held_out_performance`.
 
 - [ ] **Step 4: Verify GREEN and mutation coverage**
 
