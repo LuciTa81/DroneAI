@@ -17,6 +17,7 @@ from droneai.steerer_adapter import (
     _load_official_components,
     _nearest_point_distances,
     _unwrap_steerer_checkpoint,
+    _load_steerer_checkpoint,
     calculate_steerer_size,
     extract_steerer_points,
 )
@@ -517,6 +518,43 @@ def test_research_checkpoint_unwrap_behavior_remains_frozen() -> None:
 
     assert _unwrap_steerer_checkpoint(upstream) == {"weight": 1}
     assert _unwrap_steerer_checkpoint(raw) is raw
+
+
+@pytest.mark.parametrize(
+    ("checkpoint_origin", "expected_weights_only"),
+    [("research_checkpoint", True), ("project_training", False)],
+)
+def test_checkpoint_loader_scopes_full_deserialization_to_project_training(
+    tmp_path: Path,
+    checkpoint_origin: str,
+    expected_weights_only: bool,
+) -> None:
+    """Only our hash-verified training payload may opt out of weights-only loading."""
+
+    calls: list[dict[str, object]] = []
+
+    class _TorchRecorder:
+        @staticmethod
+        def load(path: Path, **kwargs: object) -> dict[str, object]:
+            calls.append({"path": path, **kwargs})
+            return {"model": {"weight": 1}}
+
+    checkpoint = tmp_path / "checkpoint.pth"
+    payload = _load_steerer_checkpoint(
+        _TorchRecorder,
+        checkpoint,
+        map_location="cuda",
+        checkpoint_origin=checkpoint_origin,
+    )
+
+    assert payload == {"model": {"weight": 1}}
+    assert calls == [
+        {
+            "path": checkpoint,
+            "map_location": "cuda",
+            "weights_only": expected_weights_only,
+        }
+    ]
 
 
 @pytest.mark.parametrize("key", ["state_dict", "model"])
