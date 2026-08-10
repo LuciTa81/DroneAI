@@ -3,6 +3,10 @@
 from __future__ import annotations
 
 import json
+import csv
+import math
+import os
+import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 from types import MappingProxyType
@@ -267,10 +271,228 @@ def build_b_final_test_protocol(
     )
 
 
+def validate_checkpoint_manifest(
+    profile: BFinalTestProfile, path: str | Path
+) -> tuple[FrozenCheckpointSelection, ...]:
+    """Bind the preregistered roles to existing training-manifest entries."""
+
+    source = Path(path)
+    payload = json.loads(source.read_text(encoding="utf-8"))
+    if (
+        not isinstance(payload, dict)
+        or payload.get("schema_version") != 1
+        or payload.get("run_id") != profile.training_run_id
+        or not isinstance(payload.get("checkpoints"), list)
+    ):
+        raise ValueError("checkpoint manifest does not match the frozen B run")
+    entries = payload["checkpoints"]
+    for checkpoint in profile.checkpoints:
+        if not any(
+            isinstance(entry, dict)
+            and entry.get("epoch") == checkpoint.epoch
+            and entry.get("filename") == checkpoint.filename
+            and entry.get("sha256") == checkpoint.sha256
+            for entry in entries
+        ):
+            raise ValueError(
+                "checkpoint manifest is missing frozen identity: "
+                f"{checkpoint.role}@{checkpoint.epoch}"
+            )
+    return profile.checkpoints
+
+
+def verify_checkpoint_files(
+    profile: BFinalTestProfile, checkpoint_root: str | Path
+) -> tuple[Path, ...]:
+    root = Path(checkpoint_root).resolve()
+    paths: list[Path] = []
+    for checkpoint in profile.checkpoints:
+        target = (root / checkpoint.filename).resolve()
+        try:
+            target.relative_to(root)
+        except ValueError as error:
+            raise ValueError("checkpoint filename escapes the checkpoint root") from error
+        if not target.is_file():
+            raise FileNotFoundError(f"frozen checkpoint is missing: {target}")
+        observed = sha256_file(target)
+        if observed != checkpoint.sha256:
+            raise ValueError(
+                "frozen checkpoint SHA-256 mismatch: "
+                f"role={checkpoint.role} expected={checkpoint.sha256} observed={observed}"
+            )
+        paths.append(target)
+    return tuple(paths)
+
+
+def _atomic_json(path: Path, payload: object) -> Path:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if path.exists():
+        raise FileExistsError(f"result artifact already exists: {path}")
+    content = (
+        json.dumps(
+            payload,
+            indent=2,
+            ensure_ascii=False,
+            sort_keys=True,
+            allow_nan=False,
+        )
+        + "\n"
+    ).encode("utf-8")
+    descriptor, temporary_name = tempfile.mkstemp(
+        prefix=f".{path.name}.", suffix=".tmp", dir=path.parent
+    )
+    temporary = Path(temporary_name)
+    try:
+        with os.fdopen(descriptor, "wb") as stream:
+            stream.write(content)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, path)
+    except BaseException:
+        temporary.unlink(missing_ok=True)
+        raise
+    return path
+
+
+def _finite_float(row: Mapping[str, object], key: str) -> float:
+    try:
+        value = float(row[key])
+    except (KeyError, TypeError, ValueError) as error:
+        raise ValueError(f"result metric is missing or invalid: {key}") from error
+    if not math.isfinite(value):
+        raise ValueError(f"result metric is non-finite: {key}")
+    return value
+
+
+def _mean_prediction_field(rows: list[dict[str, str]], key: str) -> float:
+    values = [_finite_float(row, key) for row in rows]
+    return float(sum(values) / len(values))
+
+
+def _role_result(
+    role_root: Path,
+    *,
+    checkpoint: FrozenCheckpointSelection,
+    expected_samples: int,
+) -> dict[str, object]:
+    metrics_path = role_root / "metrics.json"
+    score_path = role_root / "score.json"
+    predictions_path = role_root / "predictions.csv"
+    if not all(path.is_file() for path in (metrics_path, score_path, predictions_path)):
+        raise FileNotFoundError(f"incomplete final-Test role bundle: {role_root}")
+    metrics = json.loads(metrics_path.read_text(encoding="utf-8"))
+    score = json.loads(score_path.read_text(encoding="utf-8"))
+    if not isinstance(metrics, dict) or not isinstance(score, dict):
+        raise ValueError("final-Test metrics and score must be objects")
+    if (
+        metrics.get("accounting_complete") is not True
+        or metrics.get("expected_samples") != expected_samples
+        or metrics.get("recorded_samples") != expected_samples
+        or metrics.get("successful_samples") != expected_samples
+        or metrics.get("explicit_failures") != 0
+    ):
+        raise ValueError(f"final-Test accounting is incomplete for {checkpoint.role}")
+    with predictions_path.open("r", encoding="utf-8", newline="") as stream:
+        rows = list(csv.DictReader(stream))
+    sample_ids = [row.get("sample_id", "") for row in rows]
+    if (
+        len(rows) != expected_samples
+        or any(not sample_id for sample_id in sample_ids)
+        or len(set(sample_ids)) != expected_samples
+    ):
+        raise ValueError(f"final-Test predictions are incomplete for {checkpoint.role}")
+    percent_errors = [
+        _finite_float(row, "absolute_error")
+        / _finite_float(row, "ground_truth_count")
+        * 100.0
+        for row in rows
+        if _finite_float(row, "ground_truth_count") > 0.0
+    ]
+    if not percent_errors:
+        raise ValueError("reference MAPE requires at least one positive ground truth")
+    return {
+        "role": checkpoint.role,
+        "epoch": checkpoint.epoch,
+        "filename": checkpoint.filename,
+        "checkpoint_sha256": checkpoint.sha256,
+        "sample_count": expected_samples,
+        "mae": _finite_float(metrics, "mae"),
+        "rmse": _finite_float(metrics, "rmse"),
+        "signed_bias": _finite_float(metrics, "signed_bias"),
+        "reference_mape_percent": float(sum(percent_errors) / len(percent_errors)),
+        "localization_precision": _mean_prediction_field(rows, "localization_precision"),
+        "localization_recall": _mean_prediction_field(rows, "localization_recall"),
+        "localization_f1": _mean_prediction_field(rows, "localization_f1"),
+        "localization_mean_distance_px": _mean_prediction_field(
+            rows, "localization_mean_distance"
+        ),
+        "density_zone_mae": _mean_prediction_field(rows, "density_zone_mae"),
+        "density_psnr": _mean_prediction_field(rows, "density_psnr"),
+        "density_ssim": _mean_prediction_field(rows, "density_ssim"),
+        "median_latency_ms": _finite_float(metrics, "median_latency_ms"),
+        "throughput_fps_batch1": _finite_float(metrics, "throughput_fps_batch1"),
+        "peak_vram_mb": _finite_float(metrics, "peak_vram_mb"),
+        "technical_score": score.get("score"),
+        "technical_status": score.get("status"),
+        "metrics_sha256": sha256_file(metrics_path),
+        "predictions_sha256": sha256_file(predictions_path),
+        "score_sha256": sha256_file(score_path),
+    }
+
+
+def finalize_b_final_test(
+    output_root: str | Path, *, profile: BFinalTestProfile
+) -> tuple[Path, Path]:
+    """Aggregate complete role bundles and atomically close the B lane."""
+
+    root = Path(output_root)
+    closure_path = root / "b-lane-closed.json"
+    if closure_path.exists():
+        raise FileExistsError(f"B lane is already closed: {closure_path}")
+    comparison_path = root / "comparison.json"
+    if comparison_path.exists():
+        raise FileExistsError(f"partial B finalization requires audit: {comparison_path}")
+    results = [
+        _role_result(
+            root / checkpoint.role,
+            checkpoint=checkpoint,
+            expected_samples=profile.expected_samples,
+        )
+        for checkpoint in profile.checkpoints
+    ]
+    comparison = {
+        "schema_version": 1,
+        "run_id": profile.run_id,
+        "dataset_id": profile.dataset_id,
+        "split_id": profile.test_split_id,
+        "split_role": "test",
+        "result_label": profile.result_label,
+        "selection_basis": profile.selection_basis,
+        "checkpoint_selection_remains_frozen": True,
+        "results": results,
+    }
+    _atomic_json(comparison_path, comparison)
+    closure = {
+        "schema_version": 1,
+        "run_id": profile.run_id,
+        "status": "CLOSED_AFTER_OFFICIAL_TEST",
+        "test_sample_count": profile.expected_samples,
+        "result_label": profile.result_label,
+        "checkpoint_selection_remains_frozen": True,
+        "post_test_training_allowed": profile.post_test_training_allowed,
+        "comparison_sha256": sha256_file(comparison_path),
+    }
+    _atomic_json(closure_path, closure)
+    return comparison_path, closure_path
+
+
 __all__ = [
     "BFinalTestProfile",
     "FrozenCheckpointSelection",
     "build_b_final_test_protocol",
+    "finalize_b_final_test",
     "load_b_final_test_profile",
+    "validate_checkpoint_manifest",
     "validate_b_final_test_profile",
+    "verify_checkpoint_files",
 ]
