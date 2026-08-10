@@ -1,0 +1,11 @@
+{
+  "checkpoint": {
+    "byte_count": 775116701,
+    "environment_sha256": "90faa7f34d9f7d4051759a2611a274dd57eb2bf39e715978060918d87706d2ba",
+    "filename": "last.pth",
+    "sha256": "2c05478d2edcb6e3bfc9d6d8ba01e298cdcd36b9434f5796bc511d2dbcafc389"
+  },
+  "run_id": "steerer-qnrf-official-a0-20260810-v1",
+  "schema_version": 1,
+  "stage": "A0"
+}

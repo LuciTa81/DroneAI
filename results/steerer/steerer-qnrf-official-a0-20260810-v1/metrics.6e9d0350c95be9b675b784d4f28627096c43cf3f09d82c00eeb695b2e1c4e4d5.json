@@ -1,0 +1,27 @@
+{
+  "density_values": [
+    9027.0126953125,
+    143.55120849609375,
+    9429.0,
+    503.9371337890625
+  ],
+  "elapsed_seconds": 1.5737342749489471,
+  "gradient_norm": 1.072663426399231,
+  "learning_rate": 5e-07,
+  "loss": 0.16829925775527954,
+  "optimizer_steps": 1,
+  "peak_vram_mb": 23716.84716796875,
+  "run_id": "steerer-qnrf-official-a0-20260810-v1",
+  "schema_version": 1,
+  "stage": "A0",
+  "train_sample_tokens": [
+    "0668",
+    "0264",
+    "0971",
+    "0825",
+    "0204",
+    "0191",
+    "0013",
+    "0777"
+  ]
+}

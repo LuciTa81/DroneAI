@@ -1,0 +1,55 @@
+{
+  "cuda": {
+    "available": true,
+    "device": "cuda:0",
+    "device_index": 0,
+    "device_name": "NVIDIA GeForce RTX 5090",
+    "matmul_finite": true,
+    "matmul_shape": [
+      256,
+      256
+    ]
+  },
+  "lineage": {
+    "backbone_sha256": "0efec102d97f2ef58f0e258b2c3076b3704b93ffc2b73f64c8da5462c0037ef8",
+    "container_image_digest": "sha256:90dfcacf0d65fec4357a37db72624b42febf8d3d9056924cdec3499237ed2691",
+    "dataset_content_sha256": "ac55c9fa3e381a5511dd7f63206e1e9883006562f02364bb1ec49dda975d4092",
+    "dataset_manifest_sha256": "57c5b26205f8146a5593dfa98a17a007aaa7582cb91c85c4938f88f444706a35",
+    "profile_sha256": "0ebaeb81b4e53fc8c75ac7c2f94f8543cea9fe5f63b72e3444fc3c37192c3e6c",
+    "project_commit": "fecf462d445dc9463b47ba7aed00874c0b46b941",
+    "split_sha256s": {
+      "test": "0b9ddcaed5853453c549a76f6caef5bb14cdd85c0815862734d48d095de4abc6",
+      "train": "8a113f562862f5617c76c8eda88f6cd095b5d04637262f3dd105e972e1c32937"
+    },
+    "upstream_commit": "5b1854dbc2d280f2326d67c65515d8baf9083810",
+    "upstream_config_sha256": "a1bd95fa9dcb62ced8c248f0716d22f45f23080705d8445e195982f789c1314c"
+  },
+  "metrics_sha256": "6e9d0350c95be9b675b784d4f28627096c43cf3f09d82c00eeb695b2e1c4e4d5",
+  "run_id": "steerer-qnrf-official-a0-20260810-v1",
+  "runtime": {
+    "amp_enabled": false,
+    "cudnn": 91400,
+    "effective_config_sha256": "47af809b6939e2bfe6fa09da1832cef39253b0c8bb4ea44bb411b31b562dbc2a",
+    "fp32_training": true,
+    "g2_dataset_content_sha256": "ac55c9fa3e381a5511dd7f63206e1e9883006562f02364bb1ec49dda975d4092",
+    "g2_manifest_sha256": "57c5b26205f8146a5593dfa98a17a007aaa7582cb91c85c4938f88f444706a35",
+    "gpu": "NVIDIA GeForce RTX 5090",
+    "gpu_count": 1,
+    "platform": "Linux-6.16.3-76061603-generic-x86_64-with-glibc2.39",
+    "project_untracked_files": [
+      ".codex-transfer-steerer-a-final-b21832f.bundle",
+      ".codex-transfer-steerer-a-g1-a32eefb.bundle",
+      ".codex-transfer-steerer-a-g1-af9ddeb.bundle",
+      ".codex-transfer-steerer-a0-8b9a239.bundle",
+      ".codex-transfer-steerer-a0-fecf462.bundle",
+      ".codex-transfer-steerer-qnrf-test334-a-20260810.bundle",
+      ".t800-lock-test/steerer_training_longrun.py",
+      ".t800-lock-test/test_steerer_training_longrun.py"
+    ],
+    "python": "3.12.3",
+    "torch": "2.9.0a0+145a3a7bda.nv25.10",
+    "torch_cuda": "13.0"
+  },
+  "schema_version": 1,
+  "stage": "A0"
+}

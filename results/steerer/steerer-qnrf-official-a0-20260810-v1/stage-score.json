@@ -1,0 +1,73 @@
+{
+  "checks": [
+    {
+      "blocker": true,
+      "category": "provenance",
+      "check_id": "a0.identity",
+      "description": "Pinned source, dataset, config, backbone, and container identities",
+      "earned": 20,
+      "evidence": "/workspace/data/results/steerer-official-code-reproduction/steerer-qnrf-official-a0-20260810-v1/a0-manifest.json",
+      "expected": "all identities pinned by SHA/commit",
+      "observed": "upstream=5b1854dbc2d280f2326d67c65515d8baf9083810 backbone=0efec102d97f2ef58f0e258b2c3076b3704b93ffc2b73f64c8da5462c0037ef8",
+      "passed": true,
+      "weight": 20
+    },
+    {
+      "blocker": true,
+      "category": "runtime",
+      "check_id": "a0.cuda",
+      "description": "CUDA import and finite matrix multiplication",
+      "earned": 20,
+      "evidence": "/workspace/data/results/steerer-official-code-reproduction/steerer-qnrf-official-a0-20260810-v1/a0-manifest.json",
+      "expected": "CUDA available and matmul finite",
+      "observed": "{\"available\": true, \"device\": \"cuda:0\", \"device_index\": 0, \"device_name\": \"NVIDIA GeForce RTX 5090\", \"matmul_finite\": true, \"matmul_shape\": [256, 256]}",
+      "passed": true,
+      "weight": 20
+    },
+    {
+      "blocker": true,
+      "category": "training",
+      "check_id": "a0.update",
+      "description": "Exactly one finite optimizer update from Train1201",
+      "earned": 20,
+      "evidence": "/workspace/data/results/steerer-official-code-reproduction/steerer-qnrf-official-a0-20260810-v1/a0-manifest.json",
+      "expected": "one optimizer update; finite loss/density/gradient",
+      "observed": "steps=1 loss=0.16829925775527954",
+      "passed": true,
+      "weight": 20
+    },
+    {
+      "blocker": true,
+      "category": "checkpoint",
+      "check_id": "a0.resume_round_trip",
+      "description": "Hash-verified model/optimizer/scheduler/RNG checkpoint reload",
+      "earned": 20,
+      "evidence": "/workspace/data/results/steerer-official-code-reproduction/steerer-qnrf-official-a0-20260810-v1/a0-manifest.json",
+      "expected": "all project state and RNG reload exactly",
+      "observed": "state=True rng=True",
+      "passed": true,
+      "weight": 20
+    },
+    {
+      "blocker": true,
+      "category": "rights",
+      "check_id": "a0.rights_and_separation",
+      "description": "ImageNet-only initialization, no official model weight, no Test access",
+      "earned": 20,
+      "evidence": "/workspace/data/results/steerer-official-code-reproduction/steerer-qnrf-official-a0-20260810-v1/a0-manifest.json",
+      "expected": "backbone-only; model checkpoint false; Test access zero",
+      "observed": "scope=backbone_only model_checkpoint=False test_access=0",
+      "passed": true,
+      "weight": 20
+    }
+  ],
+  "decision_scope": "commercial_candidate",
+  "failed_blockers": [],
+  "generated_at": "2026-08-10T07:07:21.522648+00:00",
+  "schema_version": 2,
+  "score": 100,
+  "stage_id": "G3-A0",
+  "stage_name": "STEERER official-code one-update smoke",
+  "status": "PASS_COMMERCIAL_CANDIDATE",
+  "threshold": 100
+}

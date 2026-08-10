@@ -1,0 +1,84 @@
+{
+  "schema_version": 1,
+  "run_id": "steerer-qnrf-official-a0-20260810-v1",
+  "stage": "A0",
+  "status": "PASS_COMMERCIAL_CANDIDATE",
+  "score": 100,
+  "protocol": {
+    "train_population": 1201,
+    "validation_population": 0,
+    "test_population": 334,
+    "test_access_count": 0,
+    "optimizer_steps": 1,
+    "physical_batch": 8,
+    "accumulation_steps": 1,
+    "effective_batch": 8,
+    "precision": "FP32",
+    "seed": 3035,
+    "initialization": "ImageNet HRNet-W48 backbone only",
+    "official_steerer_checkpoint_loaded": false
+  },
+  "observation": {
+    "loss": 0.16829925775527954,
+    "gradient_norm": 1.072663426399231,
+    "learning_rate": 5e-07,
+    "elapsed_seconds": 1.5737342749489471,
+    "peak_vram_mb": 23716.84716796875,
+    "train_samples_in_update": 8,
+    "checkpoint_round_trip": true,
+    "rng_round_trip": true,
+    "cuda_matmul_finite": true
+  },
+  "lineage": {
+    "project_commit": "fecf462d445dc9463b47ba7aed00874c0b46b941",
+    "upstream_commit": "5b1854dbc2d280f2326d67c65515d8baf9083810",
+    "upstream_config_sha256": "a1bd95fa9dcb62ced8c248f0716d22f45f23080705d8445e195982f789c1314c",
+    "profile_sha256": "0ebaeb81b4e53fc8c75ac7c2f94f8543cea9fe5f63b72e3444fc3c37192c3e6c",
+    "dataset_manifest_sha256": "57c5b26205f8146a5593dfa98a17a007aaa7582cb91c85c4938f88f444706a35",
+    "dataset_content_sha256": "ac55c9fa3e381a5511dd7f63206e1e9883006562f02364bb1ec49dda975d4092",
+    "train_split_sha256": "8a113f562862f5617c76c8eda88f6cd095b5d04637262f3dd105e972e1c32937",
+    "test_split_sha256": "0b9ddcaed5853453c549a76f6caef5bb14cdd85c0815862734d48d095de4abc6",
+    "backbone_sha256": "0efec102d97f2ef58f0e258b2c3076b3704b93ffc2b73f64c8da5462c0037ef8",
+    "container_image_digest": "sha256:90dfcacf0d65fec4357a37db72624b42febf8d3d9056924cdec3499237ed2691"
+  },
+  "local_artifacts": {
+    "metrics": {
+      "path": "metrics.6e9d0350c95be9b675b784d4f28627096c43cf3f09d82c00eeb695b2e1c4e4d5.json",
+      "sha256": "6e9d0350c95be9b675b784d4f28627096c43cf3f09d82c00eeb695b2e1c4e4d5"
+    },
+    "environment": {
+      "path": "environment.90faa7f34d9f7d4051759a2611a274dd57eb2bf39e715978060918d87706d2ba.json",
+      "sha256": "90faa7f34d9f7d4051759a2611a274dd57eb2bf39e715978060918d87706d2ba"
+    },
+    "stage_score_json": {
+      "path": "stage-score.json",
+      "sha256": "f99c68b551a7a6ba08924b09700a2b3eaf553d3d9234ab22d1a52aa0ba3d68c7"
+    },
+    "stage_score_markdown": {
+      "path": "stage-score.md",
+      "sha256": "bee1d3e92e65a85dc4e974fbefe94d871bbe21cd4446a9ea019336f3f60b9856"
+    },
+    "checkpoint_manifest": {
+      "path": "checkpoint-manifest.json",
+      "sha256": "c9a145ca8200f234530de582304b7c1a930a48e730120cfee5c7287be8cbec0c"
+    }
+  },
+  "ssd_artifacts": {
+    "full_manifest": {
+      "path": "/workspace/data/results/steerer-official-code-reproduction/steerer-qnrf-official-a0-20260810-v1/a0-manifest.json",
+      "sha256": "f7abd5f6c03f9d3bda1cc0c997fb8fad77eae9278707a471bad48ef70820ff53",
+      "byte_count": 53468
+    },
+    "checkpoint": {
+      "path": "/workspace/data/checkpoints/steerer-official-code-reproduction/steerer-qnrf-official-a0-20260810-v1/last.pth",
+      "sha256": "2c05478d2edcb6e3bfc9d6d8ba01e298cdcd36b9434f5796bc511d2dbcafc389",
+      "byte_count": 775116701
+    }
+  },
+  "rights": {
+    "code_license": "MIT",
+    "dataset_license_basis": "Kaggle Apache-2.0 listing accepted by user",
+    "production_approved": false,
+    "note": "PASS_COMMERCIAL_CANDIDATE is an experiment-rights scope, not production approval."
+  }
+}
