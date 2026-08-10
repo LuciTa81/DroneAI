@@ -97,7 +97,7 @@ def build_official_a800_command(
     backbone = Path(backbone_path).resolve(strict=True)
     output = Path(log_root).resolve(strict=False)
     command = (
-        str(Path(python_executable).resolve(strict=False)),
+        str(Path(python_executable).absolute()),
         str(trainer),
         "--cfg",
         str(config),

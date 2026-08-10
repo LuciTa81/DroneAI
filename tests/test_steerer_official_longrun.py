@@ -72,6 +72,34 @@ def test_official_command_has_only_path_overrides_and_pinned_raw_entrypoint(
     assert not any(name in argument for name in forbidden for argument in command[7:])
 
 
+def test_official_command_preserves_virtualenv_python_symlink(tmp_path: Path) -> None:
+    module = _subject()
+    upstream = _upstream_fixture(tmp_path)
+    processed = tmp_path / "processed"
+    processed.mkdir()
+    backbone = tmp_path / "hrnet.pth"
+    backbone.write_bytes(b"backbone")
+    interpreter = tmp_path / "python3.12"
+    interpreter.write_bytes(b"interpreter")
+    virtualenv = tmp_path / "venv"
+    virtualenv.mkdir()
+    virtualenv_python = virtualenv / "python"
+    try:
+        virtualenv_python.symlink_to(interpreter)
+    except OSError as error:
+        pytest.skip(f"symlinks are unavailable on this platform: {error}")
+
+    command = module.build_official_a800_command(
+        python_executable=virtualenv_python,
+        upstream_dir=upstream,
+        processed_root=processed,
+        backbone_path=backbone,
+        log_root=tmp_path / "checkpoints" / "official-output",
+    )
+
+    assert command[0] == str(virtualenv_python.absolute())
+
+
 def test_official_resume_adds_only_verified_upstream_resume_path(tmp_path: Path) -> None:
     module = _subject()
     upstream = _upstream_fixture(tmp_path)
