@@ -1,0 +1,167 @@
+{
+  "artifacts": [
+    {
+      "path": "test-source-inventory.json",
+      "sha256": "2f5789b14687568540e504ae04ff6d6b360ddfd7a8349470ef4483c0dc49ad3a"
+    },
+    {
+      "path": "g1-provenance.json",
+      "sha256": "6601fd6465f45c967833a53c6728364aa6608f4f5f5de47cfcce1b726da71bd1"
+    },
+    {
+      "path": "sample-manifest.json",
+      "sha256": "ad896a8d18be294c8159b78cfa69f6e87eeb24018fcb1233d77131e1f0fa5a79"
+    },
+    {
+      "path": "rights-decision.json",
+      "sha256": "20c8ab2c056a2fca2b2904869073ff2615ce3cd2872525f29a6ddde23535f669"
+    },
+    {
+      "path": "predictions.csv",
+      "sha256": "ebad4991db8f10e8bec7fba2fe4cc1f6fd1e7c6f984ee9a3350f2e211885b4c5"
+    },
+    {
+      "path": "native-output-metadata.json",
+      "sha256": "28cc26a6186d472b39ffaa8eb300bb567553b635ca722d1de99162a6e7561e2a"
+    },
+    {
+      "path": "metrics.json",
+      "sha256": "6520a833bda0ff3c90d292e6ff62220dd938c917df97593f5e4fa5789c106a6c"
+    },
+    {
+      "path": "selection_manifest.json",
+      "sha256": "59412f30f067918c2809a7f8eefe7948c8125280acbdb3c30f2162ad70e50aa7"
+    },
+    {
+      "path": "model-brief.md",
+      "sha256": "44393bb3bdd5041b941ee5684712c32c7a6e9307aad739fa1520acacf5415178"
+    },
+    {
+      "path": "summary.md",
+      "sha256": "d5e6470b6c78a53e9ae20b63372daaa7e0f0c4b8d952b124dbbf2aef9e9797f9"
+    },
+    {
+      "path": "environment-summary.json",
+      "sha256": "f5cb4fd860f93af023255708e805c2f27fdcf5c7910cfa77cd9a0bcf0868baf6"
+    },
+    {
+      "path": "figures/selected-01-30b70a506370bbc6.png",
+      "sha256": "e3b359996854d573d6dffccc0caf94236be6ffa5d9c527963696ec53417eab55"
+    },
+    {
+      "path": "figures/selected-02-f9a71033127b8315.png",
+      "sha256": "88e8c0d1fc77b872870b8788600fb92e37ea0a6ecca3abef62d638b66e981d6a"
+    },
+    {
+      "path": "figures/selected-03-99dd854396771239.png",
+      "sha256": "fe5dec012eecd03753d4bdfce323581b85dcfaa88138718bc041c474746e10d9"
+    },
+    {
+      "path": "figures/selected-04-d49ae966bf073090.png",
+      "sha256": "d9d512d80f6a05bbe05fcb5e7f4fba9184a86ffe6cdb23f3217309c33e69ea28"
+    },
+    {
+      "path": "figures/selected-05-1cc7a045607c63d0.png",
+      "sha256": "8031bb0ae5468b1012af1dce48b2d565d6eb13bd1981654fc4440a2c98d9cd83"
+    },
+    {
+      "path": "figures/selected-06-3f262429e0d8c8d9.png",
+      "sha256": "5bb87a41ba4088968d81535afe16462a5589b22e964de7f3139c0f7d162e314a"
+    },
+    {
+      "path": "figures/selected-07-bd4cc6c6de915f88.png",
+      "sha256": "c2e127b51e924618a76ba9d5bfeb01e3c30cec9491d7d2d014d23b72d5c43a02"
+    },
+    {
+      "path": "figures/selected-08-f4354c7b37f4ca2c.png",
+      "sha256": "649f947adeb0d2f33de85f867831cc4a49d3d11823a392b68472e3197c5e9254"
+    },
+    {
+      "path": "figures/selected-09-62d61773866058aa.png",
+      "sha256": "d845489708140f52682eae579025d314c4f9e8b7d70063708faf787bb4a243ea"
+    },
+    {
+      "path": "figures/selected-10-de42b1bd51239ae7.png",
+      "sha256": "91ef29b218d065ce5205c81912f29c8ce878cf14b7dce585b6f551c566675ee9"
+    },
+    {
+      "path": "figures/selected-11-d0a286859e4dab63.png",
+      "sha256": "278418f8a05993c7603f24ea44187ae86fb5b608d90361a17049944b0b0f2641"
+    },
+    {
+      "path": "figures/selected-12-5d436491737a0b5a.png",
+      "sha256": "dc40a1e2805a3118c14782e97994ca8a881804a7cc6827f1267e3a38fc5dbbfe"
+    }
+  ],
+  "checkpoint": {
+    "path": "/workspace/data/checkpoints/steerer/QNRF_mae_77.8_mse_138.0_85f71763.pth",
+    "sha256": "85f71763595527e419257d459288e4a784766f41687ff0b859dcff65a151bbec",
+    "verified": true
+  },
+  "comparison_claim": {
+    "checkpoint_split_evidence": "The official checkpoint training and selection membership is not independently verified; this is a reproduction compatibility gate.",
+    "checkpoint_training_split_status": "UNKNOWN",
+    "comparison_scope": "compatibility_smoke",
+    "ranking_eligible": false
+  },
+  "protocol": {
+    "band_bias_max": 1000.0,
+    "bias_max": 500.0,
+    "checkpoint_split_evidence": "The official checkpoint training and selection membership is not independently verified; this is a reproduction compatibility gate.",
+    "checkpoint_training_split_status": "UNKNOWN",
+    "comparison_scope": "compatibility_smoke",
+    "condition_bias_max": 1000.0,
+    "dataset_id": "ucf-qnrf-kaggle-apache",
+    "density_band_rules": [
+      "low: count < 500",
+      "medium: 500 <= count < 1500",
+      "high: count >= 1500"
+    ],
+    "expected_samples": 334,
+    "latency_max_ms": 2000.0,
+    "leakage_free": true,
+    "localization_radius": 16.0,
+    "mae_max": 200.0,
+    "protocol_id": "steerer-official-code-reproduction-g1-v2",
+    "require_clean_git": true,
+    "required_condition_keys": [
+      "source_partition"
+    ],
+    "required_density_bands": [
+      "low",
+      "medium",
+      "high"
+    ],
+    "rights_decision_path": "/workspace/data/results/steerer/steerer-rights-20260717T170242Z-79f4c350d359/rights-decision.json",
+    "rights_decision_sha256": "ff6ee8ecbd535a80df5dc72015a13a1cb6e3713a529e2b080e0f3a36f188c922",
+    "rmse_max": 300.0,
+    "run_id": "steerer-a-official-checkpoint-test334-preprocessed-v2",
+    "sealed_test_access_approved": true,
+    "spatial_direction": "minimize",
+    "spatial_metric_name": "game_l1",
+    "spatial_target": 500.0,
+    "split_id": "ucf-qnrf-official-test334-v1",
+    "split_role": "test",
+    "split_verified": true,
+    "vram_max_mb": 24000.0,
+    "zone_critical_count": 150.0,
+    "zone_warning_count": 50.0
+  },
+  "reviewed_paths": {
+    "paths": [
+      "/workspace/upstreams/STEERER/configs/QNRF_final.py",
+      "/workspace/upstreams/STEERER/lib/models/build_counter.py",
+      "/workspace/upstreams/STEERER/lib/utils/points_from_den.py",
+      "/workspace/upstreams/STEERER/lib/core/cc_function.py",
+      "/workspace/upstreams/STEERER/lib/datasets/base_dataset.py",
+      "/workspace/upstreams/STEERER/lib/datasets/nwpu.py"
+    ],
+    "verified": true
+  },
+  "rights_decision": {
+    "source_path": "/workspace/data/results/steerer/steerer-rights-20260717T170242Z-79f4c350d359/rights-decision.json",
+    "source_sha256": "ff6ee8ecbd535a80df5dc72015a13a1cb6e3713a529e2b080e0f3a36f188c922",
+    "verified": true
+  },
+  "schema_version": 1
+}

@@ -1,0 +1,25 @@
+{
+  "absolute_difference": {
+    "mae": 0.283507,
+    "rmse": 1.086744
+  },
+  "accounting_complete": true,
+  "decision": "G1 compatible; G2 data preparation may begin",
+  "frozen_tolerance": {
+    "mae_absolute": 5.0,
+    "rmse_absolute": 10.0
+  },
+  "gate_id": "steerer-a-g1-official-checkpoint-compatibility",
+  "observed": {
+    "mae": 77.5164929266124,
+    "rmse": 139.08674421137636
+  },
+  "repository_claim": {
+    "mae": 77.8,
+    "rmse": 138.0
+  },
+  "result_label": "official Test, test-selected",
+  "schema_version": 1,
+  "status": "PASS_RESEARCH_ONLY",
+  "training_authorized": true
+}

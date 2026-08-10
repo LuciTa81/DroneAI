@@ -1,0 +1,15 @@
+{
+  "artifact_manifest_allowed_scope": "research_comparison_only",
+  "checkpoint_manifest_sha256": "ff4d24a1618b945d0efeb4cc0e1a0ac58e01139c066262615bbc34cb525ef2e0",
+  "checkpoint_sha256": "85f71763595527e419257d459288e4a784766f41687ff0b859dcff65a151bbec",
+  "long_training_authorized_before_g1": false,
+  "official_weight_scope": "PASS_RESEARCH_ONLY",
+  "prepared_test_manifest_sha256": "1a56761009f13c04eac4e0731d2a841acd2e3d9afdb62b3627edcc6384f57c66",
+  "profile_sha256": "75b933daaf464711461c4b73af49ad4fa94ede911b51ead9e1c05056f926736b",
+  "result_label": "official Test, test-selected",
+  "rights_decision_sha256": "ff6ee8ecbd535a80df5dc72015a13a1cb6e3713a529e2b080e0f3a36f188c922",
+  "run_id": "steerer-a-official-checkpoint-test334-preprocessed-v2",
+  "schema_version": 1,
+  "selection_basis": "Pinned upstream evaluates official Test during training and selects best checkpoints from that Test",
+  "test_inventory_sha256": "2f5789b14687568540e504ae04ff6d6b360ddfd7a8349470ef4483c0dc49ad3a"
+}

@@ -11,8 +11,13 @@
 
 - Input color space: RGB
 - Normalization: ImageNet mean `[0.485, 0.456, 0.406]` and std `[0.229, 0.224, 0.225]`
-- Resize: preserve native size when long side <= 3072; resize only when above 3072, setting the long side to 3072
-- Padding: zero-pad both dimensions to multiples of 32
+- Offline preparation: pinned `prepare_QNRF.py` resizes every image to its
+  minimum/next-16 geometry and re-encodes it as bilinear JPEG quality 95
+- Annotation preparation: scale and integer-truncate points, then clip boundary
+  points without dropping count mass
+- Inference resize: preserve the prepared size when long side <= 3072; otherwise
+  set the long side to 3072
+- Inference padding: zero-pad both dimensions to multiples of 32
 
 ## Major blocks
 
@@ -46,13 +51,36 @@ paper localization F1 != harness F1@16px
 
 The following UCF-QNRF values are paper/repository-reported results, not measurements produced by this evaluation harness:
 
-- MAE: 77.8
-- RMSE: 138.0
+- Paper MAE/RMSE: 74.3 / 128.3
+- Official repository/checkpoint MAE/RMSE: 77.8 / 138.0
 - F1: 75.6
 - Precision: 79.7
 - Recall: 72.0
 
 Future harness results must be recorded separately. The harness localization label is `harness F1@16px in original-image coordinates`; it must not be substituted for the paper localization F1.
+
+## A-lane G1 official-checkpoint reproduction
+
+The first raw-image attempt produced 86.67 MAE / 152.57 RMSE and was blocked.
+Root-cause tracing found that raw-image evaluation omitted the pinned offline
+QNRF preparation and dropped 57 out-of-bound annotations across 45 images.
+
+After reproducing the pinned preparation, Test334 produced:
+
+- MAE: **77.5165**
+- RMSE: **139.0867**
+- Signed bias: **+0.8315**
+- MAPE reference: **10.4468%**
+- Median latency: **143.02 ms/image**
+- Throughput: **6.99 FPS**
+- Peak VRAM: **4.0149 GiB**
+- Harness localization P/R/F1@16px: **73.05% / 67.34% / 69.42%**
+- Four-quadrant density zone MAE: **21.89 people/zone**
+
+The absolute difference from the repository claim is 0.2835 MAE and 1.0867
+RMSE, inside the preregistered 5.0/10.0 compatibility tolerance. G1 is
+`PASS_RESEARCH_ONLY`; it validates evaluator compatibility, not commercial use
+of the official checkpoint.
 
 ## Failure modes
 
