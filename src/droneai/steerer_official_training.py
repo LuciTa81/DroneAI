@@ -162,7 +162,9 @@ class A0Runtime(Protocol):
 
     def checkpoint_state(self) -> dict[str, object]: ...
 
-    def restore_checkpoint_state(self, state: dict[str, object]) -> None: ...
+    def restore_checkpoint_state(
+        self, state: dict[str, object], *, global_step: int
+    ) -> None: ...
 
     def state_sha256s(self) -> dict[str, str]: ...
 
@@ -483,7 +485,8 @@ def run_a0_gate(
         torch_module=runtime.torch_module,
     )
     runtime.restore_checkpoint_state(
-        {name: restored[name] for name in ("model", "optimizer", "scheduler", "scaler")}
+        {name: restored[name] for name in ("model", "optimizer", "scheduler", "scaler")},
+        global_step=int(restored["global_step"]),
     )
     after_sha256s = runtime.state_sha256s()
     checkpoint_round_trip = before_sha256s == after_sha256s
@@ -866,7 +869,8 @@ def run_a1_gate(
         torch_module=runtime.torch_module,
     )
     runtime.restore_checkpoint_state(
-        {name: restored[name] for name in ("model", "optimizer", "scheduler", "scaler")}
+        {name: restored[name] for name in ("model", "optimizer", "scheduler", "scaler")},
+        global_step=int(restored["global_step"]),
     )
     checkpoint_round_trip = before_sha256s == runtime.state_sha256s()
     _advance_rngs(runtime.torch_module)
@@ -1239,15 +1243,18 @@ class TorchOfficialA0Runtime:
             "scaler": {},
         }
 
-    def restore_checkpoint_state(self, state: dict[str, object]) -> None:
+    def restore_checkpoint_state(
+        self, state: dict[str, object], *, global_step: int
+    ) -> None:
         if set(state) != {"model", "optimizer", "scheduler", "scaler"} or state["scaler"]:
             raise ValueError("A0 FP32 checkpoint components are invalid")
         model = getattr(self._model, "module", self._model)
         model.load_state_dict(state["model"], strict=True)
         self._optimizer.load_state_dict(state["optimizer"])
         self._scheduler.load_state_dict(state["scheduler"])
-        scheduler_step = getattr(self._scheduler, "t", None)
-        self.global_step = 1 if scheduler_step is None else int(scheduler_step) + 1
+        if not isinstance(global_step, int) or isinstance(global_step, bool) or global_step < 0:
+            raise ValueError("checkpoint global step must be a non-negative integer")
+        self.global_step = global_step
 
     def state_sha256s(self) -> dict[str, str]:
         state = self.checkpoint_state()

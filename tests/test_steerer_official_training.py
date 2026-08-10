@@ -106,9 +106,12 @@ class _FakeA0Runtime:
     def checkpoint_state(self) -> dict[str, object]:
         return copy.deepcopy(self._state)
 
-    def restore_checkpoint_state(self, state: dict[str, object]) -> None:
+    def restore_checkpoint_state(
+        self, state: dict[str, object], *, global_step: int
+    ) -> None:
         self.restore_calls += 1
         self._state = copy.deepcopy(state)
+        self.global_step = global_step
 
     def state_sha256s(self) -> dict[str, str]:
         return {
