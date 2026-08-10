@@ -1,0 +1,124 @@
+{
+  "schema_version": 1,
+  "run_id": "steerer-qnrf-official-a1-20260810-v2",
+  "stage": "A1",
+  "status": "PASS_COMMERCIAL_CANDIDATE",
+  "harness_score": 100,
+  "model_performance_scope": "epoch-one diagnostic only",
+  "protocol": {
+    "train_population": 1201,
+    "train_samples_consumed": 1200,
+    "drop_last_samples": 1,
+    "validation_population": 0,
+    "test_population": 334,
+    "test_access_count": 334,
+    "test_selection": "official Test, test-selected",
+    "epoch": 1,
+    "optimizer_steps": 150,
+    "physical_batch": 8,
+    "accumulation_steps": 1,
+    "effective_batch": 8,
+    "precision": "FP32",
+    "seed": 3035,
+    "initialization": "ImageNet HRNet-W48 backbone only",
+    "official_steerer_checkpoint_loaded": false
+  },
+  "training_settings": {
+    "optimizer": "AdamW",
+    "learning_rate": 0.0001,
+    "betas": [0.9, 0.999],
+    "weight_decay": 0.0001,
+    "epsilon": 1e-08,
+    "warmup_epochs": 10,
+    "warmup_learning_rate": 5e-07,
+    "scheduler": "cosine",
+    "minimum_learning_rate": 1e-07,
+    "schedule_horizon_epochs": 800,
+    "crop": [768, 768],
+    "route": [256, 256],
+    "scale_range": [0.5, 2.0],
+    "flip": true,
+    "density_factor": 100,
+    "sigma": 4,
+    "gaussian_kernel_size": 15,
+    "test_long_side": 3072,
+    "patch_batch_size": 16
+  },
+  "observation": {
+    "train_loss_mean": 0.10625030173609654,
+    "train_loss_first": 0.16829925775527954,
+    "train_loss_last": 0.05666768550872803,
+    "gradient_norm_mean": 0.6773428618411224,
+    "gradient_norm_max": 2.0551538467407227,
+    "learning_rate_first": 5e-07,
+    "learning_rate_last": 1.0383666666666667e-05,
+    "epoch_elapsed_seconds": 60.45739039697219,
+    "epoch_peak_vram_mb": 24233.3759765625,
+    "test_mae": 1220.4981635544827,
+    "test_rmse": 1437.56612587607,
+    "test_mape_percent_reference": 348.0217409375286,
+    "test_signed_bias": 1191.2887190401912,
+    "test_ground_truth_mean": 718.943113772455,
+    "test_ground_truth_min": 65.0,
+    "test_ground_truth_max": 4535.0,
+    "test_predicted_count_mean": 1910.2318328126462,
+    "median_latency_ms": 216.78905002772808,
+    "fps": 4.612779104258709,
+    "test_peak_vram_mb": 5385.81640625,
+    "checkpoint_round_trip": true,
+    "rng_round_trip": true
+  },
+  "repeatability": {
+    "bitwise_deterministic": false,
+    "reason": "Pinned upstream configuration enables cuDNN benchmark and disables deterministic mode.",
+    "v1_mae": 1219.4313520785577,
+    "v2_mae": 1220.4981635544827,
+    "v1_rmse": 1435.3880837554896,
+    "v2_rmse": 1437.56612587607,
+    "v1_v2_max_per_image_prediction_delta": 165.6953125
+  },
+  "lineage": {
+    "project_commit": "1b3b9b04458b33d5983aa6334549a747d1c9d2b0",
+    "upstream_commit": "5b1854dbc2d280f2326d67c65515d8baf9083810",
+    "upstream_config_sha256": "a1bd95fa9dcb62ced8c248f0716d22f45f23080705d8445e195982f789c1314c",
+    "effective_config_sha256": "716b8a22ceaf5ccbb8dd6a3ddeb3ac29c1759937d85b06f6bc5d1b2a02156cbb",
+    "profile_sha256": "0ebaeb81b4e53fc8c75ac7c2f94f8543cea9fe5f63b72e3444fc3c37192c3e6c",
+    "dataset_manifest_sha256": "57c5b26205f8146a5593dfa98a17a007aaa7582cb91c85c4938f88f444706a35",
+    "dataset_content_sha256": "ac55c9fa3e381a5511dd7f63206e1e9883006562f02364bb1ec49dda975d4092",
+    "train_split_sha256": "8a113f562862f5617c76c8eda88f6cd095b5d04637262f3dd105e972e1c32937",
+    "test_split_sha256": "0b9ddcaed5853453c549a76f6caef5bb14cdd85c0815862734d48d095de4abc6",
+    "backbone_sha256": "0efec102d97f2ef58f0e258b2c3076b3704b93ffc2b73f64c8da5462c0037ef8",
+    "container_image_digest": "sha256:90dfcacf0d65fec4357a37db72624b42febf8d3d9056924cdec3499237ed2691"
+  },
+  "ssd_artifacts": {
+    "metrics": {
+      "path": "/workspace/data/results/steerer-official-code-reproduction/steerer-qnrf-official-a1-20260810-v2/metrics.9bd5191d1ef118a43a4a45298182d9cdb49454501a1c4fe6234fbe91cbd9d91e.json",
+      "sha256": "9bd5191d1ef118a43a4a45298182d9cdb49454501a1c4fe6234fbe91cbd9d91e",
+      "byte_count": 156448
+    },
+    "environment": {
+      "path": "/workspace/data/results/steerer-official-code-reproduction/steerer-qnrf-official-a1-20260810-v2/environment.7133b14571bb303a4db492bdab11e529f215c7a3170c6b29dd2d2d7badfac11b.json",
+      "sha256": "7133b14571bb303a4db492bdab11e529f215c7a3170c6b29dd2d2d7badfac11b",
+      "byte_count": 1962
+    },
+    "full_manifest": {
+      "path": "/workspace/data/results/steerer-official-code-reproduction/steerer-qnrf-official-a1-20260810-v2/a1-manifest.json",
+      "sha256": "d8a1861c05725b5d3551a6439e2ed008724855ab62f68285d3677a05a4bbc54a",
+      "byte_count": 53602
+    },
+    "checkpoint": {
+      "path": "/workspace/data/checkpoints/steerer-official-code-reproduction/steerer-qnrf-official-a1-20260810-v2/last.pth",
+      "sha256": "3a195b73f5b11c884ff1980e5cfbc5db570bd66ee2027cfd14fd32aad216c711",
+      "byte_count": 775116701,
+      "stage": "A1",
+      "epoch": 1,
+      "global_step": 150
+    }
+  },
+  "rights": {
+    "code_license": "MIT",
+    "dataset_license_basis": "Kaggle Apache-2.0 listing accepted by user",
+    "production_approved": false,
+    "note": "PASS_COMMERCIAL_CANDIDATE is an experiment-rights scope, not production approval."
+  }
+}
