@@ -73,4 +73,3 @@ def test_partition_manifest_is_hash_verified_and_loadable(tmp_path: Path) -> Non
     assert records[0].count == 2
     assert records[0].image_sha256
     assert records[0].annotation_sha256
-
