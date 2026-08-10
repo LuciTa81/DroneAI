@@ -145,6 +145,22 @@ def test_checkpoint_round_trip_accepts_isolated_a0_one_update(tmp_path: Path) ->
     assert restored["global_step"] == 1
 
 
+def test_checkpoint_round_trip_accepts_isolated_a1_full_epoch(tmp_path: Path) -> None:
+    state = _state(epoch=1, stage="A1")
+    state["global_step"] = 150
+
+    saved = save_training_checkpoint(
+        tmp_path / "last.pth", state, torch_module=_FakeTorch()
+    )
+    restored = load_training_checkpoint(
+        saved.path, expected_sha256=saved.sha256, torch_module=_FakeTorch()
+    )
+
+    assert restored["stage"] == "A1"
+    assert restored["epoch"] == 1
+    assert restored["global_step"] == 150
+
+
 @pytest.mark.parametrize(("epoch", "global_step"), [(1, 1), (0, 0), (0, 2)])
 def test_a0_checkpoint_requires_epoch_zero_and_one_update(
     tmp_path: Path, epoch: int, global_step: int
@@ -155,6 +171,19 @@ def test_a0_checkpoint_requires_epoch_zero_and_one_update(
     with pytest.raises(ValueError, match="A0.*one optimizer update"):
         save_training_checkpoint(
             tmp_path / "invalid-a0.pth", state, torch_module=_FakeTorch()
+        )
+
+
+@pytest.mark.parametrize(("epoch", "global_step"), [(0, 150), (1, 149), (1, 151)])
+def test_a1_checkpoint_requires_epoch_one_and_150_updates(
+    tmp_path: Path, epoch: int, global_step: int
+) -> None:
+    state = _state(epoch=epoch, stage="A1")
+    state["global_step"] = global_step
+
+    with pytest.raises(ValueError, match="A1.*150 optimizer updates"):
+        save_training_checkpoint(
+            tmp_path / "invalid-a1.pth", state, torch_module=_FakeTorch()
         )
 
 

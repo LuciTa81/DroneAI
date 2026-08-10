@@ -102,6 +102,55 @@ class A0GateResult:
     environment_path: Path
 
 
+@dataclass(frozen=True)
+class A1EpochObservation:
+    epoch: int
+    optimizer_steps: int
+    losses: tuple[float, ...]
+    density_values: tuple[float, ...]
+    gradient_norms: tuple[float, ...]
+    learning_rates: tuple[float, ...]
+    elapsed_seconds: float
+    peak_vram_mb: float
+    train_sample_tokens: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class A1TestSampleObservation:
+    sample_id: str
+    predicted_count: float
+    ground_truth_count: float
+    signed_error: float
+    absolute_error: float
+    squared_error: float
+    latency_ms: float
+    peak_vram_mb: float
+
+
+@dataclass(frozen=True)
+class A1TestObservation:
+    sample_count: int
+    loss: float
+    mae: float
+    rmse: float
+    mape_percent: float
+    signed_bias: float
+    median_latency_ms: float
+    fps: float
+    peak_vram_mb: float
+    samples: tuple[A1TestSampleObservation, ...]
+
+
+@dataclass(frozen=True)
+class A1GateResult:
+    report: StageReport
+    manifest_path: Path
+    checkpoint_path: Path
+    checkpoint_sha256: str
+    metrics_path: Path
+    environment_path: Path
+
+
 class A0Runtime(Protocol):
     torch_module: object
     global_step: int
@@ -116,6 +165,12 @@ class A0Runtime(Protocol):
     def restore_checkpoint_state(self, state: dict[str, object]) -> None: ...
 
     def state_sha256s(self) -> dict[str, str]: ...
+
+
+class A1Runtime(A0Runtime, Protocol):
+    def run_epoch1(self) -> A1EpochObservation: ...
+
+    def evaluate_test(self) -> A1TestObservation: ...
 
 
 def _hash_value(digest: Any, value: object) -> None:
@@ -513,6 +568,393 @@ def run_a0_gate(
     )
 
 
+def _validate_a1_epoch(
+    observation: A1EpochObservation, *, global_step: int
+) -> None:
+    if (
+        observation.epoch != 1
+        or observation.optimizer_steps != 150
+        or global_step != 150
+    ):
+        raise RuntimeError("A1 must perform exactly 150 optimizer updates for epoch one")
+    if len(observation.losses) != 150 or len(observation.gradient_norms) != 150:
+        raise RuntimeError("A1 must record every epoch-one optimizer update")
+    if len(observation.learning_rates) != 150:
+        raise RuntimeError("A1 must record every epoch-one learning rate")
+    if (
+        len(observation.train_sample_tokens) != 1200
+        or len(set(observation.train_sample_tokens)) != 1200
+    ):
+        raise RuntimeError("A1 must consume 1,200 unique Train samples with drop_last")
+    values = (
+        *observation.losses,
+        *observation.density_values,
+        *observation.gradient_norms,
+        *observation.learning_rates,
+        observation.elapsed_seconds,
+        observation.peak_vram_mb,
+    )
+    if not observation.density_values or not all(
+        math.isfinite(float(value)) for value in values
+    ):
+        raise FloatingPointError("A1 epoch-one training evidence must be finite")
+    if min(
+        *observation.losses,
+        *observation.gradient_norms,
+        *observation.learning_rates,
+        observation.elapsed_seconds,
+        observation.peak_vram_mb,
+    ) < 0:
+        raise ValueError("A1 epoch-one observations must be non-negative")
+
+
+def _validate_a1_test(observation: A1TestObservation) -> None:
+    if observation.sample_count != 334 or len(observation.samples) != 334:
+        raise RuntimeError("A1 must evaluate exactly 334 Test samples")
+    sample_ids = [sample.sample_id for sample in observation.samples]
+    if len(set(sample_ids)) != 334:
+        raise RuntimeError("A1 Test sample IDs must be unique")
+    errors = [sample.signed_error for sample in observation.samples]
+    for sample in observation.samples:
+        if not math.isclose(
+            sample.predicted_count - sample.ground_truth_count,
+            sample.signed_error,
+            rel_tol=0.0,
+            abs_tol=1.0e-5,
+        ):
+            raise ValueError("A1 Test sample signed error is inconsistent")
+        if not math.isclose(
+            abs(sample.signed_error), sample.absolute_error, rel_tol=0.0, abs_tol=1.0e-5
+        ):
+            raise ValueError("A1 Test sample absolute error is inconsistent")
+        if not math.isclose(
+            sample.signed_error**2, sample.squared_error, rel_tol=1.0e-6, abs_tol=1.0e-5
+        ):
+            raise ValueError("A1 Test sample squared error is inconsistent")
+    expected_mae = sum(abs(error) for error in errors) / len(errors)
+    expected_rmse = math.sqrt(sum(error * error for error in errors) / len(errors))
+    expected_bias = sum(errors) / len(errors)
+    expected_mape = (
+        sum(
+            sample.absolute_error / sample.ground_truth_count
+            for sample in observation.samples
+            if sample.ground_truth_count > 0
+        )
+        / sum(sample.ground_truth_count > 0 for sample in observation.samples)
+        * 100.0
+    )
+    for name, observed, expected in (
+        ("MAE", observation.mae, expected_mae),
+        ("RMSE", observation.rmse, expected_rmse),
+        ("signed bias", observation.signed_bias, expected_bias),
+        ("MAPE", observation.mape_percent, expected_mape),
+    ):
+        if not math.isclose(observed, expected, rel_tol=1.0e-7, abs_tol=1.0e-7):
+            raise ValueError(f"A1 Test {name} differs from per-sample evidence")
+    values = (
+        observation.loss,
+        observation.mae,
+        observation.rmse,
+        observation.mape_percent,
+        observation.signed_bias,
+        observation.median_latency_ms,
+        observation.fps,
+        observation.peak_vram_mb,
+        *(
+            value
+            for sample in observation.samples
+            for value in asdict(sample).values()
+            if not isinstance(value, str)
+        ),
+    )
+    if not all(math.isfinite(float(value)) for value in values):
+        raise FloatingPointError("A1 Test metrics must be finite")
+    if min(
+        observation.loss,
+        observation.mae,
+        observation.rmse,
+        observation.mape_percent,
+        observation.median_latency_ms,
+        observation.fps,
+        observation.peak_vram_mb,
+    ) < 0:
+        raise ValueError("A1 Test metrics must be non-negative")
+
+
+def _score_a1(
+    *,
+    profile: OfficialTrainingDataProfile,
+    runtime: A1Runtime,
+    epoch: A1EpochObservation,
+    test: A1TestObservation,
+    checkpoint_round_trip: bool,
+    rng_round_trip: bool,
+    lineage: A0Lineage,
+    manifest_path: Path,
+) -> StageReport:
+    initialization = dict(runtime.initialization_audit)
+    cuda = dict(runtime.cuda_evidence)
+    return score_stage(
+        stage_id="G3-A1",
+        stage_name="STEERER official-code epoch-one and Test334 gate",
+        threshold=100,
+        success_status=profile.success_scope,
+        checks=(
+            CheckResult(
+                check_id="a1.identity",
+                category="provenance",
+                description="Pinned source, dataset, backbone, config, and container identities",
+                weight=15,
+                passed=(
+                    lineage.upstream_commit == profile.upstream_commit
+                    and lineage.backbone_sha256 == profile.imagenet_backbone.sha256
+                ),
+                blocker=True,
+                expected="all identities pinned by SHA/commit",
+                observed=f"upstream={lineage.upstream_commit} backbone={lineage.backbone_sha256}",
+                evidence=str(manifest_path),
+            ),
+            CheckResult(
+                check_id="a1.cuda",
+                category="runtime",
+                description="CUDA execution remains available and finite",
+                weight=15,
+                passed=cuda.get("available") is True and cuda.get("matmul_finite") is True,
+                blocker=True,
+                expected="CUDA available and matmul finite",
+                observed=json.dumps(cuda, sort_keys=True),
+                evidence=str(manifest_path),
+            ),
+            CheckResult(
+                check_id="a1.train_epoch",
+                category="training",
+                description="Fresh epoch one completes 150 optimizer updates from Train1201",
+                weight=25,
+                passed=(
+                    epoch.optimizer_steps == 150
+                    and runtime.global_step == 150
+                    and len(epoch.train_sample_tokens) == 1200
+                ),
+                blocker=True,
+                expected="epoch=1 steps=150 unique consumed samples=1200",
+                observed=(
+                    f"epoch={epoch.epoch} steps={epoch.optimizer_steps} "
+                    f"samples={len(epoch.train_sample_tokens)}"
+                ),
+                evidence=str(manifest_path),
+            ),
+            CheckResult(
+                check_id="a1.official_test",
+                category="evaluation",
+                description="Complete official Test334 count evaluation with explicit test-selected label",
+                weight=25,
+                passed=test.sample_count == 334 and runtime.test_access_count == 334,
+                blocker=True,
+                expected="334/334 official Test samples",
+                observed=f"samples={test.sample_count} MAE={test.mae} RMSE={test.rmse}",
+                evidence=str(manifest_path),
+            ),
+            CheckResult(
+                check_id="a1.checkpoint_and_rights",
+                category="checkpoint",
+                description="Complete checkpoint reload and ImageNet-only commercial-candidate boundary",
+                weight=20,
+                passed=(
+                    checkpoint_round_trip
+                    and rng_round_trip
+                    and initialization.get("loaded_scope") == "backbone_only"
+                    and initialization.get("model_checkpoint_loaded") is False
+                    and profile.production_approved is False
+                ),
+                blocker=True,
+                expected="state/RNG reload; backbone only; production not approved",
+                observed=(
+                    f"state={checkpoint_round_trip} rng={rng_round_trip} "
+                    f"scope={initialization.get('loaded_scope')}"
+                ),
+                evidence=str(manifest_path),
+            ),
+        ),
+    )
+
+
+def run_a1_gate(
+    profile: OfficialTrainingDataProfile,
+    *,
+    run_id: str,
+    runtime: A1Runtime,
+    lineage: A0Lineage,
+    output_dir: str | Path,
+    checkpoint_dir: str | Path,
+    environment: Mapping[str, object],
+) -> A1GateResult:
+    """Run a fresh epoch one and a complete official Test334 evaluation."""
+
+    if not isinstance(profile, OfficialTrainingDataProfile):
+        raise TypeError("validated official-code A profile is required")
+    run_id = _safe_run_id(run_id)
+    result_root = Path(output_dir)
+    checkpoint_root = Path(checkpoint_dir)
+    if result_root.exists() or checkpoint_root.exists():
+        raise FileExistsError("A1 result and checkpoint directories must be new")
+    if runtime.global_step != 0 or runtime.test_access_count != 0:
+        raise RuntimeError("A1 must start fresh before Train or Test access")
+
+    epoch = runtime.run_epoch1()
+    _validate_a1_epoch(epoch, global_step=runtime.global_step)
+    if runtime.test_access_count != 0:
+        raise PermissionError("A1 Test access is allowed only after epoch one completes")
+    training_boundary_rng = capture_rng_state(_SEED, torch_module=runtime.torch_module)
+    rng_before_sha256 = state_sha256(training_boundary_rng)
+
+    test = runtime.evaluate_test()
+    _validate_a1_test(test)
+    if runtime.test_access_count != 334:
+        raise RuntimeError("A1 must evaluate exactly 334 Test samples")
+
+    metrics_payload = {
+        "schema_version": 1,
+        "run_id": run_id,
+        "stage": "A1",
+        "selection_protocol": "official Test, test-selected",
+        "train": asdict(epoch),
+        "test": asdict(test),
+    }
+    metrics_path, metrics_sha256 = _content_addressed_json(
+        result_root, "metrics", metrics_payload
+    )
+    environment_payload = {
+        "schema_version": 1,
+        "run_id": run_id,
+        "stage": "A1",
+        "runtime": dict(environment),
+        "cuda": dict(runtime.cuda_evidence),
+        "lineage": {**asdict(lineage), "split_sha256s": dict(lineage.split_sha256s)},
+        "metrics_sha256": metrics_sha256,
+    }
+    environment_path, environment_sha256 = _content_addressed_json(
+        result_root, "environment", environment_payload
+    )
+
+    component_state = runtime.checkpoint_state()
+    if set(component_state) != {"model", "optimizer", "scheduler", "scaler"}:
+        raise ValueError("A1 checkpoint state must contain model, optimizer, scheduler, and scaler")
+    before_sha256s = runtime.state_sha256s()
+    payload: dict[str, object] = {
+        "schema_version": CHECKPOINT_SCHEMA_VERSION,
+        "run_id": run_id,
+        "stage": "A1",
+        "epoch": 1,
+        "global_step": 150,
+        **component_state,
+        "best_mae": test.mae,
+        "best_rmse": test.rmse,
+        "config_sha256": lineage.profile_sha256,
+        "split_sha256s": dict(lineage.split_sha256s),
+        "dataset_inventory_sha256": lineage.dataset_content_sha256,
+        "backbone_sha256": lineage.backbone_sha256,
+        "upstream_commit": lineage.upstream_commit,
+        "rng": training_boundary_rng,
+        "environment_manifest_sha256": environment_sha256,
+    }
+    checkpoint = save_training_checkpoint(
+        checkpoint_root / "last.pth", payload, torch_module=runtime.torch_module
+    )
+    restored = load_training_checkpoint(
+        checkpoint.path,
+        expected_sha256=checkpoint.sha256,
+        torch_module=runtime.torch_module,
+    )
+    runtime.restore_checkpoint_state(
+        {name: restored[name] for name in ("model", "optimizer", "scheduler", "scaler")}
+    )
+    checkpoint_round_trip = before_sha256s == runtime.state_sha256s()
+    _advance_rngs(runtime.torch_module)
+    restore_rng_state(restored["rng"], torch_module=runtime.torch_module)  # type: ignore[arg-type]
+    rng_after_sha256 = state_sha256(
+        capture_rng_state(_SEED, torch_module=runtime.torch_module)
+    )
+    rng_round_trip = rng_before_sha256 == rng_after_sha256
+    if not checkpoint_round_trip or not rng_round_trip:
+        raise RuntimeError("A1 checkpoint state or RNG round-trip failed")
+
+    checkpoint_manifest = {
+        "schema_version": 1,
+        "run_id": run_id,
+        "stage": "A1",
+        "checkpoint": {
+            "filename": checkpoint.path.name,
+            "sha256": checkpoint.sha256,
+            "byte_count": checkpoint.byte_size,
+            "environment_sha256": environment_sha256,
+        },
+    }
+    _atomic_bytes(
+        checkpoint_root / "checkpoint-manifest.json", _json_bytes(checkpoint_manifest)
+    )
+
+    manifest_path = result_root / "a1-manifest.json"
+    manifest_payload = {
+        "schema_version": 1,
+        "run_id": run_id,
+        "stage": "A1",
+        "status": "verified",
+        "fresh_start": True,
+        "epoch": 1,
+        "optimizer_steps": epoch.optimizer_steps,
+        "global_step": runtime.global_step,
+        "train_sample_count": len(epoch.train_sample_tokens),
+        "test_sample_count": test.sample_count,
+        "test_access_count": runtime.test_access_count,
+        "selection_protocol": "official Test, test-selected",
+        "checkpoint_round_trip": checkpoint_round_trip,
+        "rng_round_trip": rng_round_trip,
+        "training_settings": dict(profile.training_settings),
+        "initialization": dict(runtime.initialization_audit),
+        "cuda": dict(runtime.cuda_evidence),
+        "lineage": {**asdict(lineage), "split_sha256s": dict(lineage.split_sha256s)},
+        "metrics": {"path": metrics_path.name, "sha256": metrics_sha256},
+        "environment": {"path": environment_path.name, "sha256": environment_sha256},
+        "checkpoint": {
+            "path": str(checkpoint.path),
+            "sha256": checkpoint.sha256,
+            "byte_count": checkpoint.byte_size,
+            "component_sha256s": before_sha256s,
+        },
+        "rights": {
+            "success_scope": profile.success_scope,
+            "production_approved": profile.production_approved,
+            "dataset_license_basis": profile.dataset_license_basis,
+            "code_license": profile.code_license,
+        },
+    }
+    _atomic_bytes(manifest_path, _json_bytes(manifest_payload))
+    report = _score_a1(
+        profile=profile,
+        runtime=runtime,
+        epoch=epoch,
+        test=test,
+        checkpoint_round_trip=checkpoint_round_trip,
+        rng_round_trip=rng_round_trip,
+        lineage=lineage,
+        manifest_path=manifest_path,
+    )
+    _atomic_bytes(result_root / "stage-score.json", _json_bytes(report.to_dict()))
+    _atomic_bytes(
+        result_root / "stage-score.md", (report.to_markdown() + "\n").encode("utf-8")
+    )
+    if not report.is_success:
+        raise RuntimeError(f"A1 gate did not pass: {report.status} {report.score}/100")
+    return A1GateResult(
+        report=report,
+        manifest_path=manifest_path,
+        checkpoint_path=checkpoint.path,
+        checkpoint_sha256=checkpoint.sha256,
+        metrics_path=metrics_path,
+        environment_path=environment_path,
+    )
+
+
 def synthesize_a0_config(
     profile: OfficialTrainingDataProfile,
     *,
@@ -555,6 +997,43 @@ def synthesize_a0_config(
         "validation_access": False,
         "test_access": False,
         "model_checkpoint_loaded": False,
+    }
+    return config, audit
+
+
+def synthesize_a1_config(
+    profile: OfficialTrainingDataProfile,
+    *,
+    upstream_dir: str | Path,
+    processed_root: str | Path,
+    backbone_path: str | Path,
+    run_id: str,
+) -> tuple[dict[str, object], UpstreamAudit]:
+    """Build the exact fresh epoch-one/Test334 configuration for A1."""
+
+    config, audit = synthesize_a0_config(
+        profile,
+        upstream_dir=upstream_dir,
+        processed_root=processed_root,
+        backbone_path=backbone_path,
+        run_id=run_id,
+    )
+    dataset = config["dataset"]
+    if not isinstance(dataset, dict):
+        raise ValueError("official STEERER dataset config is invalid")
+    dataset["test_set"] = "test.txt"
+    config["droneai"] = {
+        "stage": "A1",
+        "stage_stop_epoch": 1,
+        "schedule_horizon_epochs": _SCHEDULE_HORIZON,
+        "physical_batch": _PHYSICAL_BATCH,
+        "accumulation_steps": _ACCUMULATION_STEPS,
+        "effective_batch": _PHYSICAL_BATCH,
+        "validation_access": False,
+        "test_access": True,
+        "test_selection": "official Test, test-selected",
+        "model_checkpoint_loaded": False,
+        "fresh_start": True,
     }
     return config, audit
 
@@ -695,11 +1174,8 @@ class TorchOfficialA0Runtime:
         random.seed(worker_seed)
         np.random.seed(worker_seed)
 
-    def run_update(self) -> A0UpdateObservation:
+    def _run_update_batch(self, batch: object) -> A0UpdateObservation:
         torch = self.torch_module
-        started = time.perf_counter()
-        initialize_cuda_memory_stats(torch, self._device)
-        batch = next(iter(self._loader))
         images, labels, _sizes, name_metadata = batch
         images = images.to(self._device, non_blocking=True)
         labels = [label.to(self._device, non_blocking=True) for label in labels]
@@ -727,16 +1203,31 @@ class TorchOfficialA0Runtime:
         self._scheduler.step_update(self.global_step)
         learning_rate = float(self._optimizer.param_groups[0]["lr"])
         self.global_step += 1
-        torch.cuda.synchronize(self._device)
         return A0UpdateObservation(
             optimizer_steps=1,
             loss=float(loss.detach().float().item()),
             density_values=tuple(density_values),
             gradient_norm=gradient_norm,
             learning_rate=learning_rate,
-            elapsed_seconds=max(time.perf_counter() - started, 0.0),
+            elapsed_seconds=0.0,
             peak_vram_mb=float(torch.cuda.max_memory_allocated(self._device) / (1024**2)),
             train_sample_tokens=tuple(str(name) for name in name_metadata[0]),
+        )
+
+    def run_update(self) -> A0UpdateObservation:
+        torch = self.torch_module
+        started = time.perf_counter()
+        initialize_cuda_memory_stats(torch, self._device)
+        observation = self._run_update_batch(next(iter(self._loader)))
+        torch.cuda.synchronize(self._device)
+        return A0UpdateObservation(
+            **{
+                **asdict(observation),
+                "elapsed_seconds": max(time.perf_counter() - started, 0.0),
+                "peak_vram_mb": float(
+                    torch.cuda.max_memory_allocated(self._device) / (1024**2)
+                ),
+            }
         )
 
     def checkpoint_state(self) -> dict[str, object]:
@@ -763,13 +1254,198 @@ class TorchOfficialA0Runtime:
         return {name: state_sha256(value) for name, value in state.items()}
 
 
+class TorchOfficialA1Runtime(TorchOfficialA0Runtime):
+    """Fresh one-epoch official STEERER runtime with Test334 access afterward."""
+
+    def __init__(
+        self,
+        profile: OfficialTrainingDataProfile,
+        *,
+        config: Mapping[str, object],
+        upstream_dir: str | Path,
+        backbone_path: str | Path,
+        device: str = "cuda:0",
+    ) -> None:
+        super().__init__(
+            profile,
+            config=config,
+            upstream_dir=upstream_dir,
+            backbone_path=backbone_path,
+            device=device,
+        )
+        mapping = copy.deepcopy(dict(config))
+        with self._scope(self._upstream_dir):
+            from mmcv import Config
+            from lib.core.cc_function import patch_forward
+            from lib.datasets.qnrf import QNRF
+            from lib.datasets.utils.collate import default_collate
+
+            config_object = Config(mapping)
+            if str(config_object.dataset.test_set) != "test.txt":
+                raise ValueError("A1 requires the exact official test.txt list")
+            self._test_dataset = QNRF(
+                root=config_object.dataset.root,
+                list_path=config_object.dataset.test_set,
+                num_samples=None,
+                num_classes=config_object.dataset.num_classes,
+                multi_scale=False,
+                flip=False,
+                base_size=config_object.test.base_size,
+                crop_size=(None, None),
+                min_unit=config_object.train.route_size,
+                downsample_rate=1,
+            )
+            if len(self._test_dataset) != profile.test_samples:
+                raise ValueError("A1 Test loader must contain exactly 334 samples")
+            self._test_loader = self.torch_module.utils.data.DataLoader(
+                self._test_dataset,
+                batch_size=1,
+                shuffle=False,
+                num_workers=int(config_object.workers),
+                pin_memory=True,
+                drop_last=False,
+                persistent_workers=False,
+                collate_fn=default_collate,
+            )
+            self._patch_forward = patch_forward
+            self._patch_batch_size = int(config_object.test.patch_batch_size)
+
+    def run_epoch1(self) -> A1EpochObservation:
+        if self.global_step != 0:
+            raise RuntimeError("A1 epoch one must start from global step zero")
+        torch = self.torch_module
+        initialize_cuda_memory_stats(torch, self._device)
+        started = time.perf_counter()
+        losses: list[float] = []
+        densities: list[float] = []
+        gradients: list[float] = []
+        rates: list[float] = []
+        samples: list[str] = []
+        for batch in self._loader:
+            observation = self._run_update_batch(batch)
+            losses.append(observation.loss)
+            densities.extend(observation.density_values)
+            gradients.append(observation.gradient_norm)
+            rates.append(observation.learning_rate)
+            samples.extend(observation.train_sample_tokens)
+        torch.cuda.synchronize(self._device)
+        return A1EpochObservation(
+            epoch=1,
+            optimizer_steps=self.global_step,
+            losses=tuple(losses),
+            density_values=tuple(densities),
+            gradient_norms=tuple(gradients),
+            learning_rates=tuple(rates),
+            elapsed_seconds=max(time.perf_counter() - started, 0.0),
+            peak_vram_mb=float(
+                torch.cuda.max_memory_allocated(self._device) / (1024**2)
+            ),
+            train_sample_tokens=tuple(samples),
+        )
+
+    def evaluate_test(self) -> A1TestObservation:
+        if self.global_step != 150 or self.test_access_count != 0:
+            raise RuntimeError("A1 Test evaluation requires a completed fresh epoch one")
+        torch = self.torch_module
+        self._model.eval()
+        losses: list[float] = []
+        samples: list[A1TestSampleObservation] = []
+        with torch.no_grad(), self._scope(self._upstream_dir):
+            for batch in self._test_loader:
+                images, labels, _ratio, name_metadata = batch
+                if not isinstance(name_metadata, (list, tuple)) or len(name_metadata) != 1:
+                    raise ValueError("A1 Test loader must provide exactly one sample name")
+                sample_id = str(name_metadata[0])
+                images = images.to(self._device, non_blocking=True)
+                labels = [label.to(self._device, non_blocking=True) for label in labels]
+                initialize_cuda_memory_stats(torch, self._device)
+                torch.cuda.synchronize(self._device)
+                started = time.perf_counter()
+                result = self._patch_forward(
+                    self._model,
+                    images,
+                    labels,
+                    self._patch_batch_size,
+                    "val",
+                )
+                torch.cuda.synchronize(self._device)
+                latency_ms = max((time.perf_counter() - started) * 1000.0, 1.0e-9)
+                loss = result["losses"].mean()
+                predicted = result["pre_den"]["1"].sum()
+                target = labels[0].sum()
+                for name, tensor in (
+                    ("loss", loss),
+                    ("predicted count", predicted),
+                    ("ground-truth count", target),
+                ):
+                    if not bool(torch.isfinite(tensor).all().item()):
+                        raise FloatingPointError(f"A1 Test produced non-finite {name}")
+                for group_name in ("pre_den", "gt_den"):
+                    group = result.get(group_name)
+                    if not isinstance(group, Mapping) or not group:
+                        raise ValueError(f"A1 Test result {group_name} is incomplete")
+                    if not all(bool(torch.isfinite(tensor).all().item()) for tensor in group.values()):
+                        raise FloatingPointError(
+                            f"A1 Test produced a non-finite {group_name} tensor"
+                        )
+                predicted_value = float(predicted.detach().float().item())
+                target_value = float(target.detach().float().item())
+                error = predicted_value - target_value
+                samples.append(
+                    A1TestSampleObservation(
+                        sample_id=sample_id,
+                        predicted_count=predicted_value,
+                        ground_truth_count=target_value,
+                        signed_error=error,
+                        absolute_error=abs(error),
+                        squared_error=error * error,
+                        latency_ms=latency_ms,
+                        peak_vram_mb=float(
+                            torch.cuda.max_memory_allocated(self._device) / (1024**2)
+                        ),
+                    )
+                )
+                losses.append(float(loss.detach().float().item()))
+                self.test_access_count += 1
+        if len(samples) != 334:
+            raise RuntimeError("A1 full Test loader did not yield 334 samples")
+        errors = [sample.signed_error for sample in samples]
+        positive = [sample for sample in samples if sample.ground_truth_count > 0]
+        latencies = sorted(sample.latency_ms for sample in samples)
+        middle = len(latencies) // 2
+        median_latency = (latencies[middle - 1] + latencies[middle]) / 2.0
+        return A1TestObservation(
+            sample_count=len(samples),
+            loss=sum(losses) / len(losses),
+            mae=sum(abs(error) for error in errors) / len(errors),
+            rmse=math.sqrt(sum(error * error for error in errors) / len(errors)),
+            mape_percent=(
+                sum(sample.absolute_error / sample.ground_truth_count for sample in positive)
+                / len(positive)
+                * 100.0
+            ),
+            signed_bias=sum(errors) / len(errors),
+            median_latency_ms=median_latency,
+            fps=1000.0 / median_latency,
+            peak_vram_mb=max(sample.peak_vram_mb for sample in samples),
+            samples=tuple(samples),
+        )
+
+
 __all__ = [
     "A0GateResult",
     "A0Lineage",
     "A0UpdateObservation",
+    "A1EpochObservation",
+    "A1GateResult",
+    "A1TestObservation",
+    "A1TestSampleObservation",
     "TorchOfficialA0Runtime",
+    "TorchOfficialA1Runtime",
     "initialize_cuda_memory_stats",
     "run_a0_gate",
+    "run_a1_gate",
     "state_sha256",
     "synthesize_a0_config",
+    "synthesize_a1_config",
 ]
