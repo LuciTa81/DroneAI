@@ -103,6 +103,10 @@ class OfficialReproductionProfile:
     rmse_tolerance: float
     targets: Mapping[str, object]
 
+    @property
+    def g1_prepared_test_root(self) -> str:
+        return f"{self.roots.processed.rstrip('/')}/g1-test-v1"
+
 
 def _exact_mapping(value: Any, *, keys: set[str], name: str) -> dict[str, Any]:
     if not isinstance(value, dict) or set(value) != keys:

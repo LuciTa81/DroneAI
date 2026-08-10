@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "run_id": "steerer-a-official-checkpoint-test334-v1",
-  "protocol_id": "steerer-official-code-reproduction-g1-v1",
+  "run_id": "steerer-a-official-checkpoint-test334-preprocessed-v2",
+  "protocol_id": "steerer-official-code-reproduction-g1-v2",
   "dataset_id": "ucf-qnrf-kaggle-apache",
   "train_split_id": "ucf-qnrf-official-train1201-v1",
   "test_split_id": "ucf-qnrf-official-test334-v1",

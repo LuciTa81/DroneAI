@@ -3,10 +3,12 @@
 > Execute one gate at a time. A failed gate blocks every later gate. Existing B-lane
 > files, checkpoints, results, and sealed-Test controls remain immutable.
 
-**Goal:** Reproduce the pinned public STEERER UCF-QNRF implementation on the full
+**Goal:** Run the pinned public STEERER UCF-QNRF implementation on the full
 official Train 1,201 / Test 334 protocol, beginning with an official-checkpoint
 evaluator compatibility gate and ending with a fresh 800-epoch ImageNet-initialized
-run only after all short gates pass.
+run only after all short gates pass. The long run intentionally uses all 1,201
+official Train images even though the released preparation script's random
+`divide_dataset` helper withholds about 20%; reports must disclose this difference.
 
 **Authority:** Upstream commit
 `5b1854dbc2d280f2326d67c65515d8baf9083810`, especially
@@ -48,19 +50,23 @@ B runner and never initialize training from the official full STEERER checkpoint
    official Test root, pinned upstream, checkpoint plus artifact manifest,
    rights decision, output directory, and CUDA device. It must expose no train,
    resume, epoch, optimizer, or arbitrary checkpoint-origin options.
-2. Implement pre-inference verification of upstream commit, checkpoint filename,
+2. Add an isolated Test preparation step matching pinned `prepare_QNRF.py`:
+   minimum/next-16 resize, bilinear JPEG quality 95, integer-scaled points, and
+   boundary clipping without dropping annotations. Raw Test images are forbidden
+   as direct G1 inference inputs.
+3. Implement pre-inference verification of upstream commit, checkpoint filename,
    size, SHA-256, artifact ID, allowed scope, and 334 unique Test records.
-3. Evaluate with `STEERERAdapter(checkpoint_origin="research_checkpoint")` and
+4. Evaluate with `STEERERAdapter(checkpoint_origin="research_checkpoint")` and
    write a G1 provenance file before invoking the generic evaluation runner.
-4. After evaluation, write `compatibility-gate.json`. Pass only when output is
+5. After evaluation, write `compatibility-gate.json`. Pass only when output is
    complete and absolute differences from 77.8/138.0 are at most 5.0 MAE and
    10.0 RMSE. Never widen these bounds after observing results.
-5. Run the focused tests, then the B regression tests.
+6. Run the focused tests, then the B regression tests.
 
 ## Task 3: Run and publish G1 on home5090
 
 **Files:**
-- Result: `/workspace/data/results/steerer-official-code-reproduction/official-checkpoint-test334-v1`
+- Result: `/workspace/data/results/steerer-official-code-reproduction/official-checkpoint-test334-preprocessed-v2`
 - Modify: `docs/models/STEERER.md`
 - Add only compact JSON/Markdown evidence under `results/steerer/` after success.
 

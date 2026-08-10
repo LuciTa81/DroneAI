@@ -19,6 +19,7 @@ from droneai.evaluation_artifacts import write_json
 from droneai.evaluation_runner import run_evaluation
 from droneai.integrity import sha256_file
 from droneai.steerer_adapter import STEERERAdapter
+from droneai.steerer_official_data import load_prepared_official_test
 from droneai.steerer_official_reproduction import (
     build_g1_protocol,
     evaluate_g1_compatibility,
@@ -27,7 +28,7 @@ from droneai.steerer_official_reproduction import (
     validate_official_checkpoint_manifest,
     verify_official_checkpoint_file,
 )
-from droneai.ucf_qnrf import index_ucf_qnrf_test, prepare_evaluation_sample
+from droneai.ucf_qnrf import prepare_evaluation_sample
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -38,7 +39,8 @@ def _parser() -> argparse.ArgumentParser:
         )
     )
     parser.add_argument("--config", required=True, type=Path)
-    parser.add_argument("--test-root", required=True, type=Path)
+    parser.add_argument("--prepared-test-root", required=True, type=Path)
+    parser.add_argument("--prepared-manifest", required=True, type=Path)
     parser.add_argument("--upstream-dir", required=True, type=Path)
     parser.add_argument("--checkpoint", required=True, type=Path)
     parser.add_argument("--checkpoint-manifest", required=True, type=Path)
@@ -64,7 +66,14 @@ def main(argv: Sequence[str] | None = None) -> int:
     )
     checkpoint = verify_official_checkpoint_file(profile, args.checkpoint)
     validate_g1_rights_decision(args.rights_decision)
-    records = index_ucf_qnrf_test(args.test_root)
+    prepared_root = args.prepared_test_root.resolve()
+    if prepared_root != Path(profile.g1_prepared_test_root).resolve():
+        raise ValueError("G1 prepared Test root differs from the isolated A profile")
+    records = load_prepared_official_test(
+        prepared_root,
+        manifest_path=args.prepared_manifest,
+        expected_samples=profile.test_samples,
+    )
     if len(records) != profile.test_samples:
         raise ValueError(
             "official Test population mismatch: "
@@ -111,6 +120,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             "checkpoint_manifest_sha256": sha256_file(args.checkpoint_manifest),
             "checkpoint_sha256": profile.checkpoint.sha256,
             "rights_decision_sha256": sha256_file(args.rights_decision),
+            "prepared_test_manifest_sha256": sha256_file(args.prepared_manifest),
             "test_inventory_sha256": sha256_file(source_inventory),
             "artifact_manifest_allowed_scope": manifest["allowed_scope"],
             "long_training_authorized_before_g1": False,

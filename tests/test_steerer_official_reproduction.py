@@ -45,6 +45,7 @@ def test_a_profile_freezes_official_code_protocol_and_isolated_roots() -> None:
     assert profile.checkpoint.size_bytes == 259607784
     assert all("steerer-official-code-reproduction" in path for path in profile.roots)
     assert all("steerer-qnrf-imagenet-20260806-t1-e" not in path for path in profile.roots)
+    assert profile.g1_prepared_test_root.endswith("/g1-test-v1")
 
 
 @pytest.mark.parametrize(
@@ -107,7 +108,8 @@ def test_g1_cli_exposes_no_training_or_tuning_controls() -> None:
 
     assert {
         "--config",
-        "--test-root",
+        "--prepared-test-root",
+        "--prepared-manifest",
         "--upstream-dir",
         "--checkpoint",
         "--checkpoint-manifest",
@@ -116,6 +118,7 @@ def test_g1_cli_exposes_no_training_or_tuning_controls() -> None:
         "--device",
     }.issubset(options)
     assert {
+        "--test-root",
         "--train-root",
         "--resume",
         "--epochs",
